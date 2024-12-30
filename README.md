@@ -1,0 +1,171 @@
+# Spring Boot E-commerce API
+
+A RESTful API built with Spring Boot that implements a basic e-commerce system with user authentication, product management, and purchase tracking.
+
+## 🚀 Features
+
+- **User Management**
+  - User registration and authentication
+  - Role-based authorization (ADMIN, USER)
+  - Profile management and password updates
+
+- **Product Management**
+  - Product creation and listing
+  - Product status management (active/inactive)
+  - Role-based access control for product operations
+
+- **Purchase System**
+  - Shopping cart functionality
+  - Purchase history tracking
+  - Role-specific purchase restrictions
+
+## 🛠️ Technologies
+
+- Java 17
+- Spring Boot 3.2.1
+- Spring Security
+- Spring Data JPA
+- MySQL 9
+- Docker & Docker Compose
+- Maven
+- Lombok
+
+## 📋 Prerequisites
+
+- Java 17 or higher
+- Docker and Docker Compose
+- Maven
+- Git
+
+## 🔧 Installation
+
+1. Clone the repository:
+   ```bash
+   git clone --branch gestion-tienda --single-branch https://github.com/gussttaav/springboot-projects.git
+   cd gestion-tienda
+   ```
+
+2. Create a `.env` file in the root directory with the following variables:
+   ```env
+   MYSQL_ROOT_PASSWORD=your_root_password
+   MYSQL_DATABASE=your_database_name
+   MYSQL_USER=your_database_user
+   MYSQL_PASSWORD=your_database_password
+   MYSQL_CHARSET=utf8mb4
+   MYSQL_COLLATION=utf8mb4_unicode_ci
+   ADMIN_EMAIL=admin@example.com
+   ADMIN_PASSWORD=your_admin_password
+   ADMIN_NAME=Administrator
+   ```
+
+3. Start the MySQL database using Docker Compose:
+   ```bash
+   docker-compose up -d
+   ```
+
+4. Build and run the application:
+   ```bash
+   mvn clean install
+   mvn spring-boot:run
+   ```
+
+The application will be available at `http://localhost:8080`
+
+## 🔑 API Endpoints
+
+### User Management
+```
+POST /api/usuarios/registro          # Register a new user
+POST /api/usuarios/admin/registro    # Register a new admin (requires ADMIN role)
+PUT  /api/usuarios/perfil           # Update user profile
+PUT  /api/usuarios/password         # Change password
+```
+
+### Product Management
+```
+GET    /api/productos/listar               # List all active products
+POST   /api/productos/crear                # Create a new product (ADMIN only)
+DELETE /api/productos/eliminar/{id}        # Delete a product (ADMIN only)
+```
+
+### Purchase Management
+```
+POST /api/compras/nueva              # Create a new purchase
+GET  /api/compras/listar             # List user purchases
+```
+
+## 🔒 Security
+
+- Basic authentication is implemented using Spring Security
+- Passwords are encrypted using BCrypt
+- Role-based access control for different endpoints
+- Input validation for all endpoints
+
+## 📝 Example Requests
+
+### Register a User
+```bash
+POST /api/usuarios/registro
+Content-Type: application/json
+
+{
+    "nombre": "John Doe",
+    "email": "john@example.com",
+    "contraseña": "password123"
+}
+```
+
+### Create a Product (Admin only)
+```bash
+POST /api/productos/crear
+Authorization: Basic base64(admin@example.com:password)
+Content-Type: application/json
+
+{
+    "nombre": "Product Name",
+    "descripcion": "Product Description",
+    "precio": 99.99
+}
+```
+
+### Make a Purchase
+```bash
+POST /api/compras/nueva
+Authorization: Basic base64(user@example.com:password)
+Content-Type: application/json
+
+{
+    "productos": [
+        {
+            "productoId": 1,
+            "cantidad": 2
+        }
+    ]
+}
+```
+
+## 📁 Project Structure
+
+```
+src/
+├── main/
+│   ├── java/
+│   │   └── com/example/tiendaspring/
+│   │       ├── config/
+│   │       ├── controller/
+│   │       ├── dto/
+│   │       ├── entity/
+│   │       ├── repository/
+│   │       ├── service/
+│   │       └── security/
+│   └── resources/
+│       └── application.yml
+├── docker-compose.yml
+├── mysql-init/
+│   └── shopping_db.sql
+└── pom.xml
+```
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details.

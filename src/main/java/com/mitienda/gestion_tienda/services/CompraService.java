@@ -14,9 +14,11 @@ import com.mitienda.gestion_tienda.entities.Compra;
 import com.mitienda.gestion_tienda.entities.CompraProducto;
 import com.mitienda.gestion_tienda.entities.Producto;
 import com.mitienda.gestion_tienda.entities.Usuario;
+import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.CompraRepository;
 import com.mitienda.gestion_tienda.repositories.ProductoRepository;
 import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
+import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -61,7 +63,7 @@ public class CompraService {
 
         for (CompraProductoDTO item : compraDTO.getProductos()) {
             Producto producto = productoRepository.findById(item.getProductoId())
-                .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
             CompraProducto compraProducto = new CompraProducto();
             compraProducto.setProducto(producto);
@@ -74,10 +76,10 @@ public class CompraService {
             total = total.add(compraProducto.getSubtotal());
         }
 
-        compra.setTotal(total);
-        compra = compraRepository.save(compra);
-        
-        return convertToDTO(compra);
+        compra.setTotal(total);        
+        return convertToDTO(DatabaseOperationHandler.executeOperation(() -> 
+            compraRepository.save(compra)
+        ));
     }
 
     private CompraResponseDTO convertToDTO(Compra compra) {

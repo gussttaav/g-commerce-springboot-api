@@ -12,7 +12,10 @@ import com.mitienda.gestion_tienda.dtos.CambioPasswdDTO;
 import com.mitienda.gestion_tienda.dtos.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.UsuarioDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
+import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
+import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
 import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
+import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.time.LocalDateTime;
 
@@ -25,14 +28,11 @@ public class UsuarioService {
 
     @Transactional
     public Usuario registrarUsuario(UsuarioDTO usuarioDTO){
-        if (usuarioRepository.existsByEmail(usuarioDTO.getEmail())) {
-            throw new RuntimeException("El email ya está registrado");
-        }
-
         Usuario usuario = new Usuario();
         usuario.setNombre(usuarioDTO.getNombre());
         usuario.setEmail(usuarioDTO.getEmail());
         usuario.setPassword(passwordEncoder.encode(usuarioDTO.getPassword()));
+
         if(usuarioDTO instanceof UsuarioAdminDTO){
             usuario.setRol(Usuario.Role.ADMIN);
         }else{
@@ -40,7 +40,9 @@ public class UsuarioService {
         }
         usuario.setFechaCreacion(LocalDateTime.now());
 
-        return usuarioRepository.save(usuario);
+        return DatabaseOperationHandler.executeOperation(() -> 
+            usuarioRepository.save(usuario)
+        );
     }
 
     @Transactional
@@ -48,16 +50,12 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        // If changing email, verify it's not already taken
-        if (!usuario.getEmail().equals(perfilDTO.getNuevoEmail())) {
-            if (usuarioRepository.existsByEmail(perfilDTO.getNuevoEmail())) {
-                throw new RuntimeException("El email ya está en uso");
-            }
-            usuario.setEmail(perfilDTO.getNuevoEmail());
-        }
-
+        usuario.setEmail(perfilDTO.getNuevoEmail());
         usuario.setNombre(perfilDTO.getNombre());
-        return usuarioRepository.save(usuario);
+
+        return DatabaseOperationHandler.executeOperation(() -> 
+            usuarioRepository.save(usuario)
+        );
     }
 
     @Transactional
@@ -67,7 +65,17 @@ public class UsuarioService {
 
         // Verify current password
         if (!passwordEncoder.matches(contraseñaDTO.getCurrentPassword(), usuario.getPassword())) {
-            throw new RuntimeException("La contraseña actual es incorrecta");
+            throw new InvalidPasswordException("La contraseña actual es incorrecta");
+        }
+
+        // Verify new password is not the same as current
+        if (passwordEncoder.matches(contraseñaDTO.getNewPassword(), usuario.getPassword())) {
+            throw new InvalidPasswordException("La nueva contraseña debe ser diferente a la actual");
+        }
+
+        // Verify password confirmation
+        if (!contraseñaDTO.getNewPassword().equals(contraseñaDTO.getConfirmPassword())) {
+            throw new PasswordMismatchException("La nueva contraseña y su confirmación no coinciden");
         }
 
         // Update password

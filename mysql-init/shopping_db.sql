@@ -19,7 +19,7 @@ CREATE TABLE usuario (
 -- Tabla Productos
 CREATE TABLE productos (
     id BIGINT PRIMARY KEY AUTO_INCREMENT,
-    nombre VARCHAR(200) NOT NULL,
+    nombre VARCHAR(200) UNIQUE NOT NULL,
     descripcion TEXT,
     precio DECIMAL(10, 2) NOT NULL,
     fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

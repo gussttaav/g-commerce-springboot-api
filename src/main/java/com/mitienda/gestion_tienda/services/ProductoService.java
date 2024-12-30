@@ -6,7 +6,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.mitienda.gestion_tienda.dtos.ProductoDTO;
 import com.mitienda.gestion_tienda.entities.Producto;
+import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.ProductoRepository;
+import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -30,13 +32,15 @@ public class ProductoService {
         producto.setActivo(true);
         producto.setFechaCreacion(LocalDateTime.now());
 
-        return productoRepository.save(producto);
+        return DatabaseOperationHandler.executeOperation(() -> 
+            productoRepository.save(producto)
+        );
     }
 
     @Transactional
     public void eliminarProducto(Long id) {
         Producto producto = productoRepository.findById(id)
-            .orElseThrow(() -> new RuntimeException("Producto no encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
         producto.setActivo(false);
         productoRepository.save(producto);
     }

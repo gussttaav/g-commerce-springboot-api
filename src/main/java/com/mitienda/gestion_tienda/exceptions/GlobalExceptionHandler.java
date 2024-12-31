@@ -16,7 +16,7 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
-import com.mitienda.gestion_tienda.dtos.ApiErrorDTO;
+import com.mitienda.gestion_tienda.dtos.api.ApiErrorDTO;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;

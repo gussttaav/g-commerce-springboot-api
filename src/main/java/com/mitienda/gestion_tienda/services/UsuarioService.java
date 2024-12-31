@@ -7,10 +7,12 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mitienda.gestion_tienda.dtos.ActualizacionUsuarioDTO;
-import com.mitienda.gestion_tienda.dtos.CambioPasswdDTO;
-import com.mitienda.gestion_tienda.dtos.UsuarioAdminDTO;
-import com.mitienda.gestion_tienda.dtos.UsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioMapper;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
 import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
 import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
@@ -23,11 +25,12 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class UsuarioService {
     
+    private final UsuarioMapper usuarioMapper;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
-    public Usuario registrarUsuario(UsuarioDTO usuarioDTO){
+    public UsuarioResponseDTO registrarUsuario(UsuarioDTO usuarioDTO){
         Usuario usuario = new Usuario();
         usuario.setNombre(usuarioDTO.getNombre());
         usuario.setEmail(usuarioDTO.getEmail());
@@ -40,22 +43,24 @@ public class UsuarioService {
         }
         usuario.setFechaCreacion(LocalDateTime.now());
 
-        return DatabaseOperationHandler.executeOperation(() -> 
-            usuarioRepository.save(usuario)
-        );
+        return usuarioMapper.toUsuarioResponseDTO(
+            DatabaseOperationHandler.executeOperation(() -> 
+                usuarioRepository.save(usuario)
+        ));
     }
 
     @Transactional
-    public Usuario actualizarPerfil(String email, ActualizacionUsuarioDTO perfilDTO) {
+    public UsuarioResponseDTO actualizarPerfil(String email, ActualizacionUsuarioDTO perfilDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         usuario.setEmail(perfilDTO.getNuevoEmail());
         usuario.setNombre(perfilDTO.getNombre());
 
-        return DatabaseOperationHandler.executeOperation(() -> 
-            usuarioRepository.save(usuario)
-        );
+        return usuarioMapper.toUsuarioResponseDTO(
+            DatabaseOperationHandler.executeOperation(() -> 
+                usuarioRepository.save(usuario)
+        ));
     }
 
     @Transactional

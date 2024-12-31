@@ -1,4 +1,4 @@
-package com.mitienda.gestion_tienda.dtos;
+package com.mitienda.gestion_tienda.dtos.producto;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;

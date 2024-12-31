@@ -1,4 +1,4 @@
-package com.mitienda.gestion_tienda.dtos;
+package com.mitienda.gestion_tienda.dtos.usuario;
 
 import com.mitienda.gestion_tienda.entities.Usuario;
 

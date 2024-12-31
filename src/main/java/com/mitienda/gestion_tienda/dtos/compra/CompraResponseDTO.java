@@ -1,4 +1,4 @@
-package com.mitienda.gestion_tienda.dtos;
+package com.mitienda.gestion_tienda.dtos.compra;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;

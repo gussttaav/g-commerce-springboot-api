@@ -6,10 +6,10 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.mitienda.gestion_tienda.dtos.CompraDTO;
-import com.mitienda.gestion_tienda.dtos.CompraProductoDTO;
-import com.mitienda.gestion_tienda.dtos.CompraProductoResponseDTO;
-import com.mitienda.gestion_tienda.dtos.CompraResponseDTO;
+import com.mitienda.gestion_tienda.dtos.compra.CompraDTO;
+import com.mitienda.gestion_tienda.dtos.compra.CompraMapper;
+import com.mitienda.gestion_tienda.dtos.compra.CompraProductoDTO;
+import com.mitienda.gestion_tienda.dtos.compra.CompraResponseDTO;
 import com.mitienda.gestion_tienda.entities.Compra;
 import com.mitienda.gestion_tienda.entities.CompraProducto;
 import com.mitienda.gestion_tienda.entities.Producto;
@@ -28,6 +28,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class CompraService {
+    private final CompraMapper compraMapper;
     private final CompraRepository compraRepository;
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
@@ -45,7 +46,7 @@ public class CompraService {
         }
         
         return compras.stream()
-            .map(this::convertToDTO)  // Using your existing conversion method
+            .map(compraMapper::toCompraResponseDTO)
             .collect(Collectors.toList());
     }
 
@@ -77,32 +78,9 @@ public class CompraService {
         }
 
         compra.setTotal(total);        
-        return convertToDTO(DatabaseOperationHandler.executeOperation(() -> 
-            compraRepository.save(compra)
+        return compraMapper.toCompraResponseDTO(
+            DatabaseOperationHandler.executeOperation(() -> 
+                compraRepository.save(compra)
         ));
-    }
-
-    private CompraResponseDTO convertToDTO(Compra compra) {
-        CompraResponseDTO dto = new CompraResponseDTO();
-        dto.setId(compra.getId());
-        dto.setUsuarioNombre(compra.getUsuario().getNombre());
-        dto.setFecha(compra.getFecha());
-        dto.setTotal(compra.getTotal());
-        
-        dto.setProductos(compra.getProductos().stream()
-            .map(this::convertToDTO)
-            .collect(Collectors.toList()));
-            
-        return dto;
-    }
-
-    private CompraProductoResponseDTO convertToDTO(CompraProducto compraProducto) {
-        CompraProductoResponseDTO dto = new CompraProductoResponseDTO();
-        dto.setId(compraProducto.getId());
-        dto.setProductoNombre(compraProducto.getProducto().getNombre());
-        dto.setPrecioUnitario(compraProducto.getProducto().getPrecio());
-        dto.setCantidad(compraProducto.getCantidad());
-        dto.setSubtotal(compraProducto.getSubtotal());
-        return dto;
     }
 }

@@ -1,4 +1,4 @@
-package com.mitienda.gestion_tienda.dtos;
+package com.mitienda.gestion_tienda.dtos.compra;
 
 import jakarta.validation.constraints.NotEmpty;
 import lombok.Data;

@@ -151,13 +151,14 @@ src/
 ├── main/
 │   ├── java/
 │   │   └── com/example/tiendaspring/
-│   │       ├── config/
-│   │       ├── controller/
-│   │       ├── dto/
-│   │       ├── entity/
-│   │       ├── repository/
-│   │       ├── service/
-│   │       └── security/
+│   │       ├── configs/
+│   │       ├── controllers/
+│   │       ├── dtos/
+│   │       ├── entities/
+│   │       ├── exceptions/
+│   │       ├── repositories/
+│   │       ├── services/
+│   │       └── utilities/
 │   └── resources/
 │       └── application.yml
 ├── docker-compose.yml

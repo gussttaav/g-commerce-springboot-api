@@ -1,0 +1,357 @@
+package com.mitienda.gestion_tienda.controllers;
+
+import static org.hamcrest.Matchers.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.Mockito.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import java.time.LocalDateTime;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.context.annotation.Import;
+import org.springframework.http.MediaType;
+import org.springframework.security.core.userdetails.User;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mitienda.gestion_tienda.configs.SecurityConfig;
+import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
+import com.mitienda.gestion_tienda.entities.Usuario;
+import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
+import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
+import com.mitienda.gestion_tienda.services.UsuarioDetallesService;
+import com.mitienda.gestion_tienda.services.UsuarioService;
+
+@WebMvcTest(UsuarioController.class)
+@Import(SecurityConfig.class)
+@AutoConfigureMockMvc
+class UsuarioControllerTest {
+    
+    @Autowired
+    private MockMvc mockMvc;
+    
+    @MockitoBean
+    private UsuarioService usuarioService;
+
+    @MockitoBean
+    private UsuarioDetallesService userDetailsService;
+    
+    @Autowired
+    private ObjectMapper objectMapper;
+
+    private static final String BASE_URL = "/api/usuarios";
+    private static final String TEST_USER_EMAIL = "test@example.com";
+    private static final String TEST_ADMIN_EMAIL = "admin@example.com";
+
+    private UsuarioDTO buildValidUsuarioDTO() {
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setNombre("Test User");
+        dto.setEmail(TEST_USER_EMAIL);
+        dto.setPassword("Password123!");
+        return dto;
+    }
+
+    private UsuarioAdminDTO buildValidUsuarioAdminDTO() {
+        UsuarioAdminDTO dto = new UsuarioAdminDTO();
+        dto.setNombre("Admin User");
+        dto.setEmail(TEST_ADMIN_EMAIL);
+        dto.setPassword("AdminPass123!");
+        dto.setRol(Usuario.Role.ADMIN);
+        return dto;
+    }
+
+    // /api/usuarios/registro endpoint tests
+    @Nested
+    @DisplayName("POST /registro")
+    class RegistroUsuarioTests {
+        
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should register user successfully with valid data")
+        void registrarUsuario_ValidData_Success() throws Exception {
+            // Arrange
+            UsuarioDTO requestDto = buildValidUsuarioDTO();
+            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
+                requestDto.getNombre(), 
+                requestDto.getEmail(), 
+                Usuario.Role.USER,
+                LocalDateTime.now());
+            
+            when(usuarioService.registrarUsuario(any(UsuarioDTO.class)))
+                .thenReturn(responseDto);
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/registro")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.getEmail()))
+                    .andExpect(jsonPath("$.rol").value("USER"))
+                    .andExpect(jsonPath("$.fechaCreacion").exists());
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should return 400 when email is invalid")
+        void registrarUsuario_InvalidEmail_BadRequest() throws Exception {
+            // Arrange
+            UsuarioDTO requestDto = buildValidUsuarioDTO();
+            requestDto.setEmail("invalid-email");
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/registro")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details[0]").value(containsString("email")));
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should return 400 when required fields are missing")
+        void registrarUsuario_MissingRequiredFields_BadRequest() throws Exception {
+            // Arrange
+            UsuarioDTO requestDto = new UsuarioDTO();
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/registro")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details").isArray())
+                    .andExpect(jsonPath("$.details", hasSize(greaterThan(0))));
+        }
+    }
+
+    // /api/usuarios/admin/registro endpoint tests
+    @Nested
+    @DisplayName("POST /admin/registro")
+    class RegistroAdminTests {
+        
+        @Test
+        @DisplayName("Should register admin successfully with valid data when authenticated as ADMIN")
+        @WithMockUser(roles = "ADMIN")
+        void registrarAdmin_ValidData_AuthenticatedAsAdmin_Success() throws Exception {
+            // Arrange
+            UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
+            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
+                requestDto.getNombre(), 
+                requestDto.getEmail(), 
+                requestDto.getRol(),
+                LocalDateTime.now());
+            
+            when(usuarioService.registrarUsuario(any(UsuarioAdminDTO.class)))
+                .thenReturn(responseDto);
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/admin/registro")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.getEmail()))
+                    .andExpect(jsonPath("$.rol").value("ADMIN"));
+        }
+
+        @Test
+        @DisplayName("Should return 403 when not authenticated as ADMIN")
+        @WithMockUser(roles = "USER")
+        void registrarAdmin_ValidData_NotAdmin_Forbidden() throws Exception {
+            // Arrange
+            UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/admin/registro")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isForbidden());
+        }
+    }
+
+    // /api/usuarios/perfil endpoint tests
+    @Nested
+    @DisplayName("PUT /api/usuarios/perfil")
+    class ActualizarPerfilTests {
+        
+        @Test
+        @DisplayName("Should update profile successfully when authenticated")
+        @WithMockUser(username = TEST_USER_EMAIL)
+        void actualizarPerfil_ValidData_Authenticated_Success() throws Exception {
+            // Arrange
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                "Updated Name", "updated@example.com");
+            
+            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
+                requestDto.getNombre(), 
+                requestDto.getNuevoEmail(), 
+                Usuario.Role.USER,
+                LocalDateTime.now());
+            
+            when(usuarioService.actualizarPerfil(anyString(), any(ActualizacionUsuarioDTO.class)))
+                .thenReturn(responseDto);
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/perfil")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.getNuevoEmail()));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when update data is invalid")
+        @WithMockUser
+        void actualizarPerfil_InvalidData_BadRequest() throws Exception {
+            // Arrange
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                "", "invalid-email");
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/perfil")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details", hasSize(2)));
+        }
+
+        @Test
+        @DisplayName("Should return 401 when not authenticated")
+        void actualizarPerfil_NotAuthenticated_Unauthorized() throws Exception {
+            // Arrange
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                "New Name", "new@example.com");
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/perfil")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    // /api/usuarios/password endpoint tests
+    @Nested
+    @DisplayName("PUT /api/usuarios/password")
+    class CambiarContraseñaTests {
+        
+        @Test
+        @DisplayName("Should change password successfully when authenticated")
+        @WithMockUser(username = TEST_USER_EMAIL)
+        void cambiarContraseña_ValidData_Authenticated_Success() throws Exception {
+            // Arrange
+            CambioPasswdDTO requestDto = new CambioPasswdDTO();
+            requestDto.setCurrentPassword("CurrentPass123!");
+            requestDto.setNewPassword("NewPass123!");
+            requestDto.setConfirmPassword("NewPass123!");
+            
+            doNothing().when(usuarioService)
+                .cambiarContraseña(anyString(), any(CambioPasswdDTO.class));
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("Should return 400 when passwords don't match")
+        @WithMockUser
+        void cambiarContraseña_PasswordMismatch_BadRequest() throws Exception {
+            // Arrange
+            CambioPasswdDTO requestDto = new CambioPasswdDTO();
+            requestDto.setCurrentPassword("CurrentPass123!");
+            requestDto.setNewPassword("NewPass123!");
+            requestDto.setConfirmPassword("DifferentPass123!");
+            
+            doThrow(new PasswordMismatchException("Las contraseñas no coinciden"))
+                .when(usuarioService)
+                .cambiarContraseña(anyString(), any(CambioPasswdDTO.class));
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("Las contraseñas no coinciden"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when current password is incorrect")
+        @WithMockUser
+        void cambiarContraseña_IncorrectCurrentPassword_BadRequest() throws Exception {
+            // Arrange
+            CambioPasswdDTO requestDto = new CambioPasswdDTO();
+            requestDto.setCurrentPassword("WrongPass123!");
+            requestDto.setNewPassword("NewPass123!");
+            requestDto.setConfirmPassword("NewPass123!");
+            
+            doThrow(new InvalidPasswordException("La contraseña actual es incorrecta"))
+                .when(usuarioService)
+                .cambiarContraseña(anyString(), any(CambioPasswdDTO.class));
+
+            // Act & Assert
+                mockMvc.perform(put(BASE_URL + "/password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.message").value("La contraseña actual es incorrecta"));
+        }
+
+        @Test
+        @DisplayName("Should return 401 when not authenticated")
+        void cambiarContraseña_NotAuthenticated_Unauthorized() throws Exception {
+            // Arrange
+            CambioPasswdDTO requestDto = new CambioPasswdDTO();
+            requestDto.setCurrentPassword("CurrentPass123!");
+            requestDto.setNewPassword("NewPass123!");
+            requestDto.setConfirmPassword("NewPass123!");
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/password")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(requestDto)))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    private UserDetails mockUser(String username, String... roles) {
+        return User.builder()
+                .username(username)
+                .password("password")
+                .roles(roles)
+                .build();
+    }
+
+    @BeforeEach
+    void setup() {
+        // Configure UserDetailsService to return the mock users
+        when(userDetailsService.loadUserByUsername(TEST_USER_EMAIL))
+            .thenReturn(mockUser(TEST_USER_EMAIL, "USER"));
+        when(userDetailsService.loadUserByUsername(TEST_ADMIN_EMAIL))
+            .thenReturn(mockUser(TEST_ADMIN_EMAIL, "ADMIN"));
+    }
+}

@@ -6,6 +6,7 @@ import lombok.RequiredArgsConstructor;
 
 import java.util.List;
 
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
@@ -15,6 +16,7 @@ import com.mitienda.gestion_tienda.services.ProductoService;
 @RestController
 @RequestMapping("/api/productos")
 @RequiredArgsConstructor
+@Validated
 public class ProductoController {
 
     private final ProductoService productoService;

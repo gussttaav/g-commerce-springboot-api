@@ -19,6 +19,12 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Purchase history tracking
   - Role-specific purchase restrictions
 
+- **Comprehensive Testing**
+  - Unit tests for all layers
+  - Security tests
+  - Mock MVC tests for controllers
+  - In-memory H2 database for testing
+
 ## 🛠️ Technologies
 
 - Java 17
@@ -26,6 +32,9 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - Spring Security
 - Spring Data JPA
 - MySQL 9
+- H2 Database (for testing)
+- JUnit 5
+- Mockito
 - Docker & Docker Compose
 - Maven
 - Lombok
@@ -70,6 +79,29 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    ```
 
 The application will be available at `http://localhost:8080`
+
+## 🧪 Testing
+
+### Test Configuration
+The project uses H2 in-memory database for testing.
+
+### Test Categories
+- **Controller Tests**: Using MockMvc to test HTTP endpoints
+- **Service Tests**: Unit tests for business logic
+- **Repository Tests**: Database operation tests
+- **Security Tests**: Authentication and authorization tests
+
+### Running Tests
+```bash
+# Run all tests
+mvn test
+
+# Run specific test class
+mvn test -Dtest=UsuarioControllerTest
+
+# Run tests with coverage report
+mvn verify
+```
 
 ## 🔑 API Endpoints
 
@@ -150,7 +182,7 @@ Content-Type: application/json
 src/
 ├── main/
 │   ├── java/
-│   │   └── com/example/tiendaspring/
+│   │   └── com/mitienda/gestion_tienda/
 │   │       ├── configs/
 │   │       ├── controllers/
 │   │       ├── dtos/
@@ -161,6 +193,16 @@ src/
 │   │       └── utilities/
 │   └── resources/
 │       └── application.yml
+├── test/
+│   ├── java/
+│   │   └── com/mitienda/gestion_tienda/
+│   │       ├── controllers/
+│   │       ├── repositories/
+│   │       ├── services/
+│   │       ├── security/
+│   │       └── integration/
+│   └── resources/
+│       └── application-test.properties
 ├── docker-compose.yml
 ├── mysql-init/
 │   └── shopping_db.sql

@@ -1,0 +1,159 @@
+package com.mitienda.gestion_tienda.services;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+
+import java.time.LocalDateTime;
+import java.util.Optional;
+
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+
+import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioMapper;
+import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
+import com.mitienda.gestion_tienda.entities.Usuario;
+import com.mitienda.gestion_tienda.exceptions.ApiException;
+import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
+
+@ExtendWith(MockitoExtension.class)
+class UsuarioServiceTest {
+    @Mock
+    private UsuarioRepository usuarioRepository;
+    
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private UsuarioMapper usuarioMapper;
+    
+    @InjectMocks
+    private UsuarioService usuarioService;
+
+    private Usuario createTestUsuario() {
+        Usuario usuario = new Usuario();
+        usuario.setId(1L);
+        usuario.setNombre("Test User");
+        usuario.setEmail("test@example.com");
+        usuario.setPassword("encodedPassword");
+        usuario.setRol(Usuario.Role.USER);
+        usuario.setFechaCreacion(LocalDateTime.now());
+        return usuario;
+    }
+    
+    private UsuarioDTO createTestUsuarioDTO() {
+        UsuarioDTO dto = new UsuarioDTO();
+        dto.setNombre("Test User");
+        dto.setEmail("test@example.com");
+        dto.setPassword("password123");
+        return dto;
+    }
+    
+    @Test
+    void registrarUsuario_ValidData_Success() {
+        // Arrange
+        UsuarioDTO usuarioDTO = createTestUsuarioDTO();
+        Usuario savedUsuario = createTestUsuario();
+        UsuarioResponseDTO expectedResponse = new UsuarioResponseDTO(
+            1L, usuarioDTO.getNombre(), usuarioDTO.getEmail(), 
+            Usuario.Role.USER, savedUsuario.getFechaCreacion());
+        
+        when(passwordEncoder.encode(usuarioDTO.getPassword())).thenReturn("encodedPassword");
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(savedUsuario);
+        when(usuarioMapper.toUsuarioResponseDTO(savedUsuario)).thenReturn(expectedResponse);
+        
+        // Act
+        UsuarioResponseDTO result = usuarioService.registrarUsuario(usuarioDTO);
+        
+        // Assert
+        assertNotNull(result);
+        assertEquals(savedUsuario.getId(), result.getId());
+        assertEquals(savedUsuario.getNombre(), result.getNombre());
+        assertEquals(savedUsuario.getEmail(), result.getEmail());
+        assertEquals(Usuario.Role.USER, result.getRol());
+        
+        verify(passwordEncoder).encode(usuarioDTO.getPassword());
+        verify(usuarioRepository).save(any(Usuario.class));
+    }
+    
+    @Test
+    void registrarUsuario_ExistingEmail_ThrowsException() {
+        // Arrange
+        UsuarioDTO usuarioDTO = createTestUsuarioDTO();
+        usuarioDTO.setEmail("existing@example.com");
+        
+        when(passwordEncoder.encode(usuarioDTO.getPassword())).thenReturn("encodedPassword");
+        when(usuarioRepository.save(any(Usuario.class)))
+            .thenThrow(new DataIntegrityViolationException("Duplicate email"));
+        
+        assertThrows(ApiException.class, () -> 
+            usuarioService.registrarUsuario(usuarioDTO));
+        
+        verify(passwordEncoder).encode(usuarioDTO.getPassword());
+        verify(usuarioRepository).save(any(Usuario.class));
+    }
+    
+    @Test
+    void actualizarPerfil_ValidData_Success() {
+        // Arrange
+        Usuario existingUser = createTestUsuario();
+        String userEmail = existingUser.getEmail();
+        ActualizacionUsuarioDTO perfilDTO = new ActualizacionUsuarioDTO(
+            "Updated Name", "new@example.com");
+        Usuario updatedUser = createTestUsuario();
+        updatedUser.setNombre(perfilDTO.getNombre());
+        updatedUser.setEmail(perfilDTO.getNuevoEmail());
+        UsuarioResponseDTO expectedResponse = UsuarioResponseDTO.builder()
+            .nombre(perfilDTO.getNombre())
+            .email(perfilDTO.getNuevoEmail())
+            .build();
+        
+        when(usuarioRepository.findByEmail(userEmail)).thenReturn(Optional.of(existingUser));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(updatedUser);
+        when(usuarioMapper.toUsuarioResponseDTO(updatedUser)).thenReturn(expectedResponse);
+        
+        // Act
+        UsuarioResponseDTO result = usuarioService.actualizarPerfil(userEmail, perfilDTO);
+        
+        // Assert
+        assertNotNull(result);
+        assertEquals(perfilDTO.getNombre(), result.getNombre());
+        assertEquals(perfilDTO.getNuevoEmail(), result.getEmail());
+    }
+    
+    @Test
+    void cambiarContraseña_ValidData_Success() {
+        // Arrange
+        String userEmail = "test@example.com";
+        CambioPasswdDTO contraseñaDTO = new CambioPasswdDTO();
+        contraseñaDTO.setCurrentPassword("oldPassword");
+        contraseñaDTO.setNewPassword("newPassword");
+        contraseñaDTO.setConfirmPassword("newPassword");
+        
+        Usuario usuario = new Usuario();
+        usuario.setPassword("encodedOldPassword");
+        
+        when(usuarioRepository.findByEmail(userEmail)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches(contraseñaDTO.getCurrentPassword(), usuario.getPassword())).thenReturn(true);
+        when(passwordEncoder.encode(contraseñaDTO.getNewPassword())).thenReturn("encodedNewPassword");
+        
+        // Act & Assert
+        assertDoesNotThrow(() -> 
+            usuarioService.cambiarContraseña(userEmail, contraseñaDTO));
+        
+        verify(usuarioRepository).save(usuario);
+        assertEquals("encodedNewPassword", usuario.getPassword());
+    }
+}

@@ -90,6 +90,7 @@ The project uses H2 in-memory database for testing.
 - **Service Tests**: Unit tests for business logic
 - **Repository Tests**: Database operation tests
 - **Security Tests**: Authentication and authorization tests
+- **Integration Tests**: End-to-end functionality tests
 
 ### Running Tests
 ```bash

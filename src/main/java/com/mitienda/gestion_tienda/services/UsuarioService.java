@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioMapper;
@@ -16,6 +17,7 @@ import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
 import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
 import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
+import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
 import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
@@ -47,6 +49,19 @@ public class UsuarioService {
             DatabaseOperationHandler.executeOperation(() -> 
                 usuarioRepository.save(usuario)
         ));
+    }
+
+    public UsuarioResponseDTO login(LoginDTO loginDTO) {
+        Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "No existe ningún usuario con el email proporcionado"
+            ));
+
+        if (!passwordEncoder.matches(loginDTO.getPassword(), usuario.getPassword())) {
+            throw new InvalidPasswordException("Contraseña incorrecta.");
+        }
+
+        return usuarioMapper.toUsuarioResponseDTO(usuario);
     }
 
     @Transactional

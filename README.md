@@ -109,6 +109,7 @@ mvn verify
 ### User Management
 ```
 POST /api/usuarios/registro          # Register a new user
+POST /api/usuarios/login             # Login a user
 POST /api/usuarios/admin/registro    # Register a new admin (requires ADMIN role)
 PUT  /api/usuarios/perfil           # Update user profile
 PUT  /api/usuarios/password         # Change password

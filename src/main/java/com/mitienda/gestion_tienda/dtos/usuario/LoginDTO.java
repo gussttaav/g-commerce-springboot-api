@@ -2,9 +2,11 @@ package com.mitienda.gestion_tienda.dtos.usuario;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
+@AllArgsConstructor
 public class LoginDTO {
     @NotBlank(message = "El email es obligatorio")
     @Email(message = "El email debe ser válido")

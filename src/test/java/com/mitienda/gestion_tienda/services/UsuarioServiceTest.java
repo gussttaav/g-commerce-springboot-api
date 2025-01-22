@@ -26,7 +26,10 @@ import com.mitienda.gestion_tienda.dtos.usuario.UsuarioMapper;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
 import com.mitienda.gestion_tienda.exceptions.ApiException;
+import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
+import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
+import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
@@ -155,5 +158,60 @@ class UsuarioServiceTest {
         
         verify(usuarioRepository).save(usuario);
         assertEquals("encodedNewPassword", usuario.getPassword());
+    }
+
+    @Test
+    void login_ValidCredentials_Success() {
+        // Arrange
+        String email = "test@example.com";
+        String password = "password123";
+        Usuario usuario = createTestUsuario();
+        LoginDTO loginDTO = new LoginDTO(email, password);
+        UsuarioResponseDTO expectedResponse = new UsuarioResponseDTO(
+            usuario.getId(), usuario.getNombre(), usuario.getEmail(), 
+            usuario.getRol(), usuario.getFechaCreacion()
+        );
+
+        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches(password, usuario.getPassword())).thenReturn(true);
+        when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(expectedResponse);
+
+        // Act
+        UsuarioResponseDTO result = usuarioService.login(loginDTO);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(expectedResponse.getId(), result.getId());
+        assertEquals(expectedResponse.getNombre(), result.getNombre());
+        assertEquals(expectedResponse.getEmail(), result.getEmail());
+        assertEquals(expectedResponse.getRol(), result.getRol());
+    }
+
+    @Test
+    void login_InvalidPassword_ThrowsException() {
+        // Arrange
+        String email = "test@example.com";
+        String password = "wrongPassword";
+        Usuario usuario = createTestUsuario();
+        LoginDTO loginDTO = new LoginDTO(email, password);
+
+        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
+        when(passwordEncoder.matches(password, usuario.getPassword())).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(InvalidPasswordException.class, () -> usuarioService.login(loginDTO));
+    }
+
+    @Test
+    void login_NonExistentEmail_ThrowsException() {
+        // Arrange
+        String email = "nonexistent@example.com";
+        String password = "password123";
+        LoginDTO loginDTO = new LoginDTO(email, password);
+
+        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> usuarioService.login(loginDTO));
     }
 }

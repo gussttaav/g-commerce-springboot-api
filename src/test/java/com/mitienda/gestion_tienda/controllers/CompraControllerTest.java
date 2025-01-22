@@ -18,7 +18,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -31,7 +30,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mitienda.gestion_tienda.configs.SecurityConfig;
 import com.mitienda.gestion_tienda.dtos.compra.CompraDTO;
 import com.mitienda.gestion_tienda.dtos.compra.CompraProductoDTO;
 import com.mitienda.gestion_tienda.dtos.compra.CompraProductoResponseDTO;
@@ -41,8 +39,7 @@ import com.mitienda.gestion_tienda.services.CompraService;
 import com.mitienda.gestion_tienda.services.UsuarioDetallesService;
 
 @WebMvcTest(CompraController.class)
-@AutoConfigureMockMvc
-@Import(SecurityConfig.class)
+@Import(TestSecurityConfig.class)
 class CompraControllerTest {
     
     @Autowired

@@ -17,6 +17,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
@@ -204,7 +205,59 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(cambioDTO)))
-                .andExpect(status().isBadRequest())
+                .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("La contraseña actual es incorrecta"));
+    }
+
+    @Test
+    void login_CredencialesCorrectas_RetornaUsuario() throws Exception {
+        // Arrange - Create user first
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        // Register user first
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk());
+
+        // Arrange login request
+        LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
+
+        // Act & Assert
+        mockMvc.perform(post(BASE_URL + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginDTO)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
+                .andExpect(jsonPath("$.nombre").value("Test User"))
+                .andExpect(jsonPath("$.rol").value("USER"));
+    }
+
+    @Test
+    void login_ContraseñaIncorrecta_RetornaBadRequest() throws Exception {
+        // Arrange - Create user first
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        // Register user first
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk());
+
+        // Arrange login request with wrong password
+        LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, "wrongpassword");
+
+        // Act & Assert
+        mockMvc.perform(post(BASE_URL + "/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(loginDTO)))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
     }
 }

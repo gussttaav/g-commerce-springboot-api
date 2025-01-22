@@ -13,5 +13,56 @@
     "name": "admin.default.nombre",
     "type": "java.lang.String",
     "description": "Admin default name"
+  },
+  {
+    "name": "cors.allowed-origins",
+    "type": "java.util.List<java.lang.String>",
+    "description": "List of origins allowed to access the API (e.g., http://localhost:3000).",
+    "defaultValue": []
+  },
+  {
+    "name": "cors.allowed-methods",
+    "type": "java.util.List<java.lang.String>",
+    "description": "List of HTTP methods allowed for CORS requests (e.g., GET, POST, PUT, DELETE, OPTIONS).",
+    "defaultValue": []
+  },
+  {
+    "name": "cors.allowed-headers",
+    "type": "java.util.List<java.lang.String>",
+    "description": "List of HTTP headers allowed in CORS requests (e.g., Authorization, Content-Type).",
+    "defaultValue": []
+  },
+  {
+    "name": "cors.test-origin",
+    "type": "java.lang.String",
+    "description": "Single origin URL used for testing CORS configuration. Only used in test environment.",
+    "defaultValue": "http://localhost:3000"
+  }
+],
+"hints": [
+  {
+    "name": "cors.allowed-methods",
+    "values": [
+      {
+        "value": "GET",
+        "description": "Allow GET requests"
+      },
+      {
+        "value": "POST",
+        "description": "Allow POST requests"
+      },
+      {
+        "value": "PUT",
+        "description": "Allow PUT requests"
+      },
+      {
+        "value": "DELETE",
+        "description": "Allow DELETE requests"
+      },
+      {
+        "value": "OPTIONS",
+        "description": "Allow OPTIONS requests (required for CORS preflight)"
+      }
+    ]
   }
 ]}

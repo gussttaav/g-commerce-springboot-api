@@ -14,7 +14,6 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -26,21 +25,21 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mitienda.gestion_tienda.configs.SecurityConfig;
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
 import com.mitienda.gestion_tienda.entities.Usuario;
 import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
 import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
+import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.services.UsuarioDetallesService;
 import com.mitienda.gestion_tienda.services.UsuarioService;
 
 @WebMvcTest(UsuarioController.class)
-@Import(SecurityConfig.class)
-@AutoConfigureMockMvc
+@Import(TestSecurityConfig.class)
 class UsuarioControllerTest {
     
     @Autowired
@@ -317,7 +316,7 @@ class UsuarioControllerTest {
                 mockMvc.perform(put(BASE_URL + "/password")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
-                    .andExpect(status().isBadRequest())
+                    .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").value("La contraseña actual es incorrecta"));
         }
 
@@ -335,6 +334,106 @@ class UsuarioControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                     .andExpect(status().isUnauthorized());
+        }
+    }
+
+    // /api/usuarios/login endpoint tests
+    @Nested
+    @DisplayName("POST /login")
+    class LoginTests {
+
+        @Test
+        @DisplayName("Should login successfully with valid credentials")
+        @WithAnonymousUser
+        void login_ValidCredentials_Success() throws Exception {
+            // Arrange
+            LoginDTO loginDTO = new LoginDTO(TEST_USER_EMAIL, "ValidPassword123!");
+            UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L,
+                "Test User",
+                TEST_USER_EMAIL,
+                Usuario.Role.USER,
+                LocalDateTime.now());
+
+            when(usuarioService.login(any(LoginDTO.class))).thenReturn(responseDTO);
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginDTO)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.nombre").value("Test User"))
+                    .andExpect(jsonPath("$.email").value(TEST_USER_EMAIL))
+                    .andExpect(jsonPath("$.rol").value("USER"))
+                    .andExpect(jsonPath("$.fechaCreacion").exists());
+        }
+
+        @Test
+        @DisplayName("Should return 401 when email does not exist")
+        @WithAnonymousUser
+        void login_EmailNotFound_Unauthorized() throws Exception {
+            // Arrange
+            LoginDTO loginDTO = new LoginDTO("nonexistent@example.com", "ValidPassword123!");
+            when(usuarioService.login(any(LoginDTO.class)))
+                .thenThrow(new ResourceNotFoundException("No existe ningún usuario con el email proporcionado"));
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginDTO)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("No existe ningún usuario con el email proporcionado"));
+        }
+
+        @Test
+        @DisplayName("Should return 401 when password is incorrect")
+        @WithAnonymousUser
+        void login_InvalidPassword_Unauthorized() throws Exception {
+            // Arrange
+            LoginDTO loginDTO = new LoginDTO(TEST_USER_EMAIL, "WrongPassword123!");
+            when(usuarioService.login(any(LoginDTO.class)))
+                .thenThrow(new InvalidPasswordException("Contraseña incorrecta."));
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginDTO)))
+                    .andExpect(status().isUnauthorized())
+                    .andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when email is invalid")
+        @WithAnonymousUser
+        void login_InvalidEmail_BadRequest() throws Exception {
+            // Arrange
+            LoginDTO loginDTO = new LoginDTO("invalid-email", "ValidPassword123!");
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginDTO)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details[0]").value(containsString("email")));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when required fields are missing")
+        @WithAnonymousUser
+        void login_MissingFields_BadRequest() throws Exception {
+            // Arrange
+            LoginDTO loginDTO = new LoginDTO("", "");
+
+            // Act & Assert
+            mockMvc.perform(post(BASE_URL + "/login")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(loginDTO)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details", hasSize(2)))
+                    .andExpect(jsonPath("$.details[0]").value(containsString("password")))
+                    .andExpect(jsonPath("$.details[1]").value(containsString("email")));
         }
     }
 

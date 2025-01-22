@@ -30,8 +30,6 @@ public class UsuarioController {
 
     @PostMapping("/login")
     public UsuarioResponseDTO login(@Valid @RequestBody LoginDTO loginDTO) {
-        log.info("Login request received!");
-        log.info("Body request: " + loginDTO);
         return usuarioService.login(loginDTO);
     }
 

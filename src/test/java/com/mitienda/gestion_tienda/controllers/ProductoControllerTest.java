@@ -31,7 +31,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.mitienda.gestion_tienda.configs.SecurityConfig;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoResponseDTO;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
@@ -39,7 +38,7 @@ import com.mitienda.gestion_tienda.services.ProductoService;
 import com.mitienda.gestion_tienda.services.UsuarioDetallesService;
 
 @WebMvcTest(ProductoController.class)
-@Import(SecurityConfig.class)
+@Import(TestSecurityConfig.class)
 @DisplayName("Producto Controller Tests")
 class ProductoControllerTest {
 

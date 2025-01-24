@@ -18,6 +18,13 @@ import com.mitienda.gestion_tienda.services.UsuarioDetallesService;
 
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Security configuration class that sets up Spring Security for the application.
+ * This class defines security rules, authentication, and authorization settings.
+ *
+ * @author Gustavo
+ * @version 1.0
+ */
 @Configuration
 @EnableMethodSecurity
 @RequiredArgsConstructor
@@ -26,12 +33,20 @@ public class SecurityConfig {
     private final CorsProperties corsProperties;
     private final UsuarioDetallesService customUserDetailsService;
 
+    /**
+     * Configures the security filter chain with specific security rules and permissions.
+     *
+     * @param http the HttpSecurity to configure
+     * @return the configured SecurityFilterChain
+     * @throws Exception if there's an error during configuration
+     */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
+                .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/favicon.ico").permitAll()
                 .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
                 .requestMatchers("/api/usuarios/**").permitAll()
@@ -47,11 +62,24 @@ public class SecurityConfig {
         return http.build();
     }
 
+    /**
+     * Creates a password encoder bean for secure password hashing.
+     *
+     * @return BCryptPasswordEncoder instance
+     */
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Configures the authentication manager with custom user details service and password encoder.
+     *
+     * @param http the HttpSecurity to configure
+     * @param passwordEncoder the password encoder to use
+     * @return configured AuthenticationManager
+     * @throws Exception if there's an error during configuration
+     */
     @Bean
     AuthenticationManager authManager(HttpSecurity http, PasswordEncoder passwordEncoder) throws Exception {
         AuthenticationManagerBuilder authenticationManagerBuilder = 
@@ -64,6 +92,14 @@ public class SecurityConfig {
         return authenticationManagerBuilder.build();
     }
 
+    /**
+     * Configures CORS (Cross-Origin Resource Sharing) settings for the application.
+     * 
+     * The configuration is obtained from the CorsProperties bean, that read the 
+     * settings from the application.properites file
+     *
+     * @return configured CorsConfigurationSource
+     */
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();

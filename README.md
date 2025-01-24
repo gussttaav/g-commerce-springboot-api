@@ -19,6 +19,11 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Purchase history tracking
   - Role-specific purchase restrictions
 
+- **Comprehensive Documentation**
+  - Javadoc for code-level documentation
+  - OpenAPI (Swagger) for interactive API documentation
+  - Detailed endpoint descriptions and schemas
+
 - **Comprehensive Testing**
   - Unit tests for all layers
   - Security tests
@@ -28,8 +33,9 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 ## 🛠️ Technologies
 
 - Java 17
-- Spring Boot 3.2.1
+- Spring Boot 3.4.1
 - Spring Security
+- OpenAPI/Swagger
 - Spring Data JPA
 - MySQL 9
 - H2 Database (for testing)
@@ -65,6 +71,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    ADMIN_EMAIL=admin@example.com
    ADMIN_PASSWORD=your_admin_password
    ADMIN_NAME=Administrator
+   CORS_ORIGINS=http://localhost:3000,other_allowed_origins
    ```
 
 3. Start the MySQL database using Docker Compose:
@@ -79,6 +86,30 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    ```
 
 The application will be available at `http://localhost:8080`
+
+## 📚 API Documentation
+
+### OpenAPI (Swagger) Documentation
+
+The project uses SpringDoc OpenAPI for interactive API documentation:
+
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
+  - Interactive documentation of all API endpoints
+  - Ability to test endpoints directly from the browser
+  - Detailed request and response schemas
+
+- **API Docs JSON**: `http://localhost:8080/v3/api-docs`
+  - Machine-readable OpenAPI specification
+  - Can be used for client code generation
+
+### Javadoc
+
+Comprehensive Javadoc documentation is available for all classes.
+
+To generate Javadoc:
+```bash
+mvn javadoc:javadoc
+```
 
 ## 🧪 Testing
 
@@ -134,6 +165,7 @@ GET  /api/compras/listar             # List user purchases
 - Passwords are encrypted using BCrypt
 - Role-based access control for different endpoints
 - Input validation for all endpoints
+- Comprehensive security documentation in OpenAPI spec
 
 ## 📝 Example Requests
 

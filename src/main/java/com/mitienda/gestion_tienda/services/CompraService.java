@@ -25,6 +25,13 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Service class that handles purchase-related operations including
+ * creating new purchases and listing purchase history.
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class CompraService {
@@ -33,6 +40,14 @@ public class CompraService {
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
 
+    /**
+     * Lists purchases based on user role. Admins see all purchases,
+     * regular users see only their own purchases.
+     * 
+     * @param email Email of the requesting user
+     * @return List of CompraResponseDTO containing purchase information
+     * @throws UsernameNotFoundException if user is not found
+     */
     @Transactional(readOnly = true)
     public List<CompraResponseDTO> listarCompras(String email) {
         Usuario usuario = usuarioRepository.findByEmail(email)
@@ -50,10 +65,20 @@ public class CompraService {
             .collect(Collectors.toList());
     }
 
+    /**
+     * Processes a new purchase for a user, calculating totals and
+     * creating all necessary purchase records.
+     * 
+     * @param email Email of the user making the purchase
+     * @param compraDTO Data transfer object containing purchase information
+     * @return CompraResponseDTO containing the created purchase information
+     * @throws UsernameNotFoundException if user is not found
+     * @throws ResourceNotFoundException if any product in the purchase is not found
+     */
     @Transactional
     public CompraResponseDTO realizarCompra(String email, CompraDTO compraDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         Compra compra = new Compra();
         compra.setUsuario(usuario);

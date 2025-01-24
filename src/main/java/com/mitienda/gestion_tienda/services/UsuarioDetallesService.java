@@ -13,12 +13,26 @@ import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
 
 import java.util.Collections;
 
+/**
+ * Service class that implements Spring Security's UserDetailsService.
+ * Provides user authentication and authority information to Spring Security.
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class UsuarioDetallesService implements UserDetailsService {
 
     private final UsuarioRepository usuarioRepository;
 
+    /**
+     * Loads user details by email for Spring Security authentication.
+     * 
+     * @param email The email of the user to load
+     * @return UserDetails object containing user's security information
+     * @throws UsernameNotFoundException if user is not found
+     */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         Usuario usuario = usuarioRepository.findByEmail(email)

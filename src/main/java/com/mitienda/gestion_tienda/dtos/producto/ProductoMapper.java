@@ -1,4 +1,3 @@
-
 package com.mitienda.gestion_tienda.dtos.producto;
 
 import org.mapstruct.Mapper;
@@ -7,10 +6,32 @@ import org.mapstruct.ReportingPolicy;
 
 import com.mitienda.gestion_tienda.entities.Producto;
 
+/**
+ * Mapper interface for converting between Product entities and DTOs.
+ * This interface uses MapStruct to automatically generate the implementation
+ * of the mapping methods between different product representations.
+ *
+ * @author Gustavo
+ * @version 1.0
+ */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
 public interface ProductoMapper {
+    
+    /**
+     * Converts a Product entity to a ProductoResponseDTO.
+     *
+     * @param producto the product entity to convert
+     * @return the corresponding ProductoResponseDTO
+     */
     ProductoResponseDTO toProductoResponseDTO(Producto producto);
 
+    /**
+     * Converts a ProductoDTO to a Product entity.
+     * The id and fechaCreacion fields are ignored during the mapping.
+     *
+     * @param productoDTO the product DTO to convert
+     * @return the corresponding Product entity
+     */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "fechaCreacion", ignore = true)
     Producto toProducto(ProductoDTO productoDTO);

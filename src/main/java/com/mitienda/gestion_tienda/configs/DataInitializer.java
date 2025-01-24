@@ -12,6 +12,13 @@ import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
 
 import java.time.LocalDateTime;
 
+/**
+ * Configuration class responsible for initializing default data in the application.
+ * Creates the default admin user if no users exist in the system.
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 @Slf4j
 @Configuration
 @RequiredArgsConstructor
@@ -21,6 +28,11 @@ public class DataInitializer {
     private final PasswordEncoder passwordEncoder;
     private final AdminProperties adminProperties;
 
+    /**
+     * Creates a CommandLineRunner bean that initializes the default admin user.
+     * Only creates the admin if no users exist in the system and admin credentials are configured.
+     * @return CommandLineRunner instance
+     */
     @Bean
     public CommandLineRunner initData() {
         return args -> {

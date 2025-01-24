@@ -23,6 +23,13 @@ import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.time.LocalDateTime;
 
+/**
+ * Service class that handles user-related operations including registration,
+ * authentication, profile updates, and password management.
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 @Service
 @RequiredArgsConstructor
 public class UsuarioService {
@@ -31,6 +38,12 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
 
+    /**
+     * Registers a new user in the system.
+     * 
+     * @param usuarioDTO Data transfer object containing user registration information
+     * @return UsuarioResponseDTO containing the created user's information
+     */
     @Transactional
     public UsuarioResponseDTO registrarUsuario(UsuarioDTO usuarioDTO){
         Usuario usuario = new Usuario();
@@ -51,6 +64,14 @@ public class UsuarioService {
         ));
     }
 
+    /**
+     * Authenticates a user using email and password.
+     * 
+     * @param loginDTO Data transfer object containing login credentials
+     * @return UsuarioResponseDTO containing the authenticated user's information
+     * @throws ResourceNotFoundException if user is not found
+     * @throws InvalidPasswordException if password is incorrect
+     */
     public UsuarioResponseDTO login(LoginDTO loginDTO) {
         Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
             .orElseThrow(() -> new ResourceNotFoundException(
@@ -64,6 +85,14 @@ public class UsuarioService {
         return usuarioMapper.toUsuarioResponseDTO(usuario);
     }
 
+    /**
+     * Updates a user's profile information.
+     * 
+     * @param email Current email of the user
+     * @param perfilDTO Data transfer object containing new profile information
+     * @return UsuarioResponseDTO containing the updated user information
+     * @throws UsernameNotFoundException if user is not found
+     */
     @Transactional
     public UsuarioResponseDTO actualizarPerfil(String email, ActualizacionUsuarioDTO perfilDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)
@@ -78,6 +107,15 @@ public class UsuarioService {
         ));
     }
 
+    /**
+     * Changes a user's password after validating current password.
+     * 
+     * @param email Email of the user
+     * @param contraseñaDTO Data transfer object containing password change information
+     * @throws UsernameNotFoundException if user is not found
+     * @throws InvalidPasswordException if current password is incorrect or new password is same as current
+     * @throws PasswordMismatchException if new password and confirmation don't match
+     */
     @Transactional
     public void cambiarContraseña(String email, CambioPasswdDTO contraseñaDTO) {
         Usuario usuario = usuarioRepository.findByEmail(email)

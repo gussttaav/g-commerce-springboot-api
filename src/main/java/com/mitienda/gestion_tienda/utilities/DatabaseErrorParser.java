@@ -3,9 +3,22 @@ package com.mitienda.gestion_tienda.utilities;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 
+/**
+ * Utility class for parsing database exceptions into user-friendly error messages.
+ * Handles common database errors such as duplicate entries, foreign key violations,
+ * and null constraints.
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 @Slf4j
 public class DatabaseErrorParser {
     
+    /**
+     * Parses a DataIntegrityViolationException into a DatabaseError object.
+     * @param ex the exception to parse
+     * @return a DatabaseError containing user-friendly error messages
+     */
     public static DatabaseError parse(DataIntegrityViolationException ex) {
         String originalMessage = ex.getMostSpecificCause().getMessage().toLowerCase();
         
@@ -20,6 +33,11 @@ public class DatabaseErrorParser {
         return new DatabaseError("Error de base de datos", "Se produjo un error al procesar la operación");
     }
     
+    /**
+     * Handles duplicate entry database errors.
+     * @param message the original error message
+     * @return a DatabaseError with user-friendly messages about the duplication
+     */
     private static DatabaseError handleDuplicateEntry(String message) {
         try {
             String field = extractConstraintName(message);
@@ -33,6 +51,11 @@ public class DatabaseErrorParser {
         }
     }
     
+    /**
+     * Handles foreign key constraint violation errors.
+     * @param message the original error message
+     * @return a DatabaseError with user-friendly messages about the constraint violation
+     */
     private static DatabaseError handleForeignKeyViolation(String message) {
         try {
             String constraintName = extractConstraintName(message);
@@ -49,6 +72,11 @@ public class DatabaseErrorParser {
         }
     }
     
+    /**
+     * Handles null constraint violation errors.
+     * @param message the original error message
+     * @return a DatabaseError with user-friendly messages about the null constraint
+     */
     private static DatabaseError handleNullConstraint(String message) {
         try {
             String column = message.substring(
@@ -68,6 +96,12 @@ public class DatabaseErrorParser {
         }
     }
     
+    /**
+     * Extracts the constraint name from the error message.
+     * @param message the error message containing the constraint information
+     * @return the extracted constraint name
+     * @throws IllegalArgumentException if the constraint name cannot be extracted
+     */
     private static String extractConstraintName(String message) {
         int keyIdx = message.lastIndexOf("for key '");
         if (keyIdx != -1) {

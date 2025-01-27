@@ -1,6 +1,7 @@
 package com.mitienda.gestion_tienda.dtos.api;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import java.time.LocalDateTime;
@@ -18,6 +19,7 @@ import java.util.List;
 @Schema(description = "API error response data transfer object")
 @Data
 @Builder
+@AllArgsConstructor
 public class ApiErrorDTO {
     /**
      * The timestamp when the error occurred.

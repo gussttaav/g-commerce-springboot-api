@@ -12,7 +12,7 @@ import com.mitienda.gestion_tienda.configs.SecurityConfig;
 
 @Configuration
 @Import(SecurityConfig.class)
-class TestSecurityConfig {
+public class TestSecurityConfig {
     
     @Bean
     @Primary

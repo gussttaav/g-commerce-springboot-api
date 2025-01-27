@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoMapper;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoResponseDTO;
@@ -30,15 +31,21 @@ public class ProductoService {
     private final ProductoRepository productoRepository;
 
     /**
-     * Lists all active products in the system.
+     * Lists products based on the specified status.
      * 
-     * @return List of ProductoResponseDTO containing active products' information
+     * @param status The status to filter products by
+     * @return List of ProductoResponseDTO containing filtered products' information
      */
-    public List<ProductoResponseDTO> listarProductos() {
-        return productoRepository.findByActivoTrue()
-            .stream()
-            .map(productoMapper::toProductoResponseDTO)
-            .toList();
+    public List<ProductoResponseDTO> listarProductos(ProductStatus status) {
+        List<Producto> productos = switch (status) {
+            case ACTIVE -> productoRepository.findByActivoTrue();
+            case INACTIVE -> productoRepository.findByActivoFalse();
+            case ALL -> productoRepository.findAll();
+        };
+        
+        return productos.stream()
+                .map(productoMapper::toProductoResponseDTO)
+                .toList();
     }
 
     /**

@@ -149,6 +149,11 @@ PUT  /api/usuarios/password         # Change password
 ### Product Management
 ```
 GET    /api/productos/listar               # List all active products
+
+# As ADMIN user:
+GET /api/productos/listar?status=INACTIVE  # Returns inactive products
+GET /api/productos/listar?status=ALL       # Returns all products
+
 POST   /api/productos/crear                # Create a new product (ADMIN only)
 DELETE /api/productos/eliminar/{id}        # Delete a product (ADMIN only)
 ```

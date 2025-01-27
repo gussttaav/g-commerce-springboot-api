@@ -31,6 +31,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoResponseDTO;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
@@ -60,10 +61,9 @@ class ProductoControllerTest {
         "Test Description", new BigDecimal("99.99"), true);
     }
 
-    private ProductoResponseDTO createProductoResponseDTO(Long id) {
-        return new ProductoResponseDTO(id,
-            "Test Product", "Test Description", 
-                    new BigDecimal("99.99"), LocalDateTime.now(), true);
+    private ProductoResponseDTO createProductoResponseDTO(Long id, boolean activo) {
+        return new ProductoResponseDTO(id, "Test Product", "Test Description", 
+                new BigDecimal("99.99"), LocalDateTime.now(), activo);
     }
 
     @Nested
@@ -74,7 +74,7 @@ class ProductoControllerTest {
         @WithAnonymousUser
         @DisplayName("Should return 401 when user is not authenticated")
         void listarProductos_UnauthenticatedUser_Returns401() throws Exception {
-            mockMvc.perform(get("/api/productos/listar")
+            mockMvc.perform(get("/api/productos")
                     .with(csrf()))
                     .andExpect(status().isUnauthorized())
                     .andDo(MockMvcResultHandlers.print());
@@ -82,9 +82,9 @@ class ProductoControllerTest {
 
         @Test
         @WithMockUser(roles = "USER")
-        @DisplayName("Should return empty list when no products exist")
+        @DisplayName("Should return empty list when no active products exist")
         void listarProductos_NoProducts_ReturnsEmptyList() throws Exception {
-            when(productoService.listarProductos())
+            when(productoService.listarProductos(ProductStatus.ACTIVE))
                     .thenReturn(Collections.emptyList());
 
             mockMvc.perform(get("/api/productos/listar")
@@ -98,12 +98,12 @@ class ProductoControllerTest {
 
         @Test
         @WithMockUser(roles = "USER")
-        @DisplayName("Should return list of products when products exist")
-        void listarProductos_ExistingProducts_ReturnsList() throws Exception {
-            ProductoResponseDTO product1 = createProductoResponseDTO(1L);
-            ProductoResponseDTO product2 = createProductoResponseDTO(2L);
+        @DisplayName("Should return list of active products for USER role")
+        void listarProductos_UserRole_ReturnsActiveProducts() throws Exception {
+            ProductoResponseDTO product1 = createProductoResponseDTO(1L, true);
+            ProductoResponseDTO product2 = createProductoResponseDTO(2L, true);
             
-            when(productoService.listarProductos())
+            when(productoService.listarProductos(ProductStatus.ACTIVE))
                     .thenReturn(Arrays.asList(product1, product2));
 
             mockMvc.perform(get("/api/productos/listar")
@@ -118,12 +118,24 @@ class ProductoControllerTest {
         }
 
         @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("Should return 403 when USER role tries to access inactive products")
+        void listarProductos_UserRole_AccessInactiveProducts_Returns403() throws Exception {
+            mockMvc.perform(get("/api/productos")
+                    .param("status", "INACTIVE")
+                    .with(csrf())
+                    .with(user("test@example.com").roles("USER")))
+                    .andExpect(status().isForbidden())
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
         @WithMockUser(roles = "ADMIN")
-        @DisplayName("Should return products list even with ADMIN role")
-        void listarProductos_AdminUser_ReturnsList() throws Exception {
-            ProductoResponseDTO product = createProductoResponseDTO(1L);
+        @DisplayName("Should return active products for ADMIN role")
+        void listarProductos_AdminRole_ReturnsActiveProducts() throws Exception {
+            ProductoResponseDTO product = createProductoResponseDTO(1L, true);
             
-            when(productoService.listarProductos())
+            when(productoService.listarProductos(ProductStatus.ACTIVE))
                     .thenReturn(Collections.singletonList(product));
 
             mockMvc.perform(get("/api/productos/listar")
@@ -131,6 +143,58 @@ class ProductoControllerTest {
                     .with(user("admin@example.com").roles("ADMIN")))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$", hasSize(1)))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return inactive products for ADMIN role when requested")
+        void listarProductos_AdminRole_ReturnsInactiveProducts() throws Exception {
+            ProductoResponseDTO product = createProductoResponseDTO(1L, false);
+            
+            when(productoService.listarProductos(ProductStatus.INACTIVE))
+                    .thenReturn(Collections.singletonList(product));
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("status", "INACTIVE")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(jsonPath("$[0].activo").value(false))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return all products for ADMIN role when requested")
+        void listarProductos_AdminRole_ReturnsAllProducts() throws Exception {
+            ProductoResponseDTO activeProduct = createProductoResponseDTO(1L, true);
+            ProductoResponseDTO inactiveProduct = createProductoResponseDTO(2L, false);
+            
+            when(productoService.listarProductos(ProductStatus.ALL))
+                    .thenReturn(Arrays.asList(activeProduct, inactiveProduct));
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("status", "ALL")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].activo").value(true))
+                    .andExpect(jsonPath("$[1].activo").value(false))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return 400 for invalid status parameter")
+        void listarProductos_AdminRole_InvalidStatus_Returns400() throws Exception {
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("status", "INVALID_STATUS")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN")))
+                    .andExpect(status().isBadRequest())
                     .andDo(MockMvcResultHandlers.print());
         }
     }
@@ -173,7 +237,7 @@ class ProductoControllerTest {
         @DisplayName("Should create product when data is valid")
         void crearProducto_ValidData_ReturnsCreatedProduct() throws Exception {
             ProductoDTO productoDTO = createValidProductoDTO();
-            ProductoResponseDTO responseDTO = createProductoResponseDTO(1L);
+            ProductoResponseDTO responseDTO = createProductoResponseDTO(1L,true);
 
             when(productoService.crearProducto(any(ProductoDTO.class)))
                     .thenReturn(responseDTO);

@@ -20,4 +20,10 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
      * @return a list of products where the 'activo' flag is true
      */
     List<Producto> findByActivoTrue();
+
+    /**
+     * Finds all non-active products in the system.
+     * @return a list of products where the 'activo' flag is false
+     */
+    List<Producto> findByActivoFalse();
 }

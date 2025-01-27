@@ -13,6 +13,8 @@ import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
 import java.util.List;
 
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import com.mitienda.gestion_tienda.dtos.producto.*;
@@ -26,7 +28,7 @@ import com.mitienda.gestion_tienda.services.ProductoService;
  * This controller provides endpoints for:
  * <ul>
  *   <li>Product creation (admin only)</li>
- *   <li>Product listing (authenticated)</li>
+ *   <li>Product listing (users only get the active products)</li>
  *   <li>Product deletion (admin only)</li>
  * </ul>
  * 
@@ -45,20 +47,46 @@ public class ProductoController {
     private final ProductoService productoService;
 
     /**
-     * Retrieves a list of all active products in the system.
-     * This endpoint is accessible to all authenticated users.
+     * Retrieves a list of products based on their status and user's role.
+     * - Users with ROLE_ADMIN can filter products by status (ACTIVE/INACTIVE/ALL)
+     * - Users with ROLE_USER can only access active products
      * 
-     * @return List<ProductoResponseDTO> containing all active products
+     * @param status Optional query parameter to filter products by status (ACTIVE/INACTIVE/ALL)
+     * @param authentication Spring Security authentication object
+     * @return List<ProductoResponseDTO> containing the filtered products
+     * @throws AccessDeniedException if a non-admin user attempts to access non-active products
      */
-    @Operation(summary = "List all products", description = "Returns a list of all active products")
+    @Operation(
+        summary = "List products", 
+        description = """
+            Returns a list of products filtered by status.
+            - ROLE_ADMIN users can filter by ACTIVE, INACTIVE, or ALL status
+            - ROLE_USER users can only access ACTIVE products
+            """
+    )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Products found successfully", 
-                    content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = ProductoResponseDTO.class)))),
-            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied")
+                    content = @Content(mediaType = "application/json", 
+                    array = @ArraySchema(schema = @Schema(implementation = ProductoResponseDTO.class)))),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser")
     })
     @GetMapping("/listar")
-    public List<ProductoResponseDTO> listarProductos() {
-        return productoService.listarProductos();
+    public List<ProductoResponseDTO> listarProductos(
+            @RequestParam(required = false, defaultValue = "ACTIVE") 
+            @Schema(description = "Filter products by status (ADMIN only)", allowableValues = {"ACTIVE", "INACTIVE", "ALL"})
+            ProductStatus status,
+            Authentication authentication) {
+        
+        boolean isAdmin = authentication.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
+        
+        if (!isAdmin && status != ProductStatus.ACTIVE) {
+            throw new AccessDeniedException("Only administrators can access non-active products");
+        }
+        
+        return productoService.listarProductos(status);
     }
 
 

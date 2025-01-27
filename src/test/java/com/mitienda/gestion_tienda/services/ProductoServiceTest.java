@@ -4,8 +4,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -24,10 +26,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoMapper;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoResponseDTO;
+import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
 import com.mitienda.gestion_tienda.entities.Producto;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.ProductoRepository;
 
+/**
+ * Unit tests for ProductoService.
+ * Tests product management operations.
+ */
 @ExtendWith(MockitoExtension.class)
 class ProductoServiceTest {
 
@@ -43,6 +50,8 @@ class ProductoServiceTest {
     private ProductoDTO productoDTO;
     private Producto producto;
     private ProductoResponseDTO productoResponseDTO;
+    private Producto productoInactivo;
+    private ProductoResponseDTO productoInactivoResponseDTO;
 
     @BeforeEach
     void setUp() {
@@ -69,16 +78,36 @@ class ProductoServiceTest {
                 .fechaCreacion(producto.getFechaCreacion())
                 .activo(true)
                 .build();
+
+        productoInactivo = new Producto();
+        productoInactivo.setId(2L);
+        productoInactivo.setNombre("Inactive Product");
+        productoInactivo.setDescripcion("Inactive Description");
+        productoInactivo.setPrecio(new BigDecimal("49.99"));
+        productoInactivo.setFechaCreacion(LocalDateTime.now());
+        productoInactivo.setActivo(false);
+
+        productoInactivoResponseDTO = ProductoResponseDTO.builder()
+                .id(2L)
+                .nombre("Inactive Product")
+                .descripcion("Inactive Description")
+                .precio(new BigDecimal("49.99"))
+                .fechaCreacion(productoInactivo.getFechaCreacion())
+                .activo(false)
+                .build();
     }
 
+    /**
+     * Verifies that products are correctly listed by status.
+     */
     @Test
-    void listarProductos_DebeRetornarListaDeProductosActivos() {
+    void listarProductos_ConEstadoActivo_DebeRetornarSoloProductosActivos() {
         // Arrange
         when(productoRepository.findByActivoTrue()).thenReturn(List.of(producto));
         when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
 
         // Act
-        List<ProductoResponseDTO> resultado = productoService.listarProductos();
+        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ACTIVE);
 
         // Assert
         assertNotNull(resultado);
@@ -88,6 +117,54 @@ class ProductoServiceTest {
         verify(productoMapper).toProductoResponseDTO(producto);
     }
 
+    /**
+     * Verifies that products are correctly listed by status.
+     */
+    @Test
+    void listarProductos_ConEstadoInactivo_DebeRetornarSoloProductosInactivos() {
+        // Arrange
+        when(productoRepository.findByActivoFalse()).thenReturn(List.of(productoInactivo));
+        when(productoMapper.toProductoResponseDTO(productoInactivo))
+            .thenReturn(productoInactivoResponseDTO);
+
+        // Act
+        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.INACTIVE);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(1, resultado.size());
+        assertEquals(productoInactivoResponseDTO, resultado.get(0));
+        verify(productoRepository).findByActivoFalse();
+        verify(productoMapper).toProductoResponseDTO(productoInactivo);
+    }
+
+    /**
+     * Verifies that products are correctly listed by status.
+     */
+    @Test
+    void listarProductos_ConEstadoAll_DebeRetornarTodosLosProductos() {
+        // Arrange
+        List<Producto> todosLosProductos = List.of(producto, productoInactivo);
+        when(productoRepository.findAll()).thenReturn(todosLosProductos);
+        when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
+        when(productoMapper.toProductoResponseDTO(productoInactivo))
+            .thenReturn(productoInactivoResponseDTO);
+
+        // Act
+        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ALL);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(2, resultado.size());
+        assertTrue(resultado.contains(productoResponseDTO));
+        assertTrue(resultado.contains(productoInactivoResponseDTO));
+        verify(productoRepository).findAll();
+        verify(productoMapper, times(2)).toProductoResponseDTO(any(Producto.class));
+    }
+
+    /**
+     * Verifies successful product creation.
+     */
     @Test
     void crearProducto_DebeCrearYRetornarNuevoProducto() {
         // Arrange
@@ -108,6 +185,9 @@ class ProductoServiceTest {
         verify(productoMapper).toProductoResponseDTO(producto);
     }
 
+    /**
+     * Verifies product deactivation.
+     */
     @Test
     void eliminarProducto_DebeDesactivarProductoExistente() {
         // Arrange

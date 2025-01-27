@@ -1,5 +1,6 @@
 package com.mitienda.gestion_tienda.exceptions;
 
+import jakarta.servlet.RequestDispatcher;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
@@ -8,10 +9,13 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.TypeMismatchException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
@@ -40,10 +44,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The validation exception containing field errors
      * @param request The current HTTP request
-     * @return ApiErrorDTO with validation error details
+     * @return ResponseEntity containing ApiErrorDTO with validation error details
      */
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ApiErrorDTO handleValidationErrors(MethodArgumentNotValidException ex, 
+    public ResponseEntity<ApiErrorDTO> handleValidationErrors(MethodArgumentNotValidException ex, 
                                                             HttpServletRequest request) {
         List<String> details = ex.getBindingResult()
                 .getFieldErrors()
@@ -60,7 +64,7 @@ public class GlobalExceptionHandler {
                 .details(details)
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**
@@ -69,10 +73,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The constraint violation exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with constraint violation details
+     * @return ResponseEntity containing ApiErrorDTO with constraint violation details
      */
     @ExceptionHandler(ConstraintViolationException.class)
-    public ApiErrorDTO handleConstraintViolation(ConstraintViolationException ex,
+    public ResponseEntity<ApiErrorDTO> handleConstraintViolation(ConstraintViolationException ex,
                                                                HttpServletRequest request) {
         List<String> details = ex.getConstraintViolations()
                 .stream()
@@ -88,7 +92,37 @@ public class GlobalExceptionHandler {
                 .details(details)
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
+     * Handles errors that occur during HTTP message conversion, specifically when the request body
+     * cannot be properly read or parsed into JSON.
+     * 
+     *
+     * @param ex The HttpMessageNotReadableException thrown during message conversion.
+     *           Contains details about the specific JSON parsing error that occurred.
+     * @param request The current HTTP request being processed. Used to include the
+     *                request URI in the error response for debugging purposes.
+     * @return ResponseEntity containing ApiErrorDTO with JSON parsing error details
+     */
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    public ResponseEntity<ApiErrorDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+                                                                  HttpServletRequest request) {
+        String message = "Error en el formato JSON";
+        List<String> details = new ArrayList<>();
+        details.add(ex.getMessage());
+
+        ApiErrorDTO error = ApiErrorDTO.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("JSON Parse Error")
+                .message(message)
+                .path(request.getRequestURI())
+                .details(details)
+                .build();
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**
@@ -97,10 +131,11 @@ public class GlobalExceptionHandler {
      *
      * @param ex The custom API exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with exception details
+     * @return ResponseEntity containing ApiErrorDTO with exception details
      */
     @ExceptionHandler(ApiException.class)
-    public ApiErrorDTO handleApiException(ApiException ex, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorDTO> handleApiException(ApiException ex, HttpServletRequest request) {
+
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
                 .status(ex.getStatus().value())
@@ -110,7 +145,7 @@ public class GlobalExceptionHandler {
                 .details(new ArrayList<>())
                 .build();
 
-        return error;
+        return ResponseEntity.status(error.getStatus()).body(error);
     }
 
     /**
@@ -119,10 +154,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The authentication exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with authentication error details
+     * @return ResponseEntity containing ApiErrorDTO with authentication error details
      */
     @ExceptionHandler(AuthenticationException.class)
-    public ApiErrorDTO handleAuthenticationException(AuthenticationException ex,
+    public ResponseEntity<ApiErrorDTO> handleAuthenticationException(AuthenticationException ex,
                                                                    HttpServletRequest request) {
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
@@ -133,7 +168,7 @@ public class GlobalExceptionHandler {
                 .details(new ArrayList<>())
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
 
     /**
@@ -142,10 +177,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The access denied exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with access denied details
+     * @return ResponseEntity containing ApiErrorDTO with access denied details
      */
     @ExceptionHandler(AccessDeniedException.class)
-    public ApiErrorDTO handleAccessDeniedException(AccessDeniedException ex,
+    public ResponseEntity<ApiErrorDTO> handleAccessDeniedException(AccessDeniedException ex,
                                                                  HttpServletRequest request) {
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
@@ -156,7 +191,7 @@ public class GlobalExceptionHandler {
                 .details(new ArrayList<>())
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     /**
@@ -165,10 +200,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The uncaught exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with generic error details
+     * @return ResponseEntity containing ApiErrorDTO with generic error details
      */
     @ExceptionHandler(Exception.class)
-    public ApiErrorDTO handleAllUncaughtException(Exception ex,
+    public ResponseEntity<ApiErrorDTO> handleAllUncaughtException(Exception ex,
                                                                 HttpServletRequest request) {
         log.error("Unexpected error occurred", ex);
         
@@ -181,7 +216,7 @@ public class GlobalExceptionHandler {
                 .details(new ArrayList<>())
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     /**
@@ -190,10 +225,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The type mismatch exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with type mismatch details
+     * @return ResponseEntity containing ApiErrorDTO with type mismatch details
      */
     @ExceptionHandler(TypeMismatchException.class)
-    public ApiErrorDTO handleTypeMismatch(TypeMismatchException ex,
+    public ResponseEntity<ApiErrorDTO> handleTypeMismatch(TypeMismatchException ex,
                                                         HttpServletRequest request) {
         List<String> details = new ArrayList<>();
         String message = "Error en el tipo de dato";
@@ -222,7 +257,7 @@ public class GlobalExceptionHandler {
                 .details(details)
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     /**
@@ -231,10 +266,10 @@ public class GlobalExceptionHandler {
      *
      * @param ex The data integrity violation exception
      * @param request The current HTTP request
-     * @return ApiErrorDTO with database error details
+     * @return ResponseEntity containing ApiErrorDTO with database error details
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    public ApiErrorDTO handleDataIntegrityViolation(
+    public ResponseEntity<ApiErrorDTO> handleDataIntegrityViolation(
             DataIntegrityViolationException ex,
             HttpServletRequest request) {
             
@@ -271,7 +306,7 @@ public class GlobalExceptionHandler {
                 .details(details)
                 .build();
 
-        return error;
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }
 
     /**

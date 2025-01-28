@@ -116,6 +116,44 @@ public class ProductoController {
 
 
     /**
+     * Updates an existing product in the system.
+     * This operation is restricted to administrators only.
+     * 
+     * @param id the unique identifier of the product to update
+     * @param productoDTO the updated product data
+     * @return ProductoResponseDTO containing the updated product's information
+     * @throws ResourceNotFoundException if the product with the given ID doesn't exist
+     * @throws ApiException if the product could not be updated due to a constraint violation
+     */
+    @Operation(
+        summary = "Update an existing product", 
+        description = "Updates a product's information."
+    )
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Product updated successfully", 
+                    content = @Content(mediaType = "application/json", 
+                    schema = @Schema(implementation = ProductoResponseDTO.class))),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct")
+    })
+    @PutMapping("/actualizar/{id}")
+    public ProductoResponseDTO actualizarProducto(
+            @Parameter(name = "id", description = "Unique identifier of the product to update", 
+                      required = true, 
+                      example = "1",
+                      schema = @Schema(type = "long", minimum = "1"))
+            @PathVariable @Min(1) Long id,
+            @Valid @RequestBody 
+            @Parameter(description = "Updated product parameters", required = true) 
+            ProductoDTO productoDTO) {
+        return productoService.actualizarProducto(id, productoDTO);
+    }
+
+
+    /**
      * Deletes a product from the system by its ID.
      * This operation is restricted to administrators only.
      * 

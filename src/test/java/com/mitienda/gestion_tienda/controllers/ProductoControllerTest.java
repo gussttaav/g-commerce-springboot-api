@@ -3,6 +3,7 @@ package com.mitienda.gestion_tienda.controllers;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -280,6 +281,135 @@ class ProductoControllerTest {
             productoDTO.setPrecio(new BigDecimal("-10.00"));
 
             mockMvc.perform(post("/api/productos/crear")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andExpect(jsonPath("$.details[0]").value(containsString("precio")))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /api/productos/actualizar/{id}")
+    class ActualizarProducto {
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should return 401 when user is not authenticated")
+        void actualizarProducto_UnauthenticatedUser_Returns401() throws Exception {
+            ProductoDTO productoDTO = createValidProductoDTO();
+
+            mockMvc.perform(put("/api/productos/actualizar/1")
+                    .with(csrf())
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isUnauthorized())
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("Should return 403 when user is not admin")
+        void actualizarProducto_NonAdminUser_Returns403() throws Exception {
+            ProductoDTO productoDTO = createValidProductoDTO();
+
+            mockMvc.perform(put("/api/productos/actualizar/1")
+                    .with(csrf())
+                    .with(user("test@example.com").roles("USER"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isForbidden())
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should update product when data is valid")
+        void actualizarProducto_ValidData_ReturnsUpdatedProduct() throws Exception {
+            Long productId = 1L;
+            ProductoDTO productoDTO = createValidProductoDTO();
+            ProductoResponseDTO responseDTO = createProductoResponseDTO(productId, true);
+
+            when(productoService.actualizarProducto(eq(productId), any(ProductoDTO.class)))
+                    .thenReturn(responseDTO);
+
+            mockMvc.perform(put("/api/productos/actualizar/" + productId)
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(productId))
+                    .andExpect(jsonPath("$.nombre").value("Test Product"))
+                    .andExpect(jsonPath("$.precio").value("99.99"))
+                    .andExpect(jsonPath("$.activo").value(true))
+                    .andDo(MockMvcResultHandlers.print());
+
+            verify(productoService).actualizarProducto(eq(productId), any(ProductoDTO.class));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return 404 when product doesn't exist")
+        void actualizarProducto_NonExistentProduct_Returns404() throws Exception {
+            ProductoDTO productoDTO = createValidProductoDTO();
+
+            when(productoService.actualizarProducto(eq(999L), any(ProductoDTO.class)))
+                    .thenThrow(new ResourceNotFoundException("Producto no encontrado"));
+
+            mockMvc.perform(put("/api/productos/actualizar/999")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Producto no encontrado"))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return 400 when product data is invalid")
+        void actualizarProducto_InvalidData_Returns400() throws Exception {
+            ProductoDTO invalidProducto = ProductoDTO.builder().build();
+            // Empty product data
+
+            mockMvc.perform(put("/api/productos/actualizar/1")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(invalidProducto)))
+                    .andExpect(status().isBadRequest())
+                    .andExpect(jsonPath("$.error").value("Validation Error"))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return 400 when ID is invalid")
+        void actualizarProducto_InvalidId_Returns400() throws Exception {
+            ProductoDTO productoDTO = createValidProductoDTO();
+
+            mockMvc.perform(put("/api/productos/actualizar/-1")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN"))
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(objectMapper.writeValueAsString(productoDTO)))
+                    .andExpect(status().isBadRequest())
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return 400 when price is negative")
+        void actualizarProducto_NegativePrice_Returns400() throws Exception {
+            ProductoDTO productoDTO = createValidProductoDTO();
+            productoDTO.setPrecio(new BigDecimal("-10.00"));
+
+            mockMvc.perform(put("/api/productos/actualizar/1")
                     .with(csrf())
                     .with(user("admin@example.com").roles("ADMIN"))
                     .contentType(MediaType.APPLICATION_JSON)

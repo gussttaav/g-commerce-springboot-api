@@ -66,6 +66,27 @@ public class ProductoService {
     }
 
     /**
+     * Updates an existing product in the system.
+     * 
+     * @param id ID of the product to update
+     * @param productoDTO Data transfer object containing updated product information
+     * @return ProductoResponseDTO containing the updated product's information
+     * @throws ResourceNotFoundException if product is not found
+     */
+    @Transactional
+    public ProductoResponseDTO actualizarProducto(Long id, ProductoDTO productoDTO) {
+        Producto producto = productoRepository.findById(id)
+            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+        
+        productoMapper.updateProductoFromDTO(productoDTO, producto);
+        
+        return productoMapper.toProductoResponseDTO(
+            DatabaseOperationHandler.executeOperation(() -> 
+                productoRepository.save(producto)
+            ));
+    }
+
+    /**
      * Logically deletes a product by marking it as inactive.
      * 
      * @param id ID of the product to delete

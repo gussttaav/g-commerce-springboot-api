@@ -31,6 +31,7 @@ import com.mitienda.gestion_tienda.services.UsuarioService;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -306,5 +307,63 @@ class SecurityConfigTest {
         usuario.setRol(role);
         usuario.setFechaCreacion(LocalDateTime.now());
         usuarioRepository.save(usuario);
+    }
+
+    @Test
+    void whenAdminUpdatesProduct_thenAllowsAccess() throws Exception {
+        // Arrange
+        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
+        
+        ProductoDTO productoDTO = ProductoDTO.builder()
+            .nombre("Updated Product")
+            .precio(new BigDecimal("20.00"))
+            .descripcion("Updated Description")
+            .build();
+        
+        ProductoResponseDTO responseDTO = ProductoResponseDTO.builder()
+            .id(1L)
+            .nombre("Updated Product")
+            .build();
+
+        when(productoService.actualizarProducto(eq(1L), any(ProductoDTO.class)))
+            .thenReturn(responseDTO);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/productos/actualizar/1")
+                .with(httpBasic("admin@test.com", "password"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productoDTO)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenUserUpdatesProduct_thenReturns403() throws Exception {
+        // Arrange
+        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+        
+        ProductoDTO productoDTO = ProductoDTO.builder()
+            .nombre("Unauthorized Update")
+            .precio(new BigDecimal("20.00"))
+            .build();
+
+        // Act & Assert
+        mockMvc.perform(put("/api/productos/actualizar/1")
+                .with(httpBasic("user@test.com", "password"))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productoDTO)))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void whenNoAuthUpdateProduct_thenReturns401() throws Exception {
+        ProductoDTO productoDTO = ProductoDTO.builder()
+            .nombre("Test Update")
+            .precio(new BigDecimal("20.00"))
+            .build();
+
+        mockMvc.perform(put("/api/productos/actualizar/1")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productoDTO)))
+                .andExpect(status().isUnauthorized());
     }
 }

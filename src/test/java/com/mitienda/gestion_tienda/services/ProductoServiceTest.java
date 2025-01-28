@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -227,6 +228,94 @@ class ProductoServiceTest {
             productoService.crearProducto(productoDTO)
         );
         verify(productoMapper).toProducto(productoDTO);
+        verify(productoRepository).save(any(Producto.class));
+    }
+
+    /**
+     * Verifies successful product update.
+     */
+    @Test
+    void actualizarProducto_DebeActualizarYRetornarProductoExistente() {
+        // Arrange
+        ProductoDTO productoActualizadoDTO = ProductoDTO.builder()
+                .nombre("Updated Product")
+                .descripcion("Updated Description")
+                .precio(new BigDecimal("199.99"))
+                .activo(true)
+                .build();
+
+        Producto productoActualizado = new Producto();
+        productoActualizado.setId(1L);
+        productoActualizado.setNombre("Updated Product");
+        productoActualizado.setDescripcion("Updated Description");
+        productoActualizado.setPrecio(new BigDecimal("199.99"));
+        productoActualizado.setFechaCreacion(producto.getFechaCreacion());
+        productoActualizado.setActivo(true);
+
+        ProductoResponseDTO productoActualizadoResponseDTO = ProductoResponseDTO.builder()
+                .id(1L)
+                .nombre("Updated Product")
+                .descripcion("Updated Description")
+                .precio(new BigDecimal("199.99"))
+                .fechaCreacion(producto.getFechaCreacion())
+                .activo(true)
+                .build();
+
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        doNothing().when(productoMapper).updateProductoFromDTO(productoActualizadoDTO, producto);
+        when(productoRepository.save(any(Producto.class))).thenReturn(productoActualizado);
+        when(productoMapper.toProductoResponseDTO(productoActualizado))
+            .thenReturn(productoActualizadoResponseDTO);
+
+        // Act
+        ProductoResponseDTO resultado = productoService.actualizarProducto(1L, productoActualizadoDTO);
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(productoActualizadoResponseDTO.getId(), resultado.getId());
+        assertEquals(productoActualizadoResponseDTO.getNombre(), resultado.getNombre());
+        assertEquals(productoActualizadoResponseDTO.getDescripcion(), resultado.getDescripcion());
+        assertEquals(productoActualizadoResponseDTO.getPrecio(), resultado.getPrecio());
+        verify(productoRepository).findById(1L);
+        verify(productoMapper).updateProductoFromDTO(productoActualizadoDTO, producto);
+        verify(productoRepository).save(any(Producto.class));
+        verify(productoMapper).toProductoResponseDTO(productoActualizado);
+    }
+
+    /**
+     * Verifies that updating a non-existent product throws ResourceNotFoundException.
+     */
+    @Test
+    void actualizarProducto_DebeLanzarExcepcionCuandoProductoNoExiste() {
+        // Arrange
+        when(productoRepository.findById(1L)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> 
+            productoService.actualizarProducto(1L, productoDTO)
+        );
+        verify(productoRepository).findById(1L);
+        verify(productoMapper, never()).updateProductoFromDTO(any(), any());
+        verify(productoRepository, never()).save(any());
+    }
+
+    /**
+     * Verifies that database errors during update are properly handled.
+     */
+    @Test
+    void actualizarProducto_DebeManipularErroresDeBD() {
+        // Arrange
+        when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
+        doNothing().when(productoMapper).updateProductoFromDTO(productoDTO, producto);
+        when(productoRepository.save(any(Producto.class)))
+            .thenThrow(new RuntimeException("Error de BD"));
+
+        // Act & Assert
+        assertThrows(RuntimeException.class, () ->
+            productoService.actualizarProducto(1L, productoDTO)
+        );
+        verify(productoRepository).findById(1L);
+        verify(productoMapper).updateProductoFromDTO(productoDTO, producto);
         verify(productoRepository).save(any(Producto.class));
     }
 }

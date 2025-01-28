@@ -2,6 +2,7 @@ package com.mitienda.gestion_tienda.dtos.producto;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
 import com.mitienda.gestion_tienda.entities.Producto;
@@ -35,4 +36,15 @@ public interface ProductoMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "fechaCreacion", ignore = true)
     Producto toProducto(ProductoDTO productoDTO);
+
+    /**
+     * Updates an existing Product entity with data from a ProductoDTO.
+     * Preserves the id and fechaCreacion fields of the existing entity.
+     *
+     * @param productoDTO the source DTO containing updated data
+     * @param producto the target Product entity to update
+     */
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "fechaCreacion", ignore = true)
+    void updateProductoFromDTO(ProductoDTO productoDTO, @MappingTarget Producto producto);
 }

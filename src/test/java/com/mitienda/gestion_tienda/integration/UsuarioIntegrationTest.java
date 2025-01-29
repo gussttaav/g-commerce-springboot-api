@@ -1,8 +1,10 @@
 package com.mitienda.gestion_tienda.integration;
 
+import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -14,7 +16,9 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.web.servlet.MvcResult;
 
+import com.jayway.jsonpath.JsonPath;
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
@@ -259,5 +263,173 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
                 .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
+    }
+
+    @Test
+    void obtenerPerfil_UsuarioAutenticado_RetornaDatosCorrectos() throws Exception {
+        // Arrange - Create user first
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk());
+
+        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        
+        // Act & Assert
+        mockMvc.perform(get(BASE_URL + "/perfil")
+                .header(HttpHeaders.AUTHORIZATION, authHeader))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.nombre").value("Test User"))
+                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
+                .andExpect(jsonPath("$.rol").value("USER"));
+    }
+
+    @Test
+    void obtenerPerfil_SinAutenticacion_RetornaUnauthorized() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get(BASE_URL + "/perfil"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void listarUsuarios_UsuarioAdmin_RetornaListaCompleta() throws Exception {
+        // Arrange - Create regular user
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk());
+
+        // Create admin user
+        crearUsuarioAdmin();
+        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        
+        // Act & Assert
+        mockMvc.perform(get(BASE_URL + "/admin/listar")
+                .header(HttpHeaders.AUTHORIZATION, authHeader))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[*].email", hasItems(TEST_EMAIL, TEST_ADMIN_EMAIL)))
+                .andExpect(jsonPath("$[*].rol", hasItems("USER", "ADMIN")));
+    }
+
+    @Test
+    void listarUsuarios_UsuarioRegular_RetornaForbidden() throws Exception {
+        // Arrange - Create regular user
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk());
+
+        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        
+        // Act & Assert
+        mockMvc.perform(get(BASE_URL + "/admin/listar")
+                .header(HttpHeaders.AUTHORIZATION, authHeader))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cambiarRol_UsuarioAdmin_CambiaRolCorrectamente() throws Exception {
+        // Arrange - Create regular user
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Get user ID from response
+        String responseJson = result.getResponse().getContentAsString();
+        Number userIdNumber = JsonPath.read(responseJson, "$.id");
+        Long userId = userIdNumber.longValue();
+
+        // Create admin user
+        crearUsuarioAdmin();
+        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        
+        // Act & Assert - Change role to ADMIN
+        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                .param("userId", String.valueOf(userId))
+                .param("newRole", "ADMIN"))
+                .andExpect(status().isOk());
+                
+        // Verify role change in database
+        Usuario usuario = usuarioRepository.findByEmail(TEST_EMAIL)
+                .orElseThrow(() -> new AssertionError("Usuario no encontrado"));
+        assertEquals(Usuario.Role.ADMIN, usuario.getRol());
+    }
+
+    @Test
+    void cambiarRol_UsuarioRegular_RetornaForbidden() throws Exception {
+        // Arrange - Create first regular user
+        UsuarioDTO usuarioDTO = new UsuarioDTO();
+        usuarioDTO.setNombre("Test User");
+        usuarioDTO.setEmail(TEST_EMAIL);
+        usuarioDTO.setPassword(TEST_PASSWORD);
+        
+        MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Get user ID from response
+        String responseJson = result.getResponse().getContentAsString();
+        Number userIdNumber = JsonPath.read(responseJson, "$.id");
+        Long userId = userIdNumber.longValue();
+
+        // Create second regular user
+        UsuarioDTO usuario2DTO = new UsuarioDTO();
+        usuario2DTO.setNombre("Test User 2");
+        usuario2DTO.setEmail("test2@example.com");
+        usuario2DTO.setPassword(TEST_PASSWORD);
+        
+        mockMvc.perform(post(BASE_URL + "/registro")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(usuario2DTO)))
+                .andExpect(status().isOk());
+
+        String authHeader = obtenerBasicAuthHeader("test2@example.com", TEST_PASSWORD);
+        
+        // Act & Assert - Try to change role
+        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                .param("userId", String.valueOf(userId))
+                .param("newRole", "ADMIN"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void cambiarRol_UsuarioInexistente_RetornaNotFound() throws Exception {
+        // Arrange - Create admin user
+        crearUsuarioAdmin();
+        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        
+        // Act & Assert
+        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                .param("userId", "999999")
+                .param("newRole", "ADMIN"))
+                .andExpect(status().isNotFound());
     }
 }

@@ -3,6 +3,8 @@ package com.mitienda.gestion_tienda.controllers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
+import java.util.List;
+
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
@@ -13,6 +15,7 @@ import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
+import com.mitienda.gestion_tienda.entities.Usuario;
 import com.mitienda.gestion_tienda.exceptions.ApiException;
 import com.mitienda.gestion_tienda.exceptions.InvalidPasswordException;
 import com.mitienda.gestion_tienda.exceptions.PasswordMismatchException;
@@ -21,6 +24,7 @@ import com.mitienda.gestion_tienda.services.UsuarioService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -34,9 +38,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
  * This controller handles all user-related operations including:
  * <ul>
  *   <li>User registration and authentication</li>
- *   <li>Admin user management</li>
- *   <li>Profile updates</li>
+ *   <li>Profile retrieve and update</li>
  *   <li>Password management</li>
+ *   <li>Admin user registration (admin only)</li>
+ *   <li>List of all users (admin only)</li>
+ *   <li>Change user role (admin only)</li>
  * </ul>
  * 
  * Most operations require authentication except for registration and login.
@@ -128,6 +134,25 @@ public class UsuarioController {
 
 
     /**
+     * Retrieves the profile information of the authenticated user.
+     * 
+     * @param authentication the current user's authentication object
+     * @return UsuarioResponseDTO containing the user's information
+     * @throws UsernameNotFoundException if the user is not found
+     */
+    @Operation(summary = "Get user profile", description = "Retrieves the authenticated user's profile information")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profile successfully retrieved", 
+                content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioResponseDTO.class))),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+    })
+    @GetMapping("/perfil")
+    public UsuarioResponseDTO obtenerPerfil(Authentication authentication) {
+        return usuarioService.obtenerPerfil(authentication.getName());
+    }
+
+
+    /**
      * Updates the profile information of the authenticated user.
      * 
      * @param authentication the current user's authentication object
@@ -174,5 +199,49 @@ public class UsuarioController {
             @Valid @RequestBody @Parameter(description = "Password change details", required = true) 
             CambioPasswdDTO contraseñaDTO) {
         usuarioService.cambiarContraseña(authentication.getName(), contraseñaDTO);
+    }
+
+
+    /**
+     * Lists all users in the system. Only accessible by administrators.
+     * 
+     * @return List of UsuarioResponseDTO containing all users' information
+     * @throws AccessDeniedException if the current user is not an administrator
+     */
+    @Operation(summary = "List all users", description = "Retrieves a list of all users in the system. Requires ADMIN role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Users successfully retrieved", 
+                content = @Content(mediaType = "application/json", 
+                array = @ArraySchema(schema = @Schema(implementation = UsuarioResponseDTO.class)))),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser")
+    })
+    @GetMapping("/admin/listar")
+    public List<UsuarioResponseDTO> listarUsuarios() {
+        return usuarioService.listarUsuarios();
+    }
+    
+
+    /**
+     * Updates a user's role. Only accessible by administrators.
+     * 
+     * @param userId the ID of the user whose role should be updated
+     * @param newRole the new role to assign to the user
+     * @throws AccessDeniedException if the current user is not an administrator
+     * @throws ResourceNotFoundException if the user is not found
+     */
+    @Operation(summary = "Change user role", description = "Updates a user's role in the system. Requires ADMIN role.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Role successfully updated"),
+            @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound")
+    })
+    @PutMapping("/admin/change-role")
+    public void cambiarRol(
+            @RequestParam @Parameter(description = "ID of the user", required = true) Long userId,
+            @RequestParam @Parameter(description = "New role (ADMIN or USER)", required = true) Usuario.Role newRole) {
+        usuarioService.cambiarRol(userId, newRole);
     }
 }

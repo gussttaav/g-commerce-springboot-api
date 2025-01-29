@@ -5,11 +5,16 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -17,6 +22,7 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
@@ -213,5 +219,130 @@ class UsuarioServiceTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> usuarioService.login(loginDTO));
+    }
+
+    @Test
+    void obtenerPerfil_ExistingUser_Success() {
+        // Arrange
+        String email = "test@example.com";
+        Usuario usuario = createTestUsuario();
+        UsuarioResponseDTO expectedResponse = new UsuarioResponseDTO(
+            usuario.getId(), usuario.getNombre(), usuario.getEmail(), 
+            usuario.getRol(), usuario.getFechaCreacion()
+        );
+
+        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
+        when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(expectedResponse);
+
+        // Act
+        UsuarioResponseDTO result = usuarioService.obtenerPerfil(email);
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(expectedResponse.getId(), result.getId());
+        assertEquals(expectedResponse.getNombre(), result.getNombre());
+        assertEquals(expectedResponse.getEmail(), result.getEmail());
+        assertEquals(expectedResponse.getRol(), result.getRol());
+        
+        verify(usuarioRepository).findByEmail(email);
+        verify(usuarioMapper).toUsuarioResponseDTO(usuario);
+    }
+
+    @Test
+    void obtenerPerfil_NonExistentUser_ThrowsException() {
+        // Arrange
+        String email = "nonexistent@example.com";
+        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(UsernameNotFoundException.class, () -> 
+            usuarioService.obtenerPerfil(email));
+        
+        verify(usuarioRepository).findByEmail(email);
+        verify(usuarioMapper, never()).toUsuarioResponseDTO(any());
+    }
+
+    @Test
+    void listarUsuarios_Success() {
+        // Arrange
+        List<Usuario> usuarios = Arrays.asList(
+            createTestUsuario(),
+            createTestUsuario() // Second user with same data for simplicity
+        );
+        
+        List<UsuarioResponseDTO> expectedResponses = usuarios.stream()
+            .map(u -> new UsuarioResponseDTO(u.getId(), u.getNombre(), 
+                u.getEmail(), u.getRol(), u.getFechaCreacion()))
+            .collect(Collectors.toList());
+
+        when(usuarioRepository.findAll()).thenReturn(usuarios);
+        when(usuarioMapper.toUsuarioResponseDTO(any(Usuario.class)))
+            .thenReturn(expectedResponses.get(0), expectedResponses.get(1));
+
+        // Act
+        List<UsuarioResponseDTO> result = usuarioService.listarUsuarios();
+
+        // Assert
+        assertNotNull(result);
+        assertEquals(2, result.size());
+        assertEquals(expectedResponses.get(0).getId(), result.get(0).getId());
+        assertEquals(expectedResponses.get(1).getId(), result.get(1).getId());
+        
+        verify(usuarioRepository).findAll();
+        verify(usuarioMapper, times(2)).toUsuarioResponseDTO(any(Usuario.class));
+    }
+
+    @Test
+    void cambiarRol_ExistingUser_Success() {
+        // Arrange
+        Long userId = 1L;
+        Usuario usuario = createTestUsuario();
+        Usuario.Role newRole = Usuario.Role.ADMIN;
+
+        when(usuarioRepository.findById(userId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+
+        // Act
+        assertDoesNotThrow(() -> usuarioService.cambiarRol(userId, newRole));
+
+        // Assert
+        assertEquals(newRole, usuario.getRol());
+        verify(usuarioRepository).findById(userId);
+        verify(usuarioRepository).save(usuario);
+    }
+
+    @Test
+    void cambiarRol_NonExistentUser_ThrowsException() {
+        // Arrange
+        Long userId = 999L;
+        Usuario.Role newRole = Usuario.Role.ADMIN;
+
+        when(usuarioRepository.findById(userId)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(ResourceNotFoundException.class, () -> 
+            usuarioService.cambiarRol(userId, newRole));
+        
+        verify(usuarioRepository).findById(userId);
+        verify(usuarioRepository, never()).save(any());
+    }
+
+    @Test
+    void cambiarRol_SameRole_Success() {
+        // Arrange
+        Long userId = 1L;
+        Usuario usuario = createTestUsuario();
+        Usuario.Role sameRole = usuario.getRol();
+
+        when(usuarioRepository.findById(userId)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.save(any(Usuario.class))).thenReturn(usuario);
+
+        // Act
+        assertDoesNotThrow(() -> usuarioService.cambiarRol(userId, sameRole));
+
+        // Assert
+        assertEquals(sameRole, usuario.getRol());
+        verify(usuarioRepository).findById(userId);
+        verify(usuarioRepository).save(usuario);
     }
 }

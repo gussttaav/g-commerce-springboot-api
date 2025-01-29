@@ -10,7 +10,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Profile management and password updates
 
 - **Product Management**
-  - Product creation, update, delete and listing
+  - Product creation, update, delete and list
   - Product status management (active/inactive)
   - Role-based access control for product operations
 
@@ -139,24 +139,28 @@ mvn verify
 
 ### User Management
 ```
-POST /api/usuarios/registro          # Register a new user
-POST /api/usuarios/login             # Login a user
-POST /api/usuarios/admin/registro    # Register a new admin (requires ADMIN role)
+POST /api/usuarios/registro         # Register a new user
+POST /api/usuarios/login            # Login a user
 PUT  /api/usuarios/perfil           # Update user profile
+GET  /api/usuarios/perfil           # Obtain the user profile
 PUT  /api/usuarios/password         # Change password
+
+# With ADMIN role only:
+POST /api/usuarios/admin/registro   # Register a new admin
+GET /api/usuarios/admin/listar      # List all users
+PUT /api/usuarios/admin/change-role # Change user role
 ```
 
 ### Product Management
 ```
 GET    /api/productos/listar               # List all active products
 
-# As ADMIN user:
+# With ADMIN role only:
 GET /api/productos/listar?status=INACTIVE  # Returns inactive products
 GET /api/productos/listar?status=ALL       # Returns all products
-
-POST   /api/productos/crear                # Create a new product (ADMIN only)
-DELETE /api/productos/eliminar/{id}        # Delete a product (ADMIN only)
-PUT /api/productos/actualizar/{id}         # Update a product information (ADMIN only)
+POST   /api/productos/crear                # Create a new product
+DELETE /api/productos/eliminar/{id}        # Delete a product
+PUT /api/productos/actualizar/{id}         # Update a product information
 ```
 
 ### Purchase Management

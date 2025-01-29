@@ -2,6 +2,8 @@ package com.mitienda.gestion_tienda.security;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -30,8 +32,10 @@ import com.mitienda.gestion_tienda.services.UsuarioService;
 
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -365,5 +369,119 @@ class SecurityConfigTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void whenGetUserProfile_withValidCredentials_thenAllowsAccess() throws Exception {
+        // Arrange
+        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+        
+        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder()
+            .id(1L)
+            .nombre("Test User")
+            .email("user@test.com")
+            .rol(Usuario.Role.USER)
+            .build();
+            
+        when(usuarioService.obtenerPerfil(anyString())).thenReturn(responseDTO);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/usuarios/perfil")
+                .with(httpBasic("user@test.com", "password")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenGetUserProfile_withNoAuth_thenReturns401() throws Exception {
+        mockMvc.perform(get("/api/usuarios/perfil"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void whenListUsers_asAdmin_thenAllowsAccess() throws Exception {
+        // Arrange
+        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
+        
+        List<UsuarioResponseDTO> users = Arrays.asList(
+            UsuarioResponseDTO.builder()
+                .id(1L)
+                .nombre("Test User")
+                .email("user@test.com")
+                .rol(Usuario.Role.USER)
+                .build()
+        );
+        
+        when(usuarioService.listarUsuarios()).thenReturn(users);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/usuarios/admin/listar")
+                .with(httpBasic("admin@test.com", "password")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenListUsers_asUser_thenReturns403() throws Exception {
+        // Arrange
+        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+
+        // Act & Assert
+        mockMvc.perform(get("/api/usuarios/admin/listar")
+                .with(httpBasic("user@test.com", "password")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void whenListUsers_withNoAuth_thenReturns401() throws Exception {
+        mockMvc.perform(get("/api/usuarios/admin/listar"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void whenChangeUserRole_asAdmin_thenAllowsAccess() throws Exception {
+        // Arrange
+        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
+        
+        doNothing().when(usuarioService).cambiarRol(anyLong(), any(Usuario.Role.class));
+
+        // Act & Assert
+        mockMvc.perform(put("/api/usuarios/admin/change-role")
+                .with(httpBasic("admin@test.com", "password"))
+                .param("userId", "1")
+                .param("newRole", "USER"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenChangeUserRole_asUser_thenReturns403() throws Exception {
+        // Arrange
+        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/usuarios/admin/change-role")
+                .with(httpBasic("user@test.com", "password"))
+                .param("userId", "1")
+                .param("newRole", "USER"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void whenChangeUserRole_withNoAuth_thenReturns401() throws Exception {
+        mockMvc.perform(put("/api/usuarios/admin/change-role")
+                .param("userId", "1")
+                .param("newRole", "USER"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void whenChangeUserRole_withInvalidRole_thenReturns400() throws Exception {
+        // Arrange
+        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
+
+        // Act & Assert
+        mockMvc.perform(put("/api/usuarios/admin/change-role")
+                .with(httpBasic("admin@test.com", "password"))
+                .param("userId", "1")
+                .param("newRole", "INVALID_ROLE"))
+                .andExpect(status().isBadRequest());
     }
 }

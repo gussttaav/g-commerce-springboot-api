@@ -22,6 +22,8 @@ import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
 import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  * Service class that handles user-related operations including registration,
@@ -138,6 +140,49 @@ public class UsuarioService {
 
         // Update password
         usuario.setPassword(passwordEncoder.encode(contraseñaDTO.getNewPassword()));
+        usuarioRepository.save(usuario);
+    }
+    
+    /**
+     * Retrieves a user's profile information.
+     * 
+     * @param email Email of the user
+     * @return UsuarioResponseDTO containing the user's information
+     * @throws UsernameNotFoundException if user is not found
+     */
+    public UsuarioResponseDTO obtenerPerfil(String email) {
+        Usuario usuario = usuarioRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        return usuarioMapper.toUsuarioResponseDTO(usuario);
+    }
+    
+
+    /**
+     * Lists all users in the system.
+     * 
+     * @return List of UsuarioResponseDTO containing all users' information
+     */
+    public List<UsuarioResponseDTO> listarUsuarios() {
+        return usuarioRepository.findAll().stream()
+            .map(usuarioMapper::toUsuarioResponseDTO)
+            .collect(Collectors.toList());
+    }
+
+    /**
+     * Updates a user's role.
+     * 
+     * @param userId ID of the user
+     * @param newRole New role to assign
+     * @throws ResourceNotFoundException if user is not found
+     */
+    @Transactional
+    public void cambiarRol(Long userId, Usuario.Role newRole) {
+        Usuario usuario = usuarioRepository.findById(userId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "No existe ningún usuario con el ID proporcionado"
+            ));
+        
+        usuario.setRol(newRole);
         usuarioRepository.save(usuario);
     }
 }

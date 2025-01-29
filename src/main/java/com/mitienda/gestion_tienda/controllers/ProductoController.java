@@ -29,6 +29,7 @@ import com.mitienda.gestion_tienda.services.ProductoService;
  * <ul>
  *   <li>Product creation (admin only)</li>
  *   <li>Product listing (users only get the active products)</li>
+ *   <li>Product update (admin only)</li>
  *   <li>Product deletion (admin only)</li>
  * </ul>
  * 

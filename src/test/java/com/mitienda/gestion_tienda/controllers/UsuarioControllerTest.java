@@ -8,6 +8,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -19,6 +21,7 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -434,6 +437,192 @@ class UsuarioControllerTest {
                     .andExpect(jsonPath("$.details", hasSize(2)))
                     .andExpect(jsonPath("$.details[0]").value(containsString("password")))
                     .andExpect(jsonPath("$.details[1]").value(containsString("email")));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /perfil")
+    class ObtenerPerfilTests {
+        
+        @Test
+        @DisplayName("Should get profile successfully when authenticated")
+        @WithMockUser(username = TEST_USER_EMAIL)
+        void obtenerPerfil_Authenticated_Success() throws Exception {
+            // Arrange
+            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L,
+                "Test User",
+                TEST_USER_EMAIL,
+                Usuario.Role.USER,
+                LocalDateTime.now());
+            
+            when(usuarioService.obtenerPerfil(TEST_USER_EMAIL))
+                .thenReturn(responseDto);
+
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/perfil"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(1))
+                    .andExpect(jsonPath("$.nombre").value("Test User"))
+                    .andExpect(jsonPath("$.email").value(TEST_USER_EMAIL))
+                    .andExpect(jsonPath("$.rol").value("USER"))
+                    .andExpect(jsonPath("$.fechaCreacion").exists());
+        }
+
+        @Test
+        @DisplayName("Should return 401 when not authenticated")
+        void obtenerPerfil_NotAuthenticated_Unauthorized() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/perfil"))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @DisplayName("Should return 404 when user not found")
+        @WithMockUser(username = TEST_USER_EMAIL)
+        void obtenerPerfil_UserNotFound_NotFound() throws Exception {
+            // Arrange
+            when(usuarioService.obtenerPerfil(TEST_USER_EMAIL))
+                .thenThrow(new UsernameNotFoundException("Usuario no encontrado"));
+
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/perfil"))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message").value("Usuario no encontrado"));
+        }
+    }
+
+    @Nested
+    @DisplayName("GET /admin/listar")
+    class ListarUsuariosTests {
+        
+        @Test
+        @DisplayName("Should list all users when authenticated as admin")
+        @WithMockUser(roles = "ADMIN")
+        void listarUsuarios_AuthenticatedAsAdmin_Success() throws Exception {
+            // Arrange
+            List<UsuarioResponseDTO> usuarios = Arrays.asList(
+                new UsuarioResponseDTO(1L, "User 1", "user1@example.com", Usuario.Role.USER, LocalDateTime.now()),
+                new UsuarioResponseDTO(2L, "User 2", "user2@example.com", Usuario.Role.ADMIN, LocalDateTime.now())
+            );
+            
+            when(usuarioService.listarUsuarios()).thenReturn(usuarios);
+
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/admin/listar"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$", hasSize(2)))
+                    .andExpect(jsonPath("$[0].id").value(1))
+                    .andExpect(jsonPath("$[0].nombre").value("User 1"))
+                    .andExpect(jsonPath("$[0].email").value("user1@example.com"))
+                    .andExpect(jsonPath("$[0].rol").value("USER"))
+                    .andExpect(jsonPath("$[1].id").value(2))
+                    .andExpect(jsonPath("$[1].nombre").value("User 2"))
+                    .andExpect(jsonPath("$[1].email").value("user2@example.com"))
+                    .andExpect(jsonPath("$[1].rol").value("ADMIN"));
+        }
+
+        @Test
+        @DisplayName("Should return 403 when authenticated as regular user")
+        @WithMockUser(roles = "USER")
+        void listarUsuarios_AuthenticatedAsUser_Forbidden() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/admin/listar"))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Should return 401 when not authenticated")
+        void listarUsuarios_NotAuthenticated_Unauthorized() throws Exception {
+            // Act & Assert
+            mockMvc.perform(get(BASE_URL + "/admin/listar"))
+                    .andExpect(status().isUnauthorized());
+        }
+    }
+
+    @Nested
+    @DisplayName("PUT /admin/change-role")
+    class CambiarRolTests {
+        
+        @Test
+        @DisplayName("Should change user role when authenticated as admin")
+        @WithMockUser(roles = "ADMIN")
+        void cambiarRol_AuthenticatedAsAdmin_Success() throws Exception {
+            // Arrange
+            Long userId = 1L;
+            Usuario.Role newRole = Usuario.Role.ADMIN;
+            
+            doNothing().when(usuarioService).cambiarRol(userId, newRole);
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                    .param("userId", userId.toString())
+                    .param("newRole", newRole.toString()))
+                    .andExpect(status().isOk());
+            
+            verify(usuarioService).cambiarRol(userId, newRole);
+        }
+
+        @Test
+        @DisplayName("Should return 404 when user not found")
+        @WithMockUser(roles = "ADMIN")
+        void cambiarRol_UserNotFound_NotFound() throws Exception {
+            // Arrange
+            Long userId = 999L;
+            Usuario.Role newRole = Usuario.Role.ADMIN;
+            
+            doThrow(new ResourceNotFoundException("No existe ningún usuario con el ID proporcionado"))
+                .when(usuarioService).cambiarRol(userId, newRole);
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                    .param("userId", userId.toString())
+                    .param("newRole", newRole.toString()))
+                    .andExpect(status().isNotFound())
+                    .andExpect(jsonPath("$.message")
+                        .value("No existe ningún usuario con el ID proporcionado"));
+        }
+
+        @Test
+        @DisplayName("Should return 400 when role is invalid")
+        @WithMockUser(roles = "ADMIN")
+        void cambiarRol_InvalidRole_BadRequest() throws Exception {
+            // Arrange
+            Long userId = 1L;
+            
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                    .param("userId", userId.toString())
+                    .param("newRole", "INVALID_ROLE"))
+                    .andExpect(status().isBadRequest());
+        }
+
+        @Test
+        @DisplayName("Should return 403 when authenticated as regular user")
+        @WithMockUser(roles = "USER")
+        void cambiarRol_AuthenticatedAsUser_Forbidden() throws Exception {
+            // Arrange
+            Long userId = 1L;
+            Usuario.Role newRole = Usuario.Role.ADMIN;
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                    .param("userId", userId.toString())
+                    .param("newRole", newRole.toString()))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @DisplayName("Should return 401 when not authenticated")
+        void cambiarRol_NotAuthenticated_Unauthorized() throws Exception {
+            // Arrange
+            Long userId = 1L;
+            Usuario.Role newRole = Usuario.Role.ADMIN;
+
+            // Act & Assert
+            mockMvc.perform(put(BASE_URL + "/admin/change-role")
+                    .param("userId", userId.toString())
+                    .param("newRole", newRole.toString()))
+                    .andExpect(status().isUnauthorized());
         }
     }
 

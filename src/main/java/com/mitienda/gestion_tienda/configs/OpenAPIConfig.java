@@ -56,7 +56,7 @@ public class OpenAPIConfig {
                 .components(new Components()
                         .responses(new ApiResponses()
                             .addApiResponse("DuplicatedEmail", createErrorApiResponse("User email already exists"))
-                            .addApiResponse("UserNotFound", createErrorApiResponse("User email not found"))
+                            .addApiResponse("UserNotFound", createErrorApiResponse("User not found"))
                             .addApiResponse("InvalidPassword", createErrorApiResponse("Invalid password"))
                             .addApiResponse("InvalidInput", createErrorApiResponse("Invalid input data"))
                             .addApiResponse("AccessDenied", createErrorApiResponse("Authentication failed"))

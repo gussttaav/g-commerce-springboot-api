@@ -76,7 +76,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 
 3. Start the MySQL database using Docker Compose:
    ```bash
-   docker-compose up -d
+   docker-compose -f docker-compose.db.yml up -d
    ```
 
 4. Build and run the application:
@@ -84,6 +84,44 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    mvn clean install
    mvn spring-boot:run
    ```
+
+The application will be available at `http://localhost:8080`
+
+## 🐳 Docker Deployment
+
+For full deployment, both the application and database run in containers:
+
+1. Build and start all services:
+   ```bash
+   docker-compose up --build -d
+   ```
+
+2. Stop all services:
+   ```bash
+   docker-compose down
+   ```
+
+### Managing Docker Resources
+
+- **Rebuild after code changes:**
+  ```bash
+  docker-compose up --build -d
+  ```
+
+- **Remove all resources (containers, volumes, images):**
+  ```bash
+  docker-compose down --volumes --rmi all
+  ```
+
+- **View logs:**
+  ```bash
+  docker-compose logs -f
+  ```
+
+- **Check container status:**
+  ```bash
+  docker-compose ps
+  ```
 
 The application will be available at `http://localhost:8080`
 

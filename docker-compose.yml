@@ -1,4 +1,19 @@
+# Full deployment configuration - both app and database
 services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - spring-mysql-network
+
   mysql:
     image: mysql:9
     environment:
@@ -13,6 +28,17 @@ services:
     volumes:
       - ./mysql-init:/docker-entrypoint-initdb.d
       - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - spring-mysql-network
 
 volumes:
   mysql-data:
+
+networks:
+  spring-mysql-network:
+    driver: bridge

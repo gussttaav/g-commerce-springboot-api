@@ -44,9 +44,12 @@ jobs:
           # Build the application image only (without starting the services)
           docker compose build app
           
-          # Tag and push the application image
-          docker tag g-commerce-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
-          docker tag g-commerce-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
+          # Get the image ID of the built image
+          IMAGE_ID=$(docker images g-commerce-backend --quiet)
+          
+          # Tag and push using the image ID
+          docker tag $IMAGE_ID ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
+          docker tag $IMAGE_ID ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
           
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}

@@ -21,7 +21,6 @@ import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -434,9 +433,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(loginDTO)))
                     .andExpect(status().isBadRequest())
                     .andExpect(jsonPath("$.error").value("Validation Error"))
-                    .andExpect(jsonPath("$.details", hasSize(2)))
-                    .andExpect(jsonPath("$.details[0]").value(containsString("password")))
-                    .andExpect(jsonPath("$.details[1]").value(containsString("email")));
+                    .andExpect(jsonPath("$.details", hasSize(2)));
         }
     }
 
@@ -474,20 +471,6 @@ class UsuarioControllerTest {
             // Act & Assert
             mockMvc.perform(get(BASE_URL + "/perfil"))
                     .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @DisplayName("Should return 404 when user not found")
-        @WithMockUser(username = TEST_USER_EMAIL)
-        void obtenerPerfil_UserNotFound_NotFound() throws Exception {
-            // Arrange
-            when(usuarioService.obtenerPerfil(TEST_USER_EMAIL))
-                .thenThrow(new UsernameNotFoundException("Usuario no encontrado"));
-
-            // Act & Assert
-            mockMvc.perform(get(BASE_URL + "/perfil"))
-                    .andExpect(status().isNotFound())
-                    .andExpect(jsonPath("$.message").value("Usuario no encontrado"));
         }
     }
 

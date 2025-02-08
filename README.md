@@ -1,6 +1,6 @@
-# Spring Boot E-commerce API
+# Spring Boot G-commerce API
 
-A RESTful API built with Spring Boot that implements a basic e-commerce system with user authentication, product management, and purchase tracking.
+A RESTful API built with Spring Boot that implements a basic e-commerce system with user authentication, role based features, product management, shoppig cart functionality and purchase tracking.
 
 ## 🚀 Features
 
@@ -30,6 +30,11 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Mock MVC tests for controllers
   - In-memory H2 database for testing
 
+- **Continuous Integration**
+  - Automated Docker image builds via GitHub Actions
+  - Automatic image publishing to Docker Hub
+  - Environment-based configuration management
+
 ## 🛠️ Technologies
 
 - Java 17
@@ -44,6 +49,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - Docker & Docker Compose
 - Maven
 - Lombok
+- GitHub Actions
 
 ## 📋 Prerequisites
 
@@ -51,6 +57,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - Docker and Docker Compose
 - Maven
 - Git
+- Docker Hub account (for CI/CD)
 
 ## 🔧 Installation
 
@@ -284,8 +291,10 @@ src/
 │   │       ├── security/
 │   │       └── integration/
 │   └── resources/
-│       └── application-test.properties
+│       └── application-test.yml
 ├── docker-compose.yml
+├── docker-compose.db.yml
+├── Dockerfile
 ├── mysql-init/
 │   └── shopping_db.sql
 └── pom.xml

@@ -1,0 +1,52 @@
+name: Docker Compose Build and Push
+
+on:
+  push:
+    branches:
+      - gestion-tienda
+    paths-ignore:
+      - '**.md'
+      - '.gitignore'
+      - 'LICENSE'
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Create .env file
+        run: |
+          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
+          echo "MYSQL_DATABASE=shopping" >> .env
+          echo "MYSQL_USER=${{ secrets.MYSQL_USER }}" >> .env
+          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
+          echo "MYSQL_CHARSET=utf8mb4" >> .env
+          echo "MYSQL_COLLATION=utf8mb4_unicode_ci" >> .env
+          echo "ADMIN_EMAIL=admin@gmail.com" >> .env
+          echo "ADMIN_PASSWORD=123" >> .env
+          echo "ADMIN_NAME=Administrator" >> .env
+          echo "CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000" >> .env
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+      
+      - name: Build and push application image
+        run: |
+          # Build the application image only (without starting the services)
+          docker compose build app
+          
+          # Tag and push the application image
+          docker tag g-commerce-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
+          docker tag g-commerce-backend:latest ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
+          
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}

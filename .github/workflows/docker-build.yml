@@ -53,3 +53,12 @@ jobs:
           
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
+
+      - name: Update Docker Hub Description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend
+          readme-filepath: ./DOCKER.md
+          short-description: "Spring Boot E-commerce API with MySQL database"

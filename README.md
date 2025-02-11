@@ -105,7 +105,12 @@ For full deployment, both the application and database run in containers:
 
 2. Stop all services:
    ```bash
-   docker-compose down
+   docker-compose stop
+   ```
+
+3. Start the created services:
+   ```bash
+   docker-compose start
    ```
 
 ### Managing Docker Resources

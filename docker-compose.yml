@@ -16,7 +16,13 @@ services:
       - spring-mysql-network
 
   mysql:
-    image: mysql:9
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM mysql:9
+        COPY mysql-init/shopping_db.sql /docker-entrypoint-initdb.d/
+        CMD ["mysqld"]
+    image: g-commerce-mysql
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -27,7 +33,6 @@ services:
     ports:
       - "3306:3306"
     volumes:
-      - ./mysql-init:/docker-entrypoint-initdb.d
       - mysql-data:/var/lib/mysql
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]

@@ -32,7 +32,7 @@ CORS_ORIGINS=http://localhost:3000
 ```yaml
 services:
   app:
-    image: your-username/g-commerce-backend:latest
+    image: gussttaav/g-commerce-backend:latest
     ports:
       - "8080:8080"
     env_file:
@@ -46,7 +46,7 @@ services:
       - spring-mysql-network
 
   mysql:
-    image: your-username/g-commerce-mysql:latest
+    image: gussttaav/g-commerce-mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}

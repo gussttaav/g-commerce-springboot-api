@@ -1,20 +1,42 @@
-# Spring Boot E-commerce Backend
+# G-Commerce Backend API
 
-A robust e-commerce REST API built with Spring Boot that provides user authentication, product management, and purchase tracking functionality.
+A robust e-commerce REST API built with Spring Boot that provides comprehensive user authentication, product management, and purchase tracking functionality.
 
-## Features
+## 🚀 Features
 
-- User Management (registration, authentication, role-based access)
-- Product Management (CRUD operations)
-- Purchase System with shopping cart functionality
-- OpenAPI/Swagger documentation
-- Role-based authorization (ADMIN, USER)
-- Comprehensive security implementation
-- MySQL database with automatic schema initialization
+- **User Management**
+  - Secure user registration and authentication
+  - Role-based authorization (ADMIN, USER)
+  - Profile management and password updates
+  - JWT-based authentication
 
-## Quick Start
+- **Product Management**
+  - Complete CRUD operations
+  - Product status management (active/inactive)
+  - Role-based access control
+  - Stock management
 
-1. Create a `.env` file with the following variables:
+- **Purchase System**
+  - Shopping cart functionality
+  - Order tracking
+  - Purchase history
+  - Transaction management
+
+- **Security & Documentation**
+  - Comprehensive security implementation
+  - OpenAPI/Swagger documentation
+  - Input validation
+  - CORS configuration
+
+## 🚦 Quick Start
+
+### Prerequisites
+- Docker and Docker Compose installed
+- Git (optional)
+
+### Installation
+
+1. Create a `.env` file with the required environment variables:
 ```env
 MYSQL_ROOT_PASSWORD=your_root_password
 MYSQL_DATABASE=your_database_name
@@ -46,7 +68,7 @@ services:
       - spring-mysql-network
 
   mysql:
-    image: gussttaav/g-commerce-mysql:latest
+    image: gussttaav/g-commerce-db:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -79,89 +101,102 @@ networks:
 docker compose up -d
 ```
 
-The application will be available at `http://localhost:8080`
+The API will be available at `http://localhost:8080`
 
-That's it! The database schema is automatically included in the MySQL image, so no additional setup is required.
+💡 The database schema is automatically initialized - no additional setup required!
 
-## API Documentation
+## 📚 API Documentation
 
-Once the application is running, you can access:
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- OpenAPI Spec: `http://localhost:8080/v3/api-docs`
+Once running, access the API documentation at:
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
+- **OpenAPI Spec**: `http://localhost:8080/v3/api-docs`
 
-## Main Endpoints
+## 🔌 Main Endpoints
 
-### User Management
-```
-POST /api/usuarios/registro         # Register a new user
-POST /api/usuarios/login           # Login a user
-PUT  /api/usuarios/perfil          # Update user profile
+### Authentication & Users
+```http
+POST /api/usuarios/registro         # Register new user
+POST /api/usuarios/login           # User login
 GET  /api/usuarios/perfil          # Get user profile
+PUT  /api/usuarios/perfil          # Update profile
 PUT  /api/usuarios/password        # Change password
 ```
 
-### Product Management
-```
-GET    /api/productos/listar       # List all active products
-POST   /api/productos/crear        # Create a new product (ADMIN)
-DELETE /api/productos/eliminar/{id} # Delete a product (ADMIN)
-PUT    /api/productos/actualizar/{id} # Update product (ADMIN)
+### Products
+```http
+GET    /api/productos/listar             # List products
+GET    /api/productos/{id}               # Get product details
+POST   /api/productos/crear              # Create product (ADMIN)
+PUT    /api/productos/actualizar/{id}    # Update product (ADMIN)
+DELETE /api/productos/eliminar/{id}      # Delete product (ADMIN)
 ```
 
-### Purchase Management
-```
-POST /api/compras/nueva           # Create a new purchase
+### Purchases
+```http
+POST /api/compras/nueva            # Create purchase
 GET  /api/compras/listar          # List user purchases
+GET  /api/compras/{id}            # Get purchase details
 ```
 
-## Environment Variables
+## ⚙️ Environment Variables
 
-| Variable | Description | Required |
-|----------|-------------|----------|
-| MYSQL_ROOT_PASSWORD | MySQL root password | Yes |
-| MYSQL_DATABASE | Database name | Yes |
-| MYSQL_USER | Database user | Yes |
-| MYSQL_PASSWORD | Database password | Yes |
-| MYSQL_CHARSET | Database charset | Yes |
-| MYSQL_COLLATION | Database collation | Yes |
-| ADMIN_EMAIL | Admin user email | Yes |
-| ADMIN_PASSWORD | Admin user password | Yes |
-| ADMIN_NAME | Admin user name | Yes |
-| CORS_ORIGINS | Allowed CORS origins | Yes |
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `MYSQL_ROOT_PASSWORD` | MySQL root password | - | Yes |
+| `MYSQL_DATABASE` | Database name | - | Yes |
+| `MYSQL_USER` | Database user | - | Yes |
+| `MYSQL_PASSWORD` | Database password | - | Yes |
+| `MYSQL_CHARSET` | Database charset | utf8mb4 | Yes |
+| `MYSQL_COLLATION` | Database collation | utf8mb4_unicode_ci | Yes |
+| `ADMIN_EMAIL` | Admin user email | - | Yes |
+| `ADMIN_PASSWORD` | Admin user password | - | Yes |
+| `ADMIN_NAME` | Admin user name | - | Yes |
+| `CORS_ORIGINS` | Allowed CORS origins | http://localhost:3000 | Yes |
 
-## Container Management
+## 🐳 Container Management
 
 ```bash
-# Start containers
+# Start services
 docker compose up -d
 
 # View logs
 docker compose logs -f
 
-# Stop containers
+# Stop services
 docker compose down
 
 # Stop and remove volumes (clears database)
 docker compose down -v
+
+# Check service status
+docker compose ps
 ```
 
-## Technologies
+## 🛠️ Technologies
 
-- Java 17
-- Spring Boot 3.4.1
-- Spring Security
-- MySQL 9
-- Docker & Docker Compose
-- OpenAPI/Swagger
+- **Backend Framework**: Spring Boot 3.4.1
+- **Language**: Java 17
+- **Security**: Spring Security with JWT
+- **Database**: MySQL 9
+- **Documentation**: OpenAPI 3.0 (Swagger)
+- **Containerization**: Docker & Docker Compose
+- **Testing**: JUnit 5, Mockito
+- **Build Tool**: Maven
 
-## Source Code
+## 📦 Related Images
+
+This application consists of two Docker images:
+- Backend API (this image): `gussttaav/g-commerce-backend`
+- Database: `gussttaav/g-commerce-db`
+
+## 💻 Source Code
 
 The complete source code is available on [GitHub](https://github.com/gussttaav/springboot-projects/tree/gestion-tienda)
 
-## Support
+## 🤝 Support
 
 For issues and feature requests, please use the [GitHub Issues](https://github.com/gussttaav/springboot-projects/issues) page.
 
-## License
+## 📄 License
 
 This project is licensed under the MIT License.

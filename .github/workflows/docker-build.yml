@@ -1,4 +1,4 @@
-name: Docker Compose Build and Push
+name: Docker Build and Push
 
 on:
   push:
@@ -17,50 +17,50 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
-      - name: Create .env file
-        run: |
-          echo "MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_ROOT_PASSWORD }}" >> .env
-          echo "MYSQL_DATABASE=shopping" >> .env
-          echo "MYSQL_USER=${{ secrets.MYSQL_USER }}" >> .env
-          echo "MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}" >> .env
-          echo "MYSQL_CHARSET=utf8mb4" >> .env
-          echo "MYSQL_COLLATION=utf8mb4_unicode_ci" >> .env
-          echo "ADMIN_EMAIL=admin@gmail.com" >> .env
-          echo "ADMIN_PASSWORD=123" >> .env
-          echo "ADMIN_NAME=Administrator" >> .env
-          echo "CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000" >> .env
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
       - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
-      
-      - name: Build and push application image
-        run: |
-          # Build the application image only (without starting the services)
-          docker compose build app
-          
-          # Tag and push backend image
-          docker tag g-commerce-backend ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
-          docker tag g-commerce-backend ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
-          
-          # Tag and push MySQL image with schema
-          docker tag g-commerce-mysql ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:latest
-          docker tag g-commerce-mysql ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:${{ github.sha }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:latest
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:${{ github.sha }}
 
-      - name: Update Docker Hub Description
+      # Build and push the database image
+      - name: Build and push database image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile.db
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:${{ github.sha }}
+      
+      # Build and push the application image
+      - name: Build and push application image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
+
+      # Update Docker Hub Description for Backend App
+      - name: Update Backend Docker Hub Description
         uses: peter-evans/dockerhub-description@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
           repository: ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend
           readme-filepath: ./DOCKER.md
-          short-description: "Spring Boot E-commerce API with MySQL database"
+          short-description: "Spring Boot E-commerce API - Backend Application"
+
+      # Update Docker Hub Description for Database
+      - name: Update Database Docker Hub Description
+        uses: peter-evans/dockerhub-description@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          repository: ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql
+          readme-filepath: ./DOCKER_DB.md
+          short-description: "MySQL Database for G-Commerce with pre-configured schema"

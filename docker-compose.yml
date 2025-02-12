@@ -1,8 +1,7 @@
 # Full deployment configuration - both app and database
 services:
   app:
-    build: .
-    image: g-commerce-backend
+    image: gussttaav/g-commerce-backend:latest
     ports:
       - "8080:8080"
     env_file:
@@ -16,13 +15,7 @@ services:
       - spring-mysql-network
 
   mysql:
-    build:
-      context: .
-      dockerfile_inline: |
-        FROM mysql:9
-        COPY mysql-init/shopping_db.sql /docker-entrypoint-initdb.d/
-        CMD ["mysqld"]
-    image: g-commerce-mysql
+    image: gussttaav/g-commerce-mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: ${MYSQL_DATABASE}

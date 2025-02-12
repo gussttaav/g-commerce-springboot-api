@@ -57,7 +57,6 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - Docker and Docker Compose
 - Maven
 - Git
-- Docker Hub account (for CI/CD)
 
 ## 🔧 Installation
 
@@ -94,48 +93,37 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 
 The application will be available at `http://localhost:8080`
 
-## 🐳 Docker Deployment
+## 🐳 Docker Images
 
-For full deployment, both the application and database run in containers:
+The application is split into two Docker images:
 
-1. Build and start all services:
-   ```bash
-   docker-compose up --build -d
-   ```
+1. **Backend Application** (`gussttaav/g-commerce-backend`)
+   - Spring Boot application
+   - API endpoints and business logic
+   - Available tags: `latest` and commit-specific tags
 
-2. Stop all services:
-   ```bash
-   docker-compose stop
-   ```
+2. **Database** (`gussttaav/g-commerce-mysql`)
+   - MySQL 8 with a pre-configured schema
+   - Includes all necessary tables and initial data
+   - Available tags: `latest` and commit-specific tags
 
-3. Start the created services:
-   ```bash
-   docker-compose start
-   ```
+Both images are automatically built and pushed to Docker Hub on every push to this branch using GitHub Actions. After creating the `.env` file with the required configuration variables, start the application with:
 
-### Managing Docker Resources
+```bash
+docker compose up -d
+```
 
-- **Rebuild after code changes:**
-  ```bash
-  docker-compose up --build -d
-  ```
+The application will be available at `http://localhost:8080`, based on the `docker-compose.yml` file specifications.
 
-- **Remove all resources (containers, volumes, images):**
-  ```bash
-  docker-compose down --volumes --rmi all
-  ```
+To stop the created container use:
+```bash
+docker compose stop
+```
 
-- **View logs:**
-  ```bash
-  docker-compose logs -f
-  ```
-
-- **Check container status:**
-  ```bash
-  docker-compose ps
-  ```
-
-The application will be available at `http://localhost:8080`
+To remove all resources (containers, volumes, images) execute: 
+```bash
+docker-compose down --volumes --rmi all
+```
 
 ## 📚 API Documentation
 

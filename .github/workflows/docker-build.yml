@@ -32,7 +32,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-mysql:${{ github.sha }}
       
       # Build and push the application image
       - name: Build and push application image
@@ -43,7 +42,6 @@ jobs:
           push: true
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:latest
-            ${{ secrets.DOCKERHUB_USERNAME }}/g-commerce-backend:${{ github.sha }}
 
       # Update Docker Hub Description for Backend App
       - name: Update Backend Docker Hub Description

@@ -1,4 +1,13 @@
 FROM mysql:9
 
+# Set default environment variables
+ENV MYSQL_DATABASE=shopping
+ENV MYSQL_CHARSET=utf8mb4
+ENV MYSQL_COLLATION=utf8mb4_unicode_ci
+ENV TZ=UTC
+
+# Set MySQL global time zone at startup
+RUN echo "[mysqld]\ndefault-time-zone='UTC'" > /etc/mysql/conf.d/timezone.cnf
+
 # Copy the initialization script
 COPY mysql-init/shopping_db.sql /docker-entrypoint-initdb.d/

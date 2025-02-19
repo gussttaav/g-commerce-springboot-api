@@ -69,11 +69,8 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 2. Create a `.env` file in the root directory with the following variables:
    ```env
    MYSQL_ROOT_PASSWORD=your_root_password
-   MYSQL_DATABASE=your_database_name
    MYSQL_USER=your_database_user
    MYSQL_PASSWORD=your_database_password
-   MYSQL_CHARSET=utf8mb4
-   MYSQL_COLLATION=utf8mb4_unicode_ci
    ADMIN_EMAIL=admin@example.com
    ADMIN_PASSWORD=your_admin_password
    ADMIN_NAME=Administrator
@@ -288,6 +285,7 @@ src/
 ├── docker-compose.yml
 ├── docker-compose.db.yml
 ├── Dockerfile
+├── Dockerfile.db
 ├── mysql-init/
 │   └── shopping_db.sql
 └── pom.xml

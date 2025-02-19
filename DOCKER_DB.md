@@ -15,11 +15,13 @@ MySQL database image pre-configured with the schema for the G-Commerce E-commerc
 
 Required environment variables:
 - `MYSQL_ROOT_PASSWORD`: Root password for MySQL
-- `MYSQL_DATABASE`: Database name (default: shopping)
 - `MYSQL_USER`: Database user
-- `MYSQL_PASSWORD`: Database password
-- `MYSQL_CHARSET`: Character set (default: utf8mb4)
-- `MYSQL_COLLATION`: Collation (default: utf8mb4_spanish_ci)
+- `MYSQL_PASSWORD`: Database user password
+
+Default environment variables:
+- `MYSQL_CHARSET`: utf8mb4
+- `MYSQL_COLLATION`: utf8mb4_spanish_ci
+- `TZ`: UTC
 
 ## 📦 Usage
 
@@ -28,12 +30,11 @@ Required environment variables:
 ```bash
 docker run -d \
   -e MYSQL_ROOT_PASSWORD=your_root_password \
-  -e MYSQL_DATABASE=shopping \
   -e MYSQL_USER=your_user \
   -e MYSQL_PASSWORD=your_password \
   -v mysql-data:/var/lib/mysql \
   -p 3306:3306 \
-  your-username/g-commerce-db:latest
+  gussttaav/g-commerce-mysql:latest
 ```
 
 ### With G-Commerce Backend
@@ -43,14 +44,11 @@ Use with docker-compose (recommended):
 ```yaml
 services:
   mysql:
-    image: your-username/g-commerce-db:latest
+    image: gussttaav/g-commerce-mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_CHARSET: ${MYSQL_CHARSET}
-      MYSQL_COLLATION: ${MYSQL_COLLATION}
     volumes:
       - mysql-data:/var/lib/mysql
     ports:
@@ -65,8 +63,10 @@ The database data is stored in the `/var/lib/mysql` directory inside the contain
 
 ### Database Configuration
 ```sql
+DATABASE NAME: shopping
 CHARACTER SET: utf8mb4
 COLLATION: utf8mb4_spanish_ci
+TZ: UTC -- Time zone
 ```
 
 ### Tables Structure
@@ -145,5 +145,6 @@ CREATE TABLE compra_productos (
 ## 🤝 Related Images
 
 This image is part of the G-Commerce application suite:
-- Backend API: `your-username/g-commerce-backend`
-- Database (this image): `your-username/g-commerce-db`
+- Frontend: `gussttaav/g-commerce-frontend`
+- Backend API: `gussttaav/g-commerce-backend`
+- Database (this image): `gussttaav/g-commerce-mysql`

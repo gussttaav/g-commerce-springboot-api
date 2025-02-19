@@ -7,7 +7,7 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
     depends_on:
       mysql:
         condition: service_healthy
@@ -18,11 +18,8 @@ services:
     image: gussttaav/g-commerce-mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_CHARSET: ${MYSQL_CHARSET}
-      MYSQL_COLLATION: ${MYSQL_COLLATION}
     ports:
       - "3306:3306"
     volumes:

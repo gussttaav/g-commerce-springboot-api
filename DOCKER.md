@@ -8,7 +8,7 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
   - Secure user registration and authentication
   - Role-based authorization (ADMIN, USER)
   - Profile management and password updates
-  - JWT-based authentication
+  - Basic authentication
 
 - **Product Management**
   - Complete CRUD operations
@@ -39,11 +39,9 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
 1. Create a `.env` file with the required environment variables:
 ```env
 MYSQL_ROOT_PASSWORD=your_root_password
-MYSQL_DATABASE=your_database_name
+MYSQL_HOST=localhost:3306
 MYSQL_USER=your_database_user
 MYSQL_PASSWORD=your_database_password
-MYSQL_CHARSET=utf8mb4
-MYSQL_COLLATION=utf8mb4_unicode_ci
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your_admin_password
 ADMIN_NAME=Administrator
@@ -60,7 +58,7 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE}
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
     depends_on:
       mysql:
         condition: service_healthy
@@ -68,14 +66,11 @@ services:
       - spring-mysql-network
 
   mysql:
-    image: gussttaav/g-commerce-db:latest
+    image: gussttaav/g-commerce-mysql:latest
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: ${MYSQL_DATABASE}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-      MYSQL_CHARSET: ${MYSQL_CHARSET}
-      MYSQL_COLLATION: ${MYSQL_COLLATION}
     ports:
       - "3306:3306"
     volumes:
@@ -143,11 +138,11 @@ GET  /api/compras/{id}            # Get purchase details
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `MYSQL_ROOT_PASSWORD` | MySQL root password | - | Yes |
-| `MYSQL_DATABASE` | Database name | - | Yes |
+| `MYSQL_HOST` | Name and port for the MySQL server | localhost:3306 | Yes |
 | `MYSQL_USER` | Database user | - | Yes |
 | `MYSQL_PASSWORD` | Database password | - | Yes |
-| `MYSQL_CHARSET` | Database charset | utf8mb4 | Yes |
-| `MYSQL_COLLATION` | Database collation | utf8mb4_unicode_ci | Yes |
+| `MYSQL_CHARSET` | Database charset | utf8mb4 | No |
+| `MYSQL_COLLATION` | Database collation | utf8mb4_unicode_ci | No |
 | `ADMIN_EMAIL` | Admin user email | - | Yes |
 | `ADMIN_PASSWORD` | Admin user password | - | Yes |
 | `ADMIN_NAME` | Admin user name | - | Yes |
@@ -186,8 +181,9 @@ docker compose ps
 ## 📦 Related Images
 
 This application consists of two Docker images:
+- Frontend: `gussttaav/g-commerce-frontend`
 - Backend API (this image): `gussttaav/g-commerce-backend`
-- Database: `gussttaav/g-commerce-db`
+- Database: `gussttaav/g-commerce-mysql`
 
 ## 💻 Source Code
 

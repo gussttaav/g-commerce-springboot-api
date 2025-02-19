@@ -1,10 +1,3 @@
-DROP DATABASE IF EXISTS shopping;
-
-CREATE DATABASE shopping
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_spanish_ci;
-
-USE shopping;
 
 -- Tabla Usuario
 CREATE TABLE usuario (
@@ -48,11 +41,11 @@ CREATE TABLE compra_productos (
 
 -- Insert users with BCrypt encoded passwords
 INSERT INTO usuario (nombre, email, password, rol) VALUES
-('Admin User', 'admin@example.com', '$2a$10$rHGJINmgN1UjmMy2NMO8OuhsODwYQl6QBZuQAm90AbtoYj2uIV4TW', 'ADMIN'), -- Admin123!
-('John Doe', 'john@example.com', '$2a$10$bXhXNQz7GQg0sV3fzfzQR.1rVfw.puYm6VGJ8JNcmsz3KydUGHWzy', 'USER'), -- JohnDoe2024
-('Jane Smith', 'jane@example.com', '$2a$10$PQ0AH2gV8rHF7g1ylL/9TOPh0w7dCJMmK8Ec6WsqQAu7Y9WKcXenim', 'USER'), -- JaneSmith2024
-('Bob Wilson', 'bob@example.com', '$2a$10$D/IX7DvYVxB3qZKiLBxtR.vEHgjL0HII4h2SqVr5/P7kJFuGD.wtK', 'USER'), -- BobWilson2024
-('Alice Brown', 'alice@example.com', '$2a$10$zG2Z4NkqHQz0LY3FnQXJWekQ8ULwwj3gmFAJD1tOjkuxXYH0.9mBG', 'USER'); -- AliceBrown2024
+('Admin', 'admin@example.com', '$2a$10$vojmaj3pMOzWHVid5J9su..YSckd.RIswZ3STy5xiJkYwmAB8b67.', 'ADMIN'), -- Admin123!
+('John Doe', 'john@example.com', '$2a$10$wMBR8BIcmw5CPy.b.ZGGv.F.8te07dT7rWwkYjsTsjMXCyd/J17x6', 'USER'), -- JohnDoe123!
+('Jane Smith', 'jane@example.com', '$2a$10$UoAgUGPRNJ/iGghzJuhsguoBYAcp3F/7k9eC.wiS4MRWL9qBtZxsO', 'USER'), -- JaneSmith123!
+('Bob Wilson', 'bob@example.com', '$2a$10$gT2Mo59GlO41xfw.p2UMEOrExZNIqRoyiCCKuLdM8ZGt9QDDaFlzu', 'USER'), -- BobWilson123!
+('Alice Brown', 'alice@example.com', '$2a$10$Afi6FHFbp8EBHycNxNR2DekLBbAc00AnefRXKY5GMsa1dzbg/GyFK', 'USER'); -- AliceBrown123!
 
 -- Insert products
 INSERT INTO productos (nombre, descripcion, precio, activo) VALUES

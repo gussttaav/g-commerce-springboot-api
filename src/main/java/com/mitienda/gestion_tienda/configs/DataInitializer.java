@@ -44,7 +44,7 @@ public class DataInitializer {
             // Only create admin if no users exist in the system
             if (usuarioRepository.count() == 0) {
                 Usuario admin = new Usuario();
-                admin.setNombre(adminProperties.getNombre());
+                admin.setNombre("Admin");
                 admin.setEmail(adminProperties.getEmail());
                 admin.setPassword(passwordEncoder.encode(adminProperties.getPassword()));
                 admin.setRol(Usuario.Role.ADMIN);

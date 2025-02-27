@@ -4,13 +4,17 @@ services:
     image: gussttaav/g-commerce-backend:latest
     ports:
       - "8080:8080"
+      - "8443:8443"
     env_file:
       - .env
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-http}
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - ./certs:/certs
     networks:
       - spring-mysql-network
 

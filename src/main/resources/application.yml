@@ -2,31 +2,31 @@ spring:
   application:
     name: gestion-tienda
   datasource:
-    url: jdbc:mysql://${MYSQL_HOST}/shopping?useUnicode=true&characterEncoding=utf8mb4&collation=utf8mb4_unicode_ci&serverTimezone=UTC
+    url: jdbc:mysql://${MYSQL_HOST:localhost:3306}/shopping?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: ${MYSQL_USER}
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.MySQL8Dialect
+    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: none
     properties:
         hibernate:
             connection:
-                characterEncoding: utf8mb4
+                characterEncoding: utf8
                 useUnicode: true
-                collation: utf8mb4_unicode_ci
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:http}
 
 # Default admin user credentials
 admin:
   default:
-    email: ${ADMIN_EMAIL}
-    password: ${ADMIN_PASSWORD}
-    nombre: ${ADMIN_NAME}
+    email: ${ADMIN_EMAIL:admin@example.com}
+    password: ${ADMIN_PASSWORD:Admin123!}
 
 # CORS (Cross-Origin Resource Sharing) configuration
 cors:
-  allowed-origins: ${CORS_ORIGINS}
+  allowed-origins: http://localhost:3000,http://127.0.0.1:3000
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: Authorization,Content-Type,X-Requested-With
 
@@ -38,3 +38,26 @@ springdoc:
     path: /swagger-ui.html
   packages-to-scan: com.mitienda.gestion_tienda
   paths-to-match: /api/**
+
+---
+# HTTP-only profile (default)
+spring:
+  config:
+    activate:
+      on-profile: http
+server:
+  port: 8080
+
+---
+# HTTPS profile
+spring:
+  config:
+    activate:
+      on-profile: https
+server:
+  port: 8443
+  ssl:
+    key-store: classpath:keystore.p12
+    key-store-password: ${SSL_PASSWORD:changeit}
+    key-store-type: PKCS12
+    key-alias: springboot

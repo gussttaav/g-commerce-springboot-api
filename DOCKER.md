@@ -22,11 +22,16 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
   - Purchase history
   - Transaction management
 
-- **Security & Documentation**
-  - Comprehensive security implementation
-  - OpenAPI/Swagger documentation
-  - Input validation
-  - CORS configuration
+- **Security & SSL Support**
+  - Automatic profile detection based on available SSL certificate
+  - HTTPS configuration with SSL keystore
+  - Environment-based profile activation
+  - Secure authentication with Spring Security
+
+- **Comprehensive Documentation**
+  - Javadoc for code-level documentation
+  - OpenAPI (Swagger) for interactive API documentation
+  - Detailed endpoint descriptions and schemas
 
 ## 🚦 Quick Start
 
@@ -36,32 +41,43 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
 
 ### Installation
 
-1. Create a `.env` file with the required environment variables:
+1- Create a `.env` file with the required environment variables:
 ```env
 MYSQL_ROOT_PASSWORD=your_root_password
-MYSQL_HOST=localhost:3306
 MYSQL_USER=your_database_user
 MYSQL_PASSWORD=your_database_password
 ADMIN_EMAIL=admin@example.com
 ADMIN_PASSWORD=your_admin_password
-ADMIN_NAME=Administrator
-CORS_ORIGINS=http://localhost:3000
 ```
 
-2. Create a `docker-compose.yml`:
+#### HTTPS support (optional)
+
+**If you need the application to run with HTTPS**, you must add the following environment variables in your `.env` file and provide a valid SSL certificate in a `certs/` directory.
+
+```env
+SPRING_PROFILES_ACTIVE=https
+SSL_PASSWORD=your_ssl_password
+```
+
+
+2- Create a `docker-compose.yml`:
 ```yaml
 services:
   app:
     image: gussttaav/g-commerce-backend:latest
     ports:
       - "8080:8080"
+      - "8443:8443"
     env_file:
       - .env
     environment:
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-http}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
     depends_on:
       mysql:
         condition: service_healthy
+    volumes:
+      - ./certs:/certs
     networks:
       - spring-mysql-network
 
@@ -96,15 +112,16 @@ networks:
 docker compose up -d
 ```
 
-The API will be available at `http://localhost:8080`
+- If **HTTPS is enabled**, access the API at `https://localhost:8443`
+- If **HTTP mode is active (default)**, access it at `http://localhost:8080`
 
 💡 The database schema is automatically initialized - no additional setup required!
 
 ## 📚 API Documentation
 
 Once running, access the API documentation at:
-- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
-- **OpenAPI Spec**: `http://localhost:8080/v3/api-docs`
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html` or `https://localhost:8443/swagger-ui.html`
+- **OpenAPI Spec**: `http://localhost:8080/v3/api-docs` or `https://localhost:8443/v3/api-docs`
 
 ## 🔌 Main Endpoints
 
@@ -138,15 +155,14 @@ GET  /api/compras/{id}            # Get purchase details
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `MYSQL_ROOT_PASSWORD` | MySQL root password | - | Yes |
-| `MYSQL_HOST` | Name and port for the MySQL server | localhost:3306 | Yes |
 | `MYSQL_USER` | Database user | - | Yes |
 | `MYSQL_PASSWORD` | Database password | - | Yes |
 | `MYSQL_CHARSET` | Database charset | utf8mb4 | No |
 | `MYSQL_COLLATION` | Database collation | utf8mb4_unicode_ci | No |
 | `ADMIN_EMAIL` | Admin user email | - | Yes |
 | `ADMIN_PASSWORD` | Admin user password | - | Yes |
-| `ADMIN_NAME` | Admin user name | - | Yes |
-| `CORS_ORIGINS` | Allowed CORS origins | http://localhost:3000 | Yes |
+| `SPRING_PROFILES_ACTIVE` | Set "https" to enable SSL, "http" to disable | http | No |
+| `SSL_PASSWORD` | Password for SSL keystore | - | No (Only for HTTPS) |
 
 ## 🐳 Container Management
 
@@ -169,9 +185,9 @@ docker compose ps
 
 ## 🛠️ Technologies
 
-- **Backend Framework**: Spring Boot 3.4.1
+- **Backend Framework**: Spring Boot 3.4.3
 - **Language**: Java 17
-- **Security**: Spring Security with JWT
+- **Security**: Spring Security with Basic Authentication
 - **Database**: MySQL 9
 - **Documentation**: OpenAPI 3.0 (Swagger)
 - **Containerization**: Docker & Docker Compose
@@ -180,7 +196,7 @@ docker compose ps
 
 ## 📦 Related Images
 
-This application consists of two Docker images:
+This application consists of three Docker images:
 - Frontend: `gussttaav/g-commerce-frontend`
 - Backend API (this image): `gussttaav/g-commerce-backend`
 - Database: `gussttaav/g-commerce-mysql`

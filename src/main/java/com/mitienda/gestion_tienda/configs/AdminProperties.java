@@ -24,9 +24,4 @@ public class AdminProperties {
      * The password for the default admin user 
      */
     private String password;
-    
-    /** 
-     * The name for the default admin user 
-     */
-    private String nombre;
 }

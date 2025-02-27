@@ -32,3 +32,9 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Exclude secrets ###
+*.p12
+*.jks
+*.pem
+*.key

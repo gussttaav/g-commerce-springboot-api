@@ -19,6 +19,12 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Purchase history tracking
   - Role-specific purchase restrictions
 
+- **Security & SSL Support**
+  - Automatic profile detection based on available SSL certificate
+  - HTTPS configuration with SSL keystore
+  - Environment-based profile activation
+  - Secure authentication with Spring Security
+
 - **Comprehensive Documentation**
   - Javadoc for code-level documentation
   - OpenAPI (Swagger) for interactive API documentation
@@ -38,7 +44,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 ## 🛠️ Technologies
 
 - Java 17
-- Spring Boot 3.4.1
+- Spring Boot 3.4.3
 - Spring Security
 - OpenAPI/Swagger
 - Spring Data JPA
@@ -73,9 +79,15 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    MYSQL_PASSWORD=your_database_password
    ADMIN_EMAIL=admin@example.com
    ADMIN_PASSWORD=your_admin_password
-   ADMIN_NAME=Administrator
-   CORS_ORIGINS=http://localhost:3000,other_allowed_origins
    ```
+
+   #### HTTPS support (optional)
+   **If you need the application to run with HTTPS**, you must add the following environment variables in your `.env` file and provide a valid SSL certificate in the `src/main/resources` directory.
+
+    ```env
+    SPRING_PROFILES_ACTIVE=https
+    SSL_PASSWORD=your_ssl_password
+    ```
 
 3. Start the MySQL database using Docker Compose:
    ```bash
@@ -88,7 +100,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
    mvn spring-boot:run
    ```
 
-The application will be available at `http://localhost:8080`
+The application will be available at `http://localhost:8080` (default) or `https://localhost:8443` (if SSL is enabled).
 
 ## 🐳 Docker Images
 
@@ -97,30 +109,14 @@ The application is split into two Docker images:
 1. **Backend Application** (`gussttaav/g-commerce-backend`)
    - Spring Boot application
    - API endpoints and business logic
-   - Available tags: `latest` and commit-specific tags
+   - Available tags: `latest`
 
 2. **Database** (`gussttaav/g-commerce-mysql`)
-   - MySQL 8 with a pre-configured schema
+   - MySQL 9 with a pre-configured schema
    - Includes all necessary tables and initial data
-   - Available tags: `latest` and commit-specific tags
+   - Available tags: `latest`
 
-Both images are automatically built and pushed to Docker Hub on every push to this branch using GitHub Actions. After creating the `.env` file with the required configuration variables, start the application with:
-
-```bash
-docker compose up -d
-```
-
-The application will be available at `http://localhost:8080`, based on the `docker-compose.yml` file specifications.
-
-To stop the created container use:
-```bash
-docker compose stop
-```
-
-To remove all resources (containers, volumes, images) execute: 
-```bash
-docker-compose down --volumes --rmi all
-```
+Both images are automatically built and pushed to Docker Hub on every push to this branch using GitHub Actions. Refer to the [repository documentation](https://hub.docker.com/repository/docker/gussttaav/g-commerce-backend/general) if you want to deploy the full application with docker compose.
 
 ## 📚 API Documentation
 
@@ -207,6 +203,7 @@ GET  /api/compras/listar             # List user purchases
 ## 🔒 Security
 
 - Basic authentication is implemented using Spring Security
+- HTTPS support to encrypt communication between clients and the server.
 - Passwords are encrypted using BCrypt
 - Role-based access control for different endpoints
 - Input validation for all endpoints
@@ -284,6 +281,7 @@ src/
 │       └── application-test.yml
 ├── docker-compose.yml
 ├── docker-compose.db.yml
+├── docker-entry.sh
 ├── Dockerfile
 ├── Dockerfile.db
 ├── mysql-init/

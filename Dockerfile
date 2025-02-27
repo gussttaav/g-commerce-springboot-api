@@ -1,16 +1,10 @@
-# Use official OpenJDK base image
-FROM eclipse-temurin:17-jdk-alpine
+# Use official OpenJDK base image for building
+FROM eclipse-temurin:17-jdk-alpine AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Copy the Maven project file
+# Copy the Maven project and wrapper
 COPY pom.xml .
-
-# Copy the project source
-COPY src ./src
-
-# Copy Maven wrapper files
 COPY .mvn .mvn
 COPY mvnw .
 COPY mvnw.cmd .
@@ -18,19 +12,30 @@ COPY mvnw.cmd .
 # Make the mvnw script executable
 RUN chmod +x mvnw
 
+# Copy the source code
+COPY src ./src
+
 # Build the application
 RUN ./mvnw clean package -DskipTests
 
-# Create the final image with just the JAR
+# Use a smaller runtime image
 FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
 # Copy the built JAR from the previous stage
-COPY --from=0 /app/target/*.jar app.jar
+COPY --from=builder /app/target/*.jar app.jar
 
-# Expose the port the app runs on
-EXPOSE 8080
+# Define environment variables (runtime only)
+ENV SPRING_PROFILES_ACTIVE=http
+ENV SSL_PASSWORD=changeit
 
-# Command to run the application
-CMD ["java", "-jar", "app.jar"]
+# Expose ports (HTTP: 8080, HTTPS: 8443)
+EXPOSE 8080 8443
+
+# Entry script to handle SSL dynamically
+COPY docker-entry.sh /docker-entry.sh
+RUN chmod +x /docker-entry.sh
+
+# Use the entrypoint script to configure SSL
+ENTRYPOINT ["/docker-entry.sh"]

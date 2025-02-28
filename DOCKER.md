@@ -163,6 +163,7 @@ GET  /api/compras/{id}            # Get purchase details
 | `ADMIN_PASSWORD` | Admin user password | - | Yes |
 | `SPRING_PROFILES_ACTIVE` | Set "https" to enable SSL, "http" to disable | http | No |
 | `SSL_PASSWORD` | Password for SSL keystore | - | No (Only for HTTPS) |
+| `CORS_ALLOWED_ORIGINS` | CORS Allowed Origins | http://localhost:3000 | No |
 
 ## 🐳 Container Management
 

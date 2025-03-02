@@ -1,6 +1,7 @@
 package com.mitienda.gestion_tienda.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
  * @author Gustavo
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CompraService {
@@ -50,6 +52,7 @@ public class CompraService {
      */
     @Transactional(readOnly = true)
     public List<CompraResponseDTO> listarCompras(String email) {
+        log.debug("Listing purchases for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
             
@@ -60,6 +63,7 @@ public class CompraService {
             compras = compraRepository.findByUsuario(usuario);
         }
         
+        log.debug("Found {} purchases", compras.size());
         return compras.stream()
             .map(compraMapper::toCompraResponseDTO)
             .collect(Collectors.toList());
@@ -77,6 +81,7 @@ public class CompraService {
      */
     @Transactional
     public CompraResponseDTO realizarCompra(String email, CompraDTO compraDTO) {
+        log.info("Starting new purchase for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
@@ -103,9 +108,10 @@ public class CompraService {
         }
 
         compra.setTotal(total);        
-        return compraMapper.toCompraResponseDTO(
-            DatabaseOperationHandler.executeOperation(() -> 
-                compraRepository.save(compra)
-        ));
+        Compra savedCompra = DatabaseOperationHandler.executeOperation(() -> 
+            compraRepository.save(compra)
+        );
+        log.info("Purchase completed - ID: {}, Total: {}", savedCompra.getId(), savedCompra.getTotal());
+        return compraMapper.toCompraResponseDTO(savedCompra);
     }
 }

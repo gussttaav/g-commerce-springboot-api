@@ -23,15 +23,26 @@ FROM eclipse-temurin:17-jre-alpine
 
 WORKDIR /app
 
+# Create log directory with proper permissions
+RUN mkdir -p /app/logs && chmod 755 /app/logs
+
 # Copy the built JAR from the previous stage
 COPY --from=builder /app/target/*.jar app.jar
 
 # Define environment variables (runtime only)
 ENV SPRING_PROFILES_ACTIVE=http
 ENV SSL_PASSWORD=changeit
+ENV LOG_PATH=/app/logs
+ENV LOG_ARCHIVE=/app/logs/archive
+
+# Create log archive directory
+RUN mkdir -p ${LOG_ARCHIVE}
 
 # Expose ports (HTTP: 8080, HTTPS: 8443)
 EXPOSE 8080 8443
+
+# Create volume for persistent logs
+VOLUME /app/logs
 
 # Entry script to handle SSL dynamically
 COPY docker-entry.sh /docker-entry.sh

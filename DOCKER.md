@@ -62,6 +62,7 @@ SSL_PASSWORD=your_ssl_password
 
 2- Create a `docker-compose.yml`:
 ```yaml
+# Full deployment configuration - both app and database
 services:
   app:
     image: gussttaav/g-commerce-backend:latest
@@ -71,13 +72,16 @@ services:
     env_file:
       - .env
     environment:
-      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-http}
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
+      SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-http}
+      LOG_PATH: /app/logs
+      LOG_ARCHIVE: /app/logs/archive
     depends_on:
       mysql:
         condition: service_healthy
     volumes:
       - ./certs:/certs
+      - app-logs:/app/logs
     networks:
       - spring-mysql-network
 
@@ -101,6 +105,7 @@ services:
 
 volumes:
   mysql-data:
+  app-logs:
 
 networks:
   spring-mysql-network:
@@ -163,7 +168,8 @@ GET  /api/compras/{id}            # Get purchase details
 | `ADMIN_PASSWORD` | Admin user password | - | Yes |
 | `SPRING_PROFILES_ACTIVE` | Set "https" to enable SSL, "http" to disable | http | No |
 | `SSL_PASSWORD` | Password for SSL keystore | - | No (Only for HTTPS) |
-| `CORS_ALLOWED_ORIGINS` | CORS Allowed Origins | http://localhost:3000 | No |
+| `LOG_PATH` | Application log path | /app/logs | No |
+| `LOG_ARCHIVE` | Archived logs path | /app/logs/archive | No |
 
 ## 🐳 Container Management
 

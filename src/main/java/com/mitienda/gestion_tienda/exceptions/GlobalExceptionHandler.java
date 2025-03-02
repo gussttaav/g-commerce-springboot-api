@@ -47,6 +47,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ApiErrorDTO> handleValidationErrors(MethodArgumentNotValidException ex, 
                                                             HttpServletRequest request) {
+        log.warn("Validation error occurred for request to {}: {}", request.getRequestURI(), ex.getMessage());
         List<String> details = ex.getBindingResult()
                 .getFieldErrors()
                 .stream()
@@ -76,6 +77,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(ConstraintViolationException.class)
     public ResponseEntity<ApiErrorDTO> handleConstraintViolation(ConstraintViolationException ex,
                                                                HttpServletRequest request) {
+        log.warn("Constraint violation occurred for request to {}: {}", request.getRequestURI(), ex.getMessage());
         List<String> details = ex.getConstraintViolations()
                 .stream()
                 .map(ConstraintViolation::getMessage)
@@ -107,6 +109,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ApiErrorDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
                                                                   HttpServletRequest request) {
+        log.warn("Message not readable error for request to {}: {}", request.getRequestURI(), ex.getMessage());
         String message = "Error en el formato JSON";
         List<String> details = new ArrayList<>();
         details.add(ex.getMessage());
@@ -133,7 +136,8 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(ApiException.class)
     public ResponseEntity<ApiErrorDTO> handleApiException(ApiException ex, HttpServletRequest request) {
-
+        log.error("API exception occurred for request to {} with status {}: {}", 
+            request.getRequestURI(), ex.getStatus(), ex.getMessage());
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
                 .status(ex.getStatus().value())
@@ -157,6 +161,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ApiErrorDTO> handleAuthenticationException(AuthenticationException ex,
                                                                    HttpServletRequest request) {
+        log.warn("Authentication failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.UNAUTHORIZED.value())
@@ -180,6 +185,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ApiErrorDTO> handleAccessDeniedException(AccessDeniedException ex,
                                                                  HttpServletRequest request) {
+        log.warn("Access denied for request to {}: {}", request.getRequestURI(), ex.getMessage());
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())
@@ -203,7 +209,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ApiErrorDTO> handleAllUncaughtException(Exception ex,
                                                                 HttpServletRequest request) {
-        log.error("Unexpected error occurred", ex);
+        log.error("Unexpected error occurred for request to {}", request.getRequestURI(), ex);
         
         ApiErrorDTO error = ApiErrorDTO.builder()
                 .timestamp(LocalDateTime.now())
@@ -228,6 +234,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(TypeMismatchException.class)
     public ResponseEntity<ApiErrorDTO> handleTypeMismatch(TypeMismatchException ex,
                                                         HttpServletRequest request) {
+        log.warn("Type mismatch error for request to {}: {}", request.getRequestURI(), ex.getMessage());
         List<String> details = new ArrayList<>();
         String message = "Error en el tipo de dato";
         
@@ -270,8 +277,8 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleDataIntegrityViolation(
             DataIntegrityViolationException ex,
             HttpServletRequest request) {
-            
-        log.error("Data integrity violation occurred", ex);
+        log.error("Data integrity violation for request to {}: {}", 
+            request.getRequestURI(), ex.getMostSpecificCause().getMessage());
         
         String message = "Error de integridad de datos";
         List<String> details = new ArrayList<>();

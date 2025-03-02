@@ -14,22 +14,6 @@ target/
 .sts4-cache
 .env
 
-### IntelliJ IDEA ###
-.idea
-*.iws
-*.iml
-*.ipr
-
-### NetBeans ###
-/nbproject/private/
-/nbbuild/
-/dist/
-/nbdist/
-/.nb-gradle/
-build/
-!**/src/main/**/build/
-!**/src/test/**/build/
-
 ### VS Code ###
 .vscode/
 
@@ -38,3 +22,6 @@ build/
 *.jks
 *.pem
 *.key
+
+### Exclude logs ###
+logs/

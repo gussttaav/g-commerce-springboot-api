@@ -10,11 +10,14 @@ services:
     environment:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/shopping
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-http}
+      LOG_PATH: /app/logs
+      LOG_ARCHIVE: /app/logs/archive
     depends_on:
       mysql:
         condition: service_healthy
     volumes:
       - ./certs:/certs
+      - app-logs:/app/logs
     networks:
       - spring-mysql-network
 
@@ -38,6 +41,7 @@ services:
 
 volumes:
   mysql-data:
+  app-logs:
 
 networks:
   spring-mysql-network:

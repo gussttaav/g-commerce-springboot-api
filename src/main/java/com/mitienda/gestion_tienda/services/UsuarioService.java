@@ -1,6 +1,7 @@
 package com.mitienda.gestion_tienda.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -32,6 +33,7 @@ import java.util.stream.Collectors;
  * @author Gustavo
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class UsuarioService {
@@ -48,6 +50,7 @@ public class UsuarioService {
      */
     @Transactional
     public UsuarioResponseDTO registrarUsuario(UsuarioDTO usuarioDTO){
+        log.info("Registering new user with email: {}", usuarioDTO.getEmail());
         Usuario usuario = new Usuario();
         usuario.setNombre(usuarioDTO.getNombre());
         usuario.setEmail(usuarioDTO.getEmail());
@@ -60,10 +63,11 @@ public class UsuarioService {
         }
         usuario.setFechaCreacion(LocalDateTime.now());
 
-        return usuarioMapper.toUsuarioResponseDTO(
-            DatabaseOperationHandler.executeOperation(() -> 
-                usuarioRepository.save(usuario)
-        ));
+        Usuario savedUsuario = DatabaseOperationHandler.executeOperation(() -> 
+            usuarioRepository.save(usuario)
+        );
+        log.info("User successfully registered with ID: {}", savedUsuario.getId());
+        return usuarioMapper.toUsuarioResponseDTO(savedUsuario);
     }
 
     /**
@@ -75,16 +79,23 @@ public class UsuarioService {
      * @throws InvalidPasswordException if password is incorrect
      */
     public UsuarioResponseDTO login(LoginDTO loginDTO) {
-        Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
-            .orElseThrow(() -> new ResourceNotFoundException(
-                "No existe ningún usuario con el email proporcionado"
-            ));
+        log.info("Login attempt for user: {}", loginDTO.getEmail());
+        try {
+            Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "No existe ningún usuario con el email proporcionado"
+                ));
 
-        if (!passwordEncoder.matches(loginDTO.getPassword(), usuario.getPassword())) {
-            throw new InvalidPasswordException("Contraseña incorrecta.");
+            if (!passwordEncoder.matches(loginDTO.getPassword(), usuario.getPassword())) {
+                throw new InvalidPasswordException("Contraseña incorrecta.");
+            }
+
+            log.info("Successful login for user: {}", loginDTO.getEmail());
+            return usuarioMapper.toUsuarioResponseDTO(usuario);
+        } catch (ResourceNotFoundException | InvalidPasswordException e) {
+            log.warn("Login failed for user: {} - {}", loginDTO.getEmail(), e.getMessage());
+            throw e;
         }
-
-        return usuarioMapper.toUsuarioResponseDTO(usuario);
     }
 
     /**
@@ -97,16 +108,18 @@ public class UsuarioService {
      */
     @Transactional
     public UsuarioResponseDTO actualizarPerfil(String email, ActualizacionUsuarioDTO perfilDTO) {
+        log.info("Updating profile for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         usuario.setEmail(perfilDTO.getNuevoEmail());
         usuario.setNombre(perfilDTO.getNombre());
 
-        return usuarioMapper.toUsuarioResponseDTO(
-            DatabaseOperationHandler.executeOperation(() -> 
-                usuarioRepository.save(usuario)
-        ));
+        Usuario updatedUsuario = DatabaseOperationHandler.executeOperation(() -> 
+            usuarioRepository.save(usuario)
+        );
+        log.info("Profile updated successfully for user: {}", updatedUsuario.getEmail());
+        return usuarioMapper.toUsuarioResponseDTO(updatedUsuario);
     }
 
     /**
@@ -120,6 +133,7 @@ public class UsuarioService {
      */
     @Transactional
     public void cambiarContraseña(String email, CambioPasswdDTO contraseñaDTO) {
+        log.info("Password change attempt for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
@@ -141,6 +155,7 @@ public class UsuarioService {
         // Update password
         usuario.setPassword(passwordEncoder.encode(contraseñaDTO.getNewPassword()));
         usuarioRepository.save(usuario);
+        log.info("Password successfully changed for user: {}", email);
     }
     
     /**
@@ -151,6 +166,7 @@ public class UsuarioService {
      * @throws UsernameNotFoundException if user is not found
      */
     public UsuarioResponseDTO obtenerPerfil(String email) {
+        log.debug("Retrieving profile for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
         return usuarioMapper.toUsuarioResponseDTO(usuario);
@@ -163,9 +179,12 @@ public class UsuarioService {
      * @return List of UsuarioResponseDTO containing all users' information
      */
     public List<UsuarioResponseDTO> listarUsuarios() {
-        return usuarioRepository.findAll().stream()
+        log.debug("Listing all users");
+        List<UsuarioResponseDTO> users = usuarioRepository.findAll().stream()
             .map(usuarioMapper::toUsuarioResponseDTO)
             .collect(Collectors.toList());
+        log.debug("Found {} users", users.size());
+        return users;
     }
 
     /**
@@ -177,6 +196,7 @@ public class UsuarioService {
      */
     @Transactional
     public void cambiarRol(Long userId, Usuario.Role newRole) {
+        log.info("Changing role to {} for user ID: {}", newRole, userId);
         Usuario usuario = usuarioRepository.findById(userId)
             .orElseThrow(() -> new ResourceNotFoundException(
                 "No existe ningún usuario con el ID proporcionado"
@@ -184,5 +204,6 @@ public class UsuarioService {
         
         usuario.setRol(newRole);
         usuarioRepository.save(usuario);
+        log.info("Role successfully updated for user ID: {}", userId);
     }
 }

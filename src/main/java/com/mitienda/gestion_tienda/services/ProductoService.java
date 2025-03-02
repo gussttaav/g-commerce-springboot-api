@@ -1,6 +1,7 @@
 package com.mitienda.gestion_tienda.services;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import java.util.List;
  * @author Gustavo
  * @version 1.0
  */
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ProductoService {
@@ -37,12 +39,13 @@ public class ProductoService {
      * @return List of ProductoResponseDTO containing filtered products' information
      */
     public List<ProductoResponseDTO> listarProductos(ProductStatus status) {
+        log.debug("Listing products with status: {}", status);
         List<Producto> productos = switch (status) {
             case ACTIVE -> productoRepository.findByActivoTrue();
             case INACTIVE -> productoRepository.findByActivoFalse();
             case ALL -> productoRepository.findAll();
         };
-        
+        log.debug("Found {} products", productos.size());
         return productos.stream()
                 .map(productoMapper::toProductoResponseDTO)
                 .toList();
@@ -56,13 +59,15 @@ public class ProductoService {
      */
     @Transactional
     public ProductoResponseDTO crearProducto(ProductoDTO productoDTO) {
+        log.info("Creating new product: {}", productoDTO.getNombre());
         Producto producto = productoMapper.toProducto(productoDTO);
         producto.setFechaCreacion(LocalDateTime.now());
         
-        return productoMapper.toProductoResponseDTO((
-            DatabaseOperationHandler.executeOperation(() -> 
-                productoRepository.save(producto)
-        )));
+        Producto savedProducto = DatabaseOperationHandler.executeOperation(() -> 
+            productoRepository.save(producto)
+        );
+        log.info("Product created with ID: {}", savedProducto.getId());
+        return productoMapper.toProductoResponseDTO(savedProducto);
     }
 
     /**
@@ -75,15 +80,17 @@ public class ProductoService {
      */
     @Transactional
     public ProductoResponseDTO actualizarProducto(Long id, ProductoDTO productoDTO) {
+        log.info("Updating product with ID: {}", id);
         Producto producto = productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
         
         productoMapper.updateProductoFromDTO(productoDTO, producto);
         
-        return productoMapper.toProductoResponseDTO(
-            DatabaseOperationHandler.executeOperation(() -> 
-                productoRepository.save(producto)
-            ));
+        Producto updatedProducto = DatabaseOperationHandler.executeOperation(() -> 
+            productoRepository.save(producto)
+        );
+        log.info("Product successfully updated - ID: {}", updatedProducto.getId());
+        return productoMapper.toProductoResponseDTO(updatedProducto);
     }
 
     /**
@@ -94,9 +101,11 @@ public class ProductoService {
      */
     @Transactional
     public void eliminarProducto(Long id) {
+        log.info("Attempting to delete product with ID: {}", id);
         Producto producto = productoRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
         producto.setActivo(false);
         productoRepository.save(producto);
+        log.info("Product successfully marked as inactive - ID: {}", id);
     }
 }

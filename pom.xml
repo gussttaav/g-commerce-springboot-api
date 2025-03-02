@@ -11,21 +11,29 @@
 	<groupId>com.mitienda</groupId>
 	<artifactId>gestion-tienda</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<name>gestion-tienda</name>
-	<description>Aplicación desarrollada con SpringBoot para gestionar usuarios, productos y compras con autenticación y roles.</description>
-	<url/>
+	<name>g-commerce</name>
+	<description>A RESTful API that implements a basic e-commerce system with user authentication, role based features, product management, shoppig cart functionality and purchase tracking.</description>
+	<url>https://github.com/gussttaav/springboot-projects/tree/gestion-tienda</url>
 	<licenses>
-		<license/>
-	</licenses>
+        <license>
+            <name>MIT License</name>
+            <url>https://github.com/gussttaav/springboot-projects/blob/gestion-tienda/LICENSE</url>
+            <distribution>repo</distribution>
+        </license>
+    </licenses>
 	<developers>
-		<developer/>
+		<developer>
+            <id>gussttaav</id>
+            <name>Gustavo Torres G.</name>
+            <email>gvs7aav0@gmail.com</email>
+        </developer>
 	</developers>
 	<scm>
-		<connection/>
-		<developerConnection/>
-		<tag/>
-		<url/>
-	</scm>
+        <connection>scm:git:https://github.com/gussttaav/springboot-projects.git</connection>
+        <developerConnection>scm:git:ssh://git@github.com:gussttaav/springboot-projects.git</developerConnection>
+        <tag>HEAD</tag>
+        <url>https://github.com/gussttaav/springboot-projects/tree/gestion-tienda</url>
+    </scm>
 	<properties>
 		<java.version>17</java.version>
 	</properties>

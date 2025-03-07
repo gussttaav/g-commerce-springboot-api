@@ -1,68 +1,112 @@
-{"properties": [
-  {
-    "name": "admin.default.email",
-    "type": "java.lang.String",
-    "description": "Admin default email"
-  },
-  {
-    "name": "admin.default.password",
-    "type": "java.lang.String",
-    "description": "Admin default password"
-  },
-  {
-    "name": "admin.default.nombre",
-    "type": "java.lang.String",
-    "description": "Admin default name"
-  },
-  {
-    "name": "cors.allowed-origins",
-    "type": "java.util.List<java.lang.String>",
-    "description": "List of origins allowed to access the API (e.g., http://localhost:3000).",
-    "defaultValue": []
-  },
-  {
-    "name": "cors.allowed-methods",
-    "type": "java.util.List<java.lang.String>",
-    "description": "List of HTTP methods allowed for CORS requests (e.g., GET, POST, PUT, DELETE, OPTIONS).",
-    "defaultValue": []
-  },
-  {
-    "name": "cors.allowed-headers",
-    "type": "java.util.List<java.lang.String>",
-    "description": "List of HTTP headers allowed in CORS requests (e.g., Authorization, Content-Type).",
-    "defaultValue": []
-  },
-  {
-    "name": "cors.test-origin",
-    "type": "java.lang.String",
-    "description": "Single origin URL used for testing CORS configuration. Only used in test environment.",
-    "defaultValue": "http://localhost:3000"
-  }
-],
-"hints": [
-  {
-    "name": "cors.allowed-methods",
-    "values": [
-      {
-        "value": "GET",
-        "description": "Allow GET requests"
-      },
-      {
-        "value": "POST",
-        "description": "Allow POST requests"
-      },
-      {
-        "value": "PUT",
-        "description": "Allow PUT requests"
-      },
-      {
-        "value": "DELETE",
-        "description": "Allow DELETE requests"
-      },
-      {
-        "value": "OPTIONS",
-        "description": "Allow OPTIONS requests (required for CORS preflight)"
-      }
+{
+    "properties": [
+        {
+            "name": "admin.default.email",
+            "type": "java.lang.String",
+            "description": "Admin default email"
+        },
+        {
+            "name": "admin.default.password",
+            "type": "java.lang.String",
+            "description": "Admin default password"
+        },
+        {
+            "name": "admin.default.nombre",
+            "type": "java.lang.String",
+            "description": "Admin default name"
+        },
+        {
+            "name": "cors.allowed-origins",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of origins allowed to access the API (e.g., http://localhost:3000).",
+            "defaultValue": []
+        },
+        {
+            "name": "cors.allowed-methods",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of HTTP methods allowed for CORS requests (e.g., GET, POST, PUT, DELETE, OPTIONS).",
+            "defaultValue": []
+        },
+        {
+            "name": "cors.allowed-headers",
+            "type": "java.util.List<java.lang.String>",
+            "description": "List of HTTP headers allowed in CORS requests (e.g., Authorization, Content-Type).",
+            "defaultValue": []
+        },
+        {
+            "name": "cors.test-origin",
+            "type": "java.lang.String",
+            "description": "Single origin URL used for testing CORS configuration. Only used in test environment.",
+            "defaultValue": "http://localhost:3000"
+        },
+        {
+            "name": "rate-limit.window-minutes",
+            "type": "java.lang.Integer",
+            "description": "Time window in minutes for rate-limiting.",
+            "defaultValue": 1
+        },
+        {
+            "name": "rate-limit.unauthenticated.capacity",
+            "type": "java.lang.Integer",
+            "description": "Maximum number of requests allowed per window for unauthenticated users.",
+            "defaultValue": 5
+        },
+        {
+            "name": "rate-limit.unauthenticated.refill",
+            "type": "java.lang.Integer",
+            "description": "Number of tokens refilled per window for unauthenticated users.",
+            "defaultValue": 5
+        },
+        {
+            "name": "rate-limit.user.capacity",
+            "type": "java.lang.Integer",
+            "description": "Maximum number of requests allowed per window for authenticated users.",
+            "defaultValue": 30
+        },
+        {
+            "name": "rate-limit.user.refill",
+            "type": "java.lang.Integer",
+            "description": "Number of tokens refilled per window for authenticated users.",
+            "defaultValue": 20
+        },
+        {
+            "name": "rate-limit.admin.capacity",
+            "type": "java.lang.Integer",
+            "description": "Maximum number of requests allowed per window for admin users.",
+            "defaultValue": 100
+        },
+        {
+            "name": "rate-limit.admin.refill",
+            "type": "java.lang.Integer",
+            "description": "Number of tokens refilled per window for admin users.",
+            "defaultValue": 50
+        }
+    ],
+    "hints": [
+        {
+            "name": "cors.allowed-methods",
+            "values": [
+                {
+                    "value": "GET",
+                    "description": "Allow GET requests"
+                },
+                {
+                    "value": "POST",
+                    "description": "Allow POST requests"
+                },
+                {
+                    "value": "PUT",
+                    "description": "Allow PUT requests"
+                },
+                {
+                    "value": "DELETE",
+                    "description": "Allow DELETE requests"
+                },
+                {
+                    "value": "OPTIONS",
+                    "description": "Allow OPTIONS requests (required for CORS preflight)"
+                }
+            ]
+        }
     ]
-  }
-]}
+}

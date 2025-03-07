@@ -1,5 +1,6 @@
 package com.mitienda.gestion_tienda.configs;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -38,6 +39,19 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
     description = "Basic authentication credentials"
 )
 public class OpenAPIConfig {
+
+    @Value("${rate-limit.unauthenticated.capacity:5}")
+    private int unauthenticatedCapacity;
+    
+    @Value("${rate-limit.user.capacity:30}")
+    private int userCapacity;
+    
+    @Value("${rate-limit.admin.capacity:100}")
+    private int adminCapacity;
+
+    @Value("${rate-limit.window-minutes:1}")
+    private int windowMinutes;
+
     /**
      * Creates and configures the OpenAPI documentation.
      *
@@ -46,7 +60,7 @@ public class OpenAPIConfig {
     @Bean
     public OpenAPI springShopOpenAPI() {
         return new OpenAPI()
-                .info(new Info().title("E-commerce API")
+                .info(new Info().title("G-commerce API")
                         .description("Spring Boot REST API that implements a basic e-commerce system with user authentication, product management, and purchase tracking.")
                         .version("v1.0")
                         .contact(new Contact()
@@ -64,7 +78,14 @@ public class OpenAPIConfig {
                             .addApiResponse("AccessDeniedAdmin", createErrorApiResponse("Access denied - Requires authentication with USER role"))
                             .addApiResponse("DuplicatedProduct", createErrorApiResponse("Product already exists"))
                             .addApiResponse("ProductNotFound", createErrorApiResponse("Product not found"))
-                            .addApiResponse("ConstraintError", createErrorApiResponse("Data constraint error"))));
+                            .addApiResponse("ConstraintError", createErrorApiResponse("Data constraint error"))
+                            .addApiResponse("UnauthenticatedRateLimitExceeded", createErrorApiResponse(
+                                String.format("Rate limit exceeded. Maximum allowed: %d requests per %d minutes.", unauthenticatedCapacity, windowMinutes)))
+                            .addApiResponse("UserRateLimitExceeded", createErrorApiResponse(
+                                String.format("Rate limit exceeded. Maximum allowed: %d requests per %d minutes.", userCapacity, windowMinutes)))
+                            .addApiResponse("AdminRateLimitExceeded", createErrorApiResponse(
+                                String.format("Rate limit exceeded. Maximum allowed: %d requests per %d minutes.", adminCapacity, windowMinutes)))
+                ));
     }
 
     /**

@@ -20,6 +20,8 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - Role-specific purchase restrictions
 
 - **Security & SSL Support**
+  - Rate limiting with token bucket algorithm
+  - Role-based rate limits (Admin/User/Unauthenticated)
   - Automatic profile detection based on available SSL certificate
   - HTTPS configuration with SSL keystore
   - Environment-based profile activation
@@ -46,6 +48,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - Java 17
 - Spring Boot 3.4.3
 - Spring Security
+- Bucket4j (for rate limiting)
 - OpenAPI/Swagger
 - Spring Data JPA
 - MySQL 9
@@ -203,7 +206,8 @@ GET  /api/compras/listar             # List user purchases
 ## 🔒 Security
 
 - Basic authentication is implemented using Spring Security
-- HTTPS support to encrypt communication between clients and the server.
+- Rate limiting implemented using token bucket algorithm
+- HTTPS support to encrypt communication between clients and the server
 - Passwords are encrypted using BCrypt
 - Role-based access control for different endpoints
 - Input validation for all endpoints

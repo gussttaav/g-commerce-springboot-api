@@ -71,7 +71,8 @@ public class ProductoController {
                     array = @ArraySchema(schema = @Schema(implementation = ProductoResponseDTO.class)))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser")
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping("/listar")
     public List<ProductoResponseDTO> listarProductos(
@@ -106,7 +107,8 @@ public class ProductoController {
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct")
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PostMapping("/crear")
     public ProductoResponseDTO crearProducto(
@@ -138,7 +140,8 @@ public class ProductoController {
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
             @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
-            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct")
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PutMapping("/actualizar/{id}")
     public ProductoResponseDTO actualizarProducto(
@@ -167,7 +170,8 @@ public class ProductoController {
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-            @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound")
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @DeleteMapping("/eliminar/{id}")
     public void eliminarProducto(

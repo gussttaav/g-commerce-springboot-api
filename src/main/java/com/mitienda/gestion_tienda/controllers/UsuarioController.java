@@ -73,7 +73,8 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "User successfully registered", 
                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioResponseDTO.class))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail")
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
     @PostMapping("/registro")
     public UsuarioResponseDTO registrarUsuario(
@@ -98,7 +99,8 @@ public class UsuarioController {
                 content = @Content(schema = @Schema(implementation = UsuarioResponseDTO.class))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound"),
-            @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword")
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
     @PostMapping("/login")
     public UsuarioResponseDTO login(
@@ -123,7 +125,8 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail")
+            @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PostMapping("/admin/registro")
     public UsuarioResponseDTO registrarAdmin(
@@ -145,6 +148,7 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Profile successfully retrieved", 
                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioResponseDTO.class))),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping("/perfil")
     public UsuarioResponseDTO obtenerPerfil(Authentication authentication) {
@@ -166,7 +170,8 @@ public class UsuarioController {
             @ApiResponse(responseCode = "200", description = "Profile successfully updated", 
                 content = @Content(mediaType = "application/json", schema = @Schema(implementation = UsuarioResponseDTO.class))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied")
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @PutMapping("/perfil")
     public UsuarioResponseDTO actualizarPerfil(
@@ -191,7 +196,8 @@ public class UsuarioController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Password successfully changed"),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-            @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword")
+            @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @PutMapping("/password")
     public void cambiarContraseña(
@@ -214,7 +220,8 @@ public class UsuarioController {
                 content = @Content(mediaType = "application/json", 
                 array = @ArraySchema(schema = @Schema(implementation = UsuarioResponseDTO.class)))),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser")
+            @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @GetMapping("/admin/listar")
     public List<UsuarioResponseDTO> listarUsuarios() {
@@ -236,7 +243,8 @@ public class UsuarioController {
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-            @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound")
+            @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound"),
+            @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PutMapping("/admin/change-role")
     public void cambiarRol(

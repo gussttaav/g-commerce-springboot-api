@@ -10,7 +10,8 @@ import org.springframework.context.annotation.Configuration;
  * Configuration class for HTTPS support.
  * Only activates when a keystore.p12 file exists in the classpath.
  * 
- * @author Gustavo Vargas
+ * @author Gustavo
+ * @version 1.0
  */
 @Configuration
 @ConditionalOnResource(resources = "classpath:keystore.p12")

@@ -15,7 +15,7 @@ import org.springframework.core.io.ClassPathResource;
  * The SSL certificate can be provided in the resource folder in development mode,
  * or in the /certs directory in a Docker container.
  * 
- * @author Gustavo Vargas
+ * @author Gustavo
  * @version 1.0
  */
 public class SslProfileDetector implements EnvironmentPostProcessor {

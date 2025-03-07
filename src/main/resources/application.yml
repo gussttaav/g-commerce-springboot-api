@@ -7,7 +7,6 @@ spring:
     password: ${MYSQL_PASSWORD}
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
-    database-platform: org.hibernate.dialect.MySQLDialect
     hibernate:
       ddl-auto: none
     properties:
@@ -30,12 +29,25 @@ cors:
   allowed-methods: GET,POST,PUT,DELETE,OPTIONS
   allowed-headers: Authorization,Content-Type,X-Requested-With
 
+# Rate limiting configuration
+rate-limit:
+  window-minutes: 1
+  unauthenticated:
+    capacity: 5
+    refill: 5
+  user:
+    capacity: 30
+    refill: 20
+  admin:
+    capacity: 100
+    refill: 50
+
 # Springdoc OpenAPI configuration
 springdoc:
   api-docs:
     path: /v3/api-docs
   swagger-ui:
-    path: /swagger-ui.html
+    path: /swagger-ui
   packages-to-scan: com.mitienda.gestion_tienda
   paths-to-match: /api/**
 

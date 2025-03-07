@@ -63,7 +63,8 @@ public class CompraController {
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedAdmin"),
         @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
-        @ApiResponse(responseCode = "409", ref = "#/components/responses/ConstraintError")
+        @ApiResponse(responseCode = "409", ref = "#/components/responses/ConstraintError"),
+        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded"),
     })
     @PostMapping("/nueva")
     public CompraResponseDTO realizarCompra(
@@ -88,6 +89,7 @@ public class CompraController {
         @ApiResponse(responseCode = "200", description = "Purchases found successfully",
             content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CompraResponseDTO.class)))),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
+        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded"),
     })
     @GetMapping("/listar")
     public List<CompraResponseDTO> listarCompras(

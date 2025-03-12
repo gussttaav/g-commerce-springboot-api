@@ -7,12 +7,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.mitienda.gestion_tienda.entities.Producto;
@@ -79,11 +80,11 @@ class ProductoRepositoryTest {
         productoRepository.save(inactiveProduct);
         
         // Act
-        List<Producto> activeProducts = productoRepository.findByActivoTrue();
+        Page<Producto> activeProducts = productoRepository.findByActivoTrue(PageRequest.of(0, 10));
         
         // Assert
-        assertEquals(1, activeProducts.size());
-        assertTrue(activeProducts.get(0).isActivo());
-        assertEquals("Active Product", activeProducts.get(0).getNombre());
+        assertEquals(1, activeProducts.getTotalElements());
+        assertTrue(activeProducts.getContent().get(0).isActivo());
+        assertEquals("Active Product", activeProducts.getContent().get(0).getNombre());
     }
 }

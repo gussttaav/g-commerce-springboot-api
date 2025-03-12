@@ -6,12 +6,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.mitienda.gestion_tienda.entities.Compra;
@@ -93,14 +95,44 @@ class CompraRepositoryTest {
         compraRepository.save(compra2);
         
         // Act
-        List<Compra> compras = compraRepository.findByUsuario(usuario);
+        Page<Compra> comprasPage = compraRepository.findByUsuario(
+            usuario,
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+        );
         
         // Assert
-        assertEquals(2, compras.size());
-        assertTrue(compras.stream()
+        assertEquals(2, comprasPage.getTotalElements());
+        assertTrue(comprasPage.getContent().stream()
             .allMatch(compra -> compra.getUsuario().getId().equals(usuario.getId())));
     }
-    
+
+    @Test
+    void findByUsuario_ExistingUser_ReturnsCompras() {
+        // Arrange
+        Compra compra1 = new Compra();
+        compra1.setUsuario(usuario);
+        compra1.setFecha(LocalDateTime.now());
+        compra1.setTotal(new BigDecimal("10.00"));
+        compraRepository.save(compra1);
+        
+        Compra compra2 = new Compra();
+        compra2.setUsuario(usuario);
+        compra2.setFecha(LocalDateTime.now());
+        compra2.setTotal(new BigDecimal("20.00"));
+        compraRepository.save(compra2);
+        
+        // Act
+        Page<Compra> comprasPage = compraRepository.findByUsuario(
+            usuario, 
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+        );
+        
+        // Assert
+        assertEquals(2, comprasPage.getTotalElements());
+        assertTrue(comprasPage.getContent().stream()
+            .allMatch(compra -> compra.getUsuario().getId().equals(usuario.getId())));
+    }
+
     @Test
     void findByFechaBetween_DateRange_ReturnsCorrectCompras() {
         // Arrange
@@ -114,11 +146,15 @@ class CompraRepositoryTest {
         compraRepository.save(compra);
         
         // Act
-        List<Compra> compras = compraRepository.findByFechaBetween(yesterday, tomorrow);
+        Page<Compra> comprasPage = compraRepository.findByFechaBetween(
+            yesterday, 
+            tomorrow,
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+        );
         
         // Assert
-        assertEquals(1, compras.size());
-        assertTrue(compras.get(0).getFecha().isAfter(yesterday));
-        assertTrue(compras.get(0).getFecha().isBefore(tomorrow));
+        assertEquals(1, comprasPage.getTotalElements());
+        assertTrue(comprasPage.getContent().get(0).getFecha().isAfter(yesterday));
+        assertTrue(comprasPage.getContent().get(0).getFecha().isBefore(tomorrow));
     }
 }

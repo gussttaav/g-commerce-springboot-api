@@ -20,6 +20,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.authority.AuthorityUtils;
 import org.springframework.security.core.userdetails.User;
@@ -176,38 +180,77 @@ class CompraControllerTest {
     @DisplayName("Should return all purchases for authenticated user")
     void listarCompras_AuthenticatedUser_ReturnsUserPurchases() throws Exception {
         // Arrange
-        List<CompraResponseDTO> mockCompras = createMockComprasList();
+        Page<CompraResponseDTO> page = new PageImpl<>(
+            createMockComprasList(),
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha")),
+            2
+        );
         
-        when(compraService.listarCompras(TEST_USER_EMAIL))
-            .thenReturn(mockCompras);
+        when(compraService.listarCompras(
+                eq(TEST_USER_EMAIL), 
+                eq(0), 
+                eq(10), 
+                eq("fecha"), 
+                eq("DESC")))
+            .thenReturn(page);
 
         // Act & Assert
         mockMvc.perform(get(BASE_URL + "/listar")
-                .with(user(TEST_USER_EMAIL).roles("USER")))
+                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .param("page", "0")
+                .param("size", "10")
+                .param("sort", "fecha")
+                .param("direction", "DESC"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(2)))
-            .andExpect(jsonPath("$[0].id").value(1L))
-            .andExpect(jsonPath("$[0].productos", hasSize(2)))
-            .andExpect(jsonPath("$[1].id").value(2L))
-            .andExpect(jsonPath("$[1].productos", hasSize(1)));
+            .andExpect(jsonPath("$.content", hasSize(2)))
+            .andExpect(jsonPath("$.content[0].id").value(1L))
+            .andExpect(jsonPath("$.content[0].productos", hasSize(2)))
+            .andExpect(jsonPath("$.content[1].id").value(2L))
+            .andExpect(jsonPath("$.content[1].productos", hasSize(1)))
+            .andExpect(jsonPath("$.totalElements").value(2))
+            .andExpect(jsonPath("$.totalPages").value(1))
+            .andExpect(jsonPath("$.pageSize").value(10))
+            .andExpect(jsonPath("$.pageNumber").value(0));
 
-        verify(compraService).listarCompras(TEST_USER_EMAIL);
+        verify(compraService).listarCompras(eq(TEST_USER_EMAIL), eq(0), eq(10), eq("fecha"), eq("DESC"));
     }
 
     @Test
     @DisplayName("Should return empty list when user has no purchases")
     void listarCompras_UserWithNoPurchases_ReturnsEmptyList() throws Exception {
         // Arrange
-        when(compraService.listarCompras(TEST_USER_EMAIL))
-            .thenReturn(Collections.emptyList());
+        Page<CompraResponseDTO> emptyPage = new PageImpl<>(
+            Collections.emptyList(),
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha")),
+            0
+        );
+        
+        when(compraService.listarCompras(
+            eq(TEST_USER_EMAIL),
+            eq(0),
+            eq(10),
+            eq("fecha"),
+            eq("DESC")))
+        .thenReturn(emptyPage);
 
         // Act & Assert
         mockMvc.perform(get(BASE_URL + "/listar")
-                .with(user(TEST_USER_EMAIL).roles("USER")))
+                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .param("page", "0")
+                .param("size", "10")
+                .param("sort", "fecha")
+                .param("direction", "DESC"))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$", hasSize(0)));
+            .andExpect(jsonPath("$.content", hasSize(0)))
+            .andExpect(jsonPath("$.totalElements").value(0))
+            .andExpect(jsonPath("$.totalPages").value(0));
 
-        verify(compraService).listarCompras(TEST_USER_EMAIL);
+        verify(compraService).listarCompras(
+            eq(TEST_USER_EMAIL),
+            eq(0),
+            eq(10),
+            eq("fecha"),
+            eq("DESC"));
     }
 
     @Test

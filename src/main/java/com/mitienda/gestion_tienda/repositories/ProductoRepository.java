@@ -1,8 +1,9 @@
 package com.mitienda.gestion_tienda.repositories;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 
 import com.mitienda.gestion_tienda.entities.Producto;
 
@@ -16,14 +17,46 @@ import com.mitienda.gestion_tienda.entities.Producto;
 public interface ProductoRepository extends JpaRepository<Producto, Long> {
     
     /**
-     * Finds all active products in the system.
-     * @return a list of products where the 'activo' flag is true
+     * Finds all active products in the system with pagination support.
+     * @param pageable pagination information
+     * @return a page of products where the 'activo' flag is true
      */
-    List<Producto> findByActivoTrue();
+    Page<Producto> findByActivoTrue(Pageable pageable);
 
     /**
-     * Finds all non-active products in the system.
-     * @return a list of products where the 'activo' flag is false
+     * Finds all non-active products in the system with pagination support.
+     * @param pageable pagination information
+     * @return a page of products where the 'activo' flag is false
      */
-    List<Producto> findByActivoFalse();
+    Page<Producto> findByActivoFalse(Pageable pageable);
+
+    /**
+     * Finds active products containing the search term in either name or description.
+     * 
+     * @param searchTerm The search term to match against name or description (should include % wildcards)
+     * @param pageable Pagination information
+     * @return Page of Producto entities matching the criteria
+     */
+    @Query("SELECT p FROM Producto p WHERE p.activo = true AND (LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm)")
+    Page<Producto> findByActivoTrueAndSearch(String searchTerm, Pageable pageable);
+
+    /**
+     * Finds inactive products containing the search term in either name or description.
+     * 
+     * @param searchTerm The search term to match against name or description (should include % wildcards)
+     * @param pageable Pagination information
+     * @return Page of Producto entities matching the criteria
+     */
+    @Query("SELECT p FROM Producto p WHERE p.activo = false AND (LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm)")
+    Page<Producto> findByActivoFalseAndSearch(String searchTerm, Pageable pageable);
+
+    /**
+     * Finds all products (active and inactive) containing the search term in either name or description.
+     * 
+     * @param searchTerm The search term to match against name or description (should include % wildcards)
+     * @param pageable Pagination information
+     * @return Page of Producto entities matching the criteria
+     */
+    @Query("SELECT p FROM Producto p WHERE LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm")
+    Page<Producto> findBySearch(String searchTerm, Pageable pageable);
 }

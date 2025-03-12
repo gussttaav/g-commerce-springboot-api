@@ -6,15 +6,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
+
+import com.mitienda.gestion_tienda.dtos.api.PaginatedResponse;
 import com.mitienda.gestion_tienda.dtos.compra.*;
 import com.mitienda.gestion_tienda.exceptions.ApiException;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
@@ -76,24 +77,36 @@ public class CompraController {
 
 
     /**
-     * Retrieves the purchase history for the authenticated user.
+     * Retrieves the paginated purchase history for the authenticated user.
      * Regular users can only see their own purchases.
+     * Administrators can see all purchases.
      * 
+     * @param page The page number (zero-based)
+     * @param size The page size
+     * @param sort The field to sort by
+     * @param direction The sort direction (ASC or DESC)
      * @param authentication the current user's authentication object
-     * @return List<CompraResponseDTO> containing all purchases made by the user
+     * @return PaginatedResponse<CompraResponseDTO> containing paginated purchases
      * @throws UsernameNotFoundException if the user is not found
      */
-    @Operation(summary = "Lists all user purchases", 
-               description = "Returns a list of all purchases made by the authenticated user")
+    @Operation(summary = "Lists user purchases with pagination", 
+               description = "Returns a paginated list of purchases made by the authenticated user. Administrators can see all purchases.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Purchases found successfully",
-            content = @Content(mediaType = "application/json", array = @ArraySchema(schema = @Schema(implementation = CompraResponseDTO.class)))),
+            content = @Content(mediaType = "application/json", 
+            schema = @Schema(implementation = PaginatedResponseCompraDTO.class))),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded"),
     })
     @GetMapping("/listar")
-    public List<CompraResponseDTO> listarCompras(
+    public PaginatedResponse<CompraResponseDTO> listarCompras(
+           @RequestParam(defaultValue = "0") @Schema(description = "Page number (zero-based)", example = "0") int page,
+           @RequestParam(defaultValue = "10") @Schema(description = "Page size", example = "10") int size,
+           @RequestParam(defaultValue = "fecha") @Schema(description = "Sort field", example = "fecha") String sort,
+           @RequestParam(defaultValue = "DESC") @Schema(description = "Sort direction", example = "DESC", allowableValues = {"ASC", "DESC"}) String direction,
            Authentication authentication) {
-        return compraService.listarCompras(authentication.getName());
+        
+        Page<CompraResponseDTO> pageResult = compraService.listarCompras(authentication.getName(), page, size, sort, direction);
+        return PaginatedResponse.fromPage(pageResult);
     }
 }

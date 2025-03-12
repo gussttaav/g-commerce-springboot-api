@@ -30,6 +30,8 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
@@ -85,15 +87,19 @@ class ProductoControllerTest {
         @WithMockUser(roles = "USER")
         @DisplayName("Should return empty list when no active products exist")
         void listarProductos_NoProducts_ReturnsEmptyList() throws Exception {
-            when(productoService.listarProductos(ProductStatus.ACTIVE))
-                    .thenReturn(Collections.emptyList());
+            Page<ProductoResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
+            
+            // Updated to include null searchText parameter
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(emptyPage);
 
             mockMvc.perform(get("/api/productos/listar")
                     .with(csrf())
                     .with(user("test@example.com").roles("USER")))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$", hasSize(0)))
+                    .andExpect(jsonPath("$.content", hasSize(0)))
+                    .andExpect(jsonPath("$.totalElements").value(0))
                     .andDo(MockMvcResultHandlers.print());
         }
 
@@ -103,18 +109,21 @@ class ProductoControllerTest {
         void listarProductos_UserRole_ReturnsActiveProducts() throws Exception {
             ProductoResponseDTO product1 = createProductoResponseDTO(1L, true);
             ProductoResponseDTO product2 = createProductoResponseDTO(2L, true);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(product1, product2));
             
-            when(productoService.listarProductos(ProductStatus.ACTIVE))
-                    .thenReturn(Arrays.asList(product1, product2));
+            // Updated to include null searchText parameter
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
 
             mockMvc.perform(get("/api/productos/listar")
                     .with(csrf())
                     .with(user("test@example.com").roles("USER")))
                     .andExpect(status().isOk())
                     .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].id").value(1))
-                    .andExpect(jsonPath("$[1].id").value(2))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id").value(1))
+                    .andExpect(jsonPath("$.content[1].id").value(2))
+                    .andExpect(jsonPath("$.totalElements").value(2))
                     .andDo(MockMvcResultHandlers.print());
         }
 
@@ -135,15 +144,19 @@ class ProductoControllerTest {
         @DisplayName("Should return active products for ADMIN role")
         void listarProductos_AdminRole_ReturnsActiveProducts() throws Exception {
             ProductoResponseDTO product = createProductoResponseDTO(1L, true);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
             
-            when(productoService.listarProductos(ProductStatus.ACTIVE))
-                    .thenReturn(Collections.singletonList(product));
+            // Updated to include null searchText parameter
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
 
             mockMvc.perform(get("/api/productos/listar")
                     .with(csrf())
                     .with(user("admin@example.com").roles("ADMIN")))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(1)))
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.totalElements").value(1))
                     .andDo(MockMvcResultHandlers.print());
         }
 
@@ -152,17 +165,20 @@ class ProductoControllerTest {
         @DisplayName("Should return inactive products for ADMIN role when requested")
         void listarProductos_AdminRole_ReturnsInactiveProducts() throws Exception {
             ProductoResponseDTO product = createProductoResponseDTO(1L, false);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
             
-            when(productoService.listarProductos(ProductStatus.INACTIVE))
-                    .thenReturn(Collections.singletonList(product));
+            // Updated to include null searchText parameter
+            when(productoService.listarProductos(eq(ProductStatus.INACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
 
             mockMvc.perform(get("/api/productos/listar")
                     .param("status", "INACTIVE")
                     .with(csrf())
                     .with(user("admin@example.com").roles("ADMIN")))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(1)))
-                    .andExpect(jsonPath("$[0].activo").value(false))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].activo").value(false))
+                    .andExpect(jsonPath("$.totalElements").value(1))
                     .andDo(MockMvcResultHandlers.print());
         }
 
@@ -172,18 +188,22 @@ class ProductoControllerTest {
         void listarProductos_AdminRole_ReturnsAllProducts() throws Exception {
             ProductoResponseDTO activeProduct = createProductoResponseDTO(1L, true);
             ProductoResponseDTO inactiveProduct = createProductoResponseDTO(2L, false);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(activeProduct, inactiveProduct));
             
-            when(productoService.listarProductos(ProductStatus.ALL))
-                    .thenReturn(Arrays.asList(activeProduct, inactiveProduct));
+            // Updated to include null searchText parameter
+            when(productoService.listarProductos(eq(ProductStatus.ALL), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
 
             mockMvc.perform(get("/api/productos/listar")
                     .param("status", "ALL")
                     .with(csrf())
                     .with(user("admin@example.com").roles("ADMIN")))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].activo").value(true))
-                    .andExpect(jsonPath("$[1].activo").value(false))
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].activo").value(true))
+                    .andExpect(jsonPath("$.content[1].activo").value(false))
+                    .andExpect(jsonPath("$.totalElements").value(2))
                     .andDo(MockMvcResultHandlers.print());
         }
 
@@ -196,6 +216,91 @@ class ProductoControllerTest {
                     .with(csrf())
                     .with(user("admin@example.com").roles("ADMIN")))
                     .andExpect(status().isBadRequest())
+                    .andDo(MockMvcResultHandlers.print());
+        }
+        
+        @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("Should return products matching search term for USER role")
+        void listarProductos_UserRole_WithSearchTerm_ReturnsMatchingProducts() throws Exception {
+            ProductoResponseDTO product = createProductoResponseDTO(1L, true);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
+            
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq("Test"), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("searchText", "Test")
+                    .with(csrf())
+                    .with(user("test@example.com").roles("USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].id").value(1))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+        
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return active products matching search term for ADMIN role")
+        void listarProductos_AdminRole_WithSearchTerm_ReturnsMatchingActiveProducts() throws Exception {
+            ProductoResponseDTO product = createProductoResponseDTO(1L, true);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
+            
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq("Test"), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("searchText", "Test")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+        
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should return inactive products matching search term for ADMIN role")
+        void listarProductos_AdminRole_WithSearchTerm_ReturnsMatchingInactiveProducts() throws Exception {
+            ProductoResponseDTO product = createProductoResponseDTO(1L, false);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
+            
+            when(productoService.listarProductos(eq(ProductStatus.INACTIVE), eq("Test"), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("status", "INACTIVE")
+                    .param("searchText", "Test")
+                    .with(csrf())
+                    .with(user("admin@example.com").roles("ADMIN")))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(1)))
+                    .andExpect(jsonPath("$.content[0].activo").value(false))
+                    .andExpect(jsonPath("$.totalElements").value(1))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+        
+        @Test
+        @WithMockUser(roles = "USER")
+        @DisplayName("Should return empty list when no products match search term")
+        void listarProductos_WithSearchTerm_NoMatches_ReturnsEmptyList() throws Exception {
+            Page<ProductoResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
+            
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq("NonExistent"), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(emptyPage);
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("searchText", "NonExistent")
+                    .with(csrf())
+                    .with(user("test@example.com").roles("USER")))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(0)))
+                    .andExpect(jsonPath("$.totalElements").value(0))
                     .andDo(MockMvcResultHandlers.print());
         }
     }

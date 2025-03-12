@@ -317,9 +317,14 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
         mockMvc.perform(get(BASE_URL + "/admin/listar")
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[*].email", hasItems(TEST_EMAIL, TEST_ADMIN_EMAIL)))
-                .andExpect(jsonPath("$[*].rol", hasItems("USER", "ADMIN")));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[*].email", hasItems(TEST_EMAIL, TEST_ADMIN_EMAIL)))
+                .andExpect(jsonPath("$.content[*].rol", hasItems("USER", "ADMIN")))
+                .andExpect(jsonPath("$.totalElements").value(2))
+                .andExpect(jsonPath("$.totalPages").value(1))
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.pageNumber").value(0))
+                .andExpect(jsonPath("$.lastPage").value(true));
     }
 
     @Test

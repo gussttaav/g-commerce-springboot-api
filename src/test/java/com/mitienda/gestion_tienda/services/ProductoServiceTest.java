@@ -6,6 +6,8 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
@@ -31,6 +33,9 @@ import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
 import com.mitienda.gestion_tienda.entities.Producto;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
 import com.mitienda.gestion_tienda.repositories.ProductoRepository;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 /**
  * Unit tests for ProductoService.
@@ -99,68 +104,177 @@ class ProductoServiceTest {
     }
 
     /**
-     * Verifies that products are correctly listed by status.
+     * Verifies that products are correctly listed by status without search.
      */
     @Test
     void listarProductos_ConEstadoActivo_DebeRetornarSoloProductosActivos() {
         // Arrange
-        when(productoRepository.findByActivoTrue()).thenReturn(List.of(producto));
+        Page<Producto> mockPage = new PageImpl<>(List.of(producto));
+        when(productoRepository.findByActivoTrue(any(Pageable.class))).thenReturn(mockPage);
         when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
 
-        // Act
-        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ACTIVE);
+        // Act - now with null searchText
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ACTIVE, null, 0, 10, "nombre", "ASC");
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
-        assertEquals(productoResponseDTO, resultado.get(0));
-        verify(productoRepository).findByActivoTrue();
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(productoResponseDTO, resultado.getContent().get(0));
+        verify(productoRepository).findByActivoTrue(any(Pageable.class));
         verify(productoMapper).toProductoResponseDTO(producto);
     }
 
     /**
-     * Verifies that products are correctly listed by status.
+     * Verifies that products are correctly listed by status without search.
      */
     @Test
     void listarProductos_ConEstadoInactivo_DebeRetornarSoloProductosInactivos() {
         // Arrange
-        when(productoRepository.findByActivoFalse()).thenReturn(List.of(productoInactivo));
+        Page<Producto> mockPage = new PageImpl<>(List.of(productoInactivo));
+        when(productoRepository.findByActivoFalse(any(Pageable.class))).thenReturn(mockPage);
         when(productoMapper.toProductoResponseDTO(productoInactivo))
             .thenReturn(productoInactivoResponseDTO);
 
-        // Act
-        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.INACTIVE);
+        // Act - now with null searchText
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.INACTIVE, null, 0, 10, "nombre", "ASC");
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(1, resultado.size());
-        assertEquals(productoInactivoResponseDTO, resultado.get(0));
-        verify(productoRepository).findByActivoFalse();
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(productoInactivoResponseDTO, resultado.getContent().get(0));
+        verify(productoRepository).findByActivoFalse(any(Pageable.class));
         verify(productoMapper).toProductoResponseDTO(productoInactivo);
     }
 
     /**
-     * Verifies that products are correctly listed by status.
+     * Verifies that products are correctly listed by status without search.
      */
     @Test
     void listarProductos_ConEstadoAll_DebeRetornarTodosLosProductos() {
         // Arrange
         List<Producto> todosLosProductos = List.of(producto, productoInactivo);
-        when(productoRepository.findAll()).thenReturn(todosLosProductos);
+        Page<Producto> mockPage = new PageImpl<>(todosLosProductos);
+        when(productoRepository.findAll(any(Pageable.class))).thenReturn(mockPage);
+        when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
+        when(productoMapper.toProductoResponseDTO(productoInactivo))
+            .thenReturn(productoInactivoResponseDTO);
+
+        // Act - now with null searchText
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ALL, null, 0, 10, "nombre", "ASC");
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(2, resultado.getTotalElements());
+        assertTrue(resultado.getContent().contains(productoResponseDTO));
+        assertTrue(resultado.getContent().contains(productoInactivoResponseDTO));
+        verify(productoRepository).findAll(any(Pageable.class));
+        verify(productoMapper, times(2)).toProductoResponseDTO(any(Producto.class));
+    }
+    
+    /**
+     * Verifies that search works correctly for active products.
+     */
+    @Test
+    void listarProductos_ConEstadoActivoYBusqueda_DebeRetornarProductosActivosConCoincidencia() {
+        // Arrange
+        String searchTerm = "Test";
+        String searchTermWithWildcards = "%test%";
+        Page<Producto> mockPage = new PageImpl<>(List.of(producto));
+        
+        when(productoRepository.findByActivoTrueAndSearch(eq(searchTermWithWildcards), any(Pageable.class)))
+            .thenReturn(mockPage);
+        when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
+
+        // Act
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(
+            ProductStatus.ACTIVE, searchTerm, 0, 10, "nombre", "ASC");
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(productoResponseDTO, resultado.getContent().get(0));
+        verify(productoRepository).findByActivoTrueAndSearch(eq(searchTermWithWildcards), any(Pageable.class));
+        verify(productoMapper).toProductoResponseDTO(producto);
+    }
+    
+    /**
+     * Verifies that search works correctly for inactive products.
+     */
+    @Test
+    void listarProductos_ConEstadoInactivoYBusqueda_DebeRetornarProductosInactivosConCoincidencia() {
+        // Arrange
+        String searchTerm = "Inactive";
+        String searchTermWithWildcards = "%inactive%";
+        Page<Producto> mockPage = new PageImpl<>(List.of(productoInactivo));
+        
+        when(productoRepository.findByActivoFalseAndSearch(eq(searchTermWithWildcards), any(Pageable.class)))
+            .thenReturn(mockPage);
+        when(productoMapper.toProductoResponseDTO(productoInactivo))
+            .thenReturn(productoInactivoResponseDTO);
+
+        // Act
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(
+            ProductStatus.INACTIVE, searchTerm, 0, 10, "nombre", "ASC");
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+        assertEquals(productoInactivoResponseDTO, resultado.getContent().get(0));
+        verify(productoRepository).findByActivoFalseAndSearch(eq(searchTermWithWildcards), any(Pageable.class));
+        verify(productoMapper).toProductoResponseDTO(productoInactivo);
+    }
+    
+    /**
+     * Verifies that search works correctly for all products.
+     */
+    @Test
+    void listarProductos_ConEstadoAllYBusqueda_DebeRetornarTodosLosProductosConCoincidencia() {
+        // Arrange
+        String searchTerm = "Product";
+        String searchTermWithWildcards = "%product%";
+        List<Producto> todosLosProductos = List.of(producto, productoInactivo);
+        Page<Producto> mockPage = new PageImpl<>(todosLosProductos);
+        
+        when(productoRepository.findBySearch(eq(searchTermWithWildcards), any(Pageable.class)))
+            .thenReturn(mockPage);
         when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
         when(productoMapper.toProductoResponseDTO(productoInactivo))
             .thenReturn(productoInactivoResponseDTO);
 
         // Act
-        List<ProductoResponseDTO> resultado = productoService.listarProductos(ProductStatus.ALL);
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(
+            ProductStatus.ALL, searchTerm, 0, 10, "nombre", "ASC");
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(2, resultado.size());
-        assertTrue(resultado.contains(productoResponseDTO));
-        assertTrue(resultado.contains(productoInactivoResponseDTO));
-        verify(productoRepository).findAll();
+        assertEquals(2, resultado.getTotalElements());
+        assertTrue(resultado.getContent().contains(productoResponseDTO));
+        assertTrue(resultado.getContent().contains(productoInactivoResponseDTO));
+        verify(productoRepository).findBySearch(eq(searchTermWithWildcards), any(Pageable.class));
         verify(productoMapper, times(2)).toProductoResponseDTO(any(Producto.class));
+    }
+    
+    /**
+     * Verifies that empty search text is handled correctly.
+     */
+    @Test
+    void listarProductos_ConBusquedaVacia_DebeIgnorarBusqueda() {
+        // Arrange
+        String searchTerm = "";  // Empty search
+        Page<Producto> mockPage = new PageImpl<>(List.of(producto));
+        when(productoRepository.findByActivoTrue(any(Pageable.class))).thenReturn(mockPage);
+        when(productoMapper.toProductoResponseDTO(producto)).thenReturn(productoResponseDTO);
+
+        // Act
+        Page<ProductoResponseDTO> resultado = productoService.listarProductos(
+            ProductStatus.ACTIVE, searchTerm, 0, 10, "nombre", "ASC");
+
+        // Assert
+        assertNotNull(resultado);
+        assertEquals(1, resultado.getTotalElements());
+        verify(productoRepository).findByActivoTrue(any(Pageable.class));
+        // Verify search methods were not called
+        verify(productoRepository, never()).findByActivoTrueAndSearch(anyString(), any(Pageable.class));
     }
 
     /**

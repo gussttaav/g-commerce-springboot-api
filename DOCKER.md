@@ -8,18 +8,20 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
   - Secure user registration and authentication
   - Role-based authorization (ADMIN, USER)
   - Profile management and password updates
-  - Basic authentication
+  - Paginated user listing for administrators
 
 - **Product Management**
   - Complete CRUD operations
   - Product status management (active/inactive)
   - Role-based access control
   - Stock management
+  - Paginated product listing with status filtering
+  - Text search across product name and description fields
 
 - **Purchase System**
   - Shopping cart functionality
   - Order tracking
-  - Purchase history
+  - Purchase history tracking with pagination
   - Transaction management
 
 - **Security & SSL Support**
@@ -137,11 +139,16 @@ POST /api/usuarios/login           # User login
 GET  /api/usuarios/perfil          # Get user profile
 PUT  /api/usuarios/perfil          # Update profile
 PUT  /api/usuarios/password        # Change password
+
+# With ADMIN role only:
+POST /api/usuarios/admin/registro   # Register a new admin
+GET /api/usuarios/admin/listar      # List all users (paginated)
+PUT /api/usuarios/admin/change-role # Change user role
 ```
 
 ### Products
 ```http
-GET    /api/productos/listar             # List products
+GET    /api/productos/listar             # List products  (paginated)
 GET    /api/productos/{id}               # Get product details
 POST   /api/productos/crear              # Create product (ADMIN)
 PUT    /api/productos/actualizar/{id}    # Update product (ADMIN)
@@ -150,8 +157,8 @@ DELETE /api/productos/eliminar/{id}      # Delete product (ADMIN)
 
 ### Purchases
 ```http
-POST /api/compras/nueva            # Create purchase
-GET  /api/compras/listar          # List user purchases
+POST /api/compras/nueva           # Create purchase
+GET  /api/compras/listar          # List user purchases  (paginated)
 GET  /api/compras/{id}            # Get purchase details
 ```
 

@@ -8,15 +8,18 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
   - User registration and authentication
   - Role-based authorization (ADMIN, USER)
   - Profile management and password updates
+  - Paginated user listing for administrators
 
 - **Product Management**
   - Product creation, update, delete and list
   - Product status management (active/inactive)
   - Role-based access control for product operations
-
+  - Paginated product listing with status filtering
+  - Text search across product name and description fields
+  
 - **Purchase System**
   - Shopping cart functionality
-  - Purchase history tracking
+  - Purchase history tracking with pagination
   - Role-specific purchase restrictions
 
 - **Security & SSL Support**
@@ -181,26 +184,26 @@ PUT  /api/usuarios/password         # Change password
 
 # With ADMIN role only:
 POST /api/usuarios/admin/registro   # Register a new admin
-GET /api/usuarios/admin/listar      # List all users
+GET /api/usuarios/admin/listar      # List all users (paginated)
 PUT /api/usuarios/admin/change-role # Change user role
 ```
 
 ### Product Management
 ```
-GET    /api/productos/listar               # List all active products
+GET    /api/productos/listar        # List products (paginated)
 
 # With ADMIN role only:
-GET /api/productos/listar?status=INACTIVE  # Returns inactive products
-GET /api/productos/listar?status=ALL       # Returns all products
-POST   /api/productos/crear                # Create a new product
-DELETE /api/productos/eliminar/{id}        # Delete a product
-PUT /api/productos/actualizar/{id}         # Update a product information
+GET    /api/productos/listar?status=INACTIVE  # Returns inactive products
+GET    /api/productos/listar?status=ALL       # Returns all products
+POST   /api/productos/crear                   # Create a new product
+DELETE /api/productos/eliminar/{id}           # Delete a product
+PUT    /api/productos/actualizar/{id}         # Update a product information
 ```
 
 ### Purchase Management
 ```
-POST /api/compras/nueva              # Create a new purchase
-GET  /api/compras/listar             # List user purchases
+POST /api/compras/nueva            # Create a new purchase
+GET  /api/compras/listar           # List user purchases (paginated)
 ```
 
 ## 🔒 Security
@@ -268,6 +271,7 @@ src/
 │   │       ├── dtos/
 │   │       ├── entities/
 │   │       ├── exceptions/
+│   │       ├── filters/
 │   │       ├── repositories/
 │   │       ├── services/
 │   │       └── utilities/

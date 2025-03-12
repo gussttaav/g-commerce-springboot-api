@@ -22,6 +22,9 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -267,28 +270,27 @@ class UsuarioServiceTest {
         // Arrange
         List<Usuario> usuarios = Arrays.asList(
             createTestUsuario(),
-            createTestUsuario() // Second user with same data for simplicity
+            createTestUsuario()
         );
-        
+        Page<Usuario> usuariosPage = new PageImpl<>(usuarios);
         List<UsuarioResponseDTO> expectedResponses = usuarios.stream()
             .map(u -> new UsuarioResponseDTO(u.getId(), u.getNombre(), 
                 u.getEmail(), u.getRol(), u.getFechaCreacion()))
             .collect(Collectors.toList());
+        Page<UsuarioResponseDTO> expectedPage = new PageImpl<>(expectedResponses);
 
-        when(usuarioRepository.findAll()).thenReturn(usuarios);
+        when(usuarioRepository.findAll(any(Pageable.class))).thenReturn(usuariosPage);
         when(usuarioMapper.toUsuarioResponseDTO(any(Usuario.class)))
             .thenReturn(expectedResponses.get(0), expectedResponses.get(1));
 
         // Act
-        List<UsuarioResponseDTO> result = usuarioService.listarUsuarios();
+        Page<UsuarioResponseDTO> result = usuarioService.listarUsuarios(0, 10, "email", "ASC");
 
         // Assert
         assertNotNull(result);
-        assertEquals(2, result.size());
-        assertEquals(expectedResponses.get(0).getId(), result.get(0).getId());
-        assertEquals(expectedResponses.get(1).getId(), result.get(1).getId());
-        
-        verify(usuarioRepository).findAll();
+        assertEquals(2, result.getContent().size());
+        assertEquals(expectedPage.getTotalElements(), result.getTotalElements());
+        verify(usuarioRepository).findAll(any(Pageable.class));
         verify(usuarioMapper, times(2)).toUsuarioResponseDTO(any(Usuario.class));
     }
 

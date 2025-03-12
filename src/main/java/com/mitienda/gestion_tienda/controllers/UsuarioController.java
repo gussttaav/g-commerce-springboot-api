@@ -3,15 +3,16 @@ package com.mitienda.gestion_tienda.controllers;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-import java.util.List;
-
+import org.springframework.data.domain.Page;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.*;
 
+import com.mitienda.gestion_tienda.dtos.api.PaginatedResponse;
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.CambioPasswdDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.LoginDTO;
+import com.mitienda.gestion_tienda.dtos.usuario.PaginatedResponseUsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioAdminDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.UsuarioResponseDTO;
@@ -24,7 +25,6 @@ import com.mitienda.gestion_tienda.services.UsuarioService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -209,23 +209,34 @@ public class UsuarioController {
 
 
     /**
-     * Lists all users in the system. Only accessible by administrators.
+     * Lists all users in the system with pagination support. Only accessible by administrators.
      * 
-     * @return List of UsuarioResponseDTO containing all users' information
+     * @param page The page number (zero-based)
+     * @param size The page size
+     * @param sort The field to sort by
+     * @param direction The sort direction (ASC or DESC)
+     * @return PaginatedResponse of UsuarioResponseDTO containing paginated users' information
      * @throws AccessDeniedException if the current user is not an administrator
      */
-    @Operation(summary = "List all users", description = "Retrieves a list of all users in the system. Requires ADMIN role.")
+    @Operation(summary = "List all users with pagination", 
+               description = "Retrieves a paginated list of all users in the system. Requires ADMIN role.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users successfully retrieved", 
                 content = @Content(mediaType = "application/json", 
-                array = @ArraySchema(schema = @Schema(implementation = UsuarioResponseDTO.class)))),
+                schema = @Schema(implementation = PaginatedResponseUsuarioDTO.class))),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
             @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @GetMapping("/admin/listar")
-    public List<UsuarioResponseDTO> listarUsuarios() {
-        return usuarioService.listarUsuarios();
+    public PaginatedResponse<UsuarioResponseDTO> listarUsuarios(
+            @RequestParam(defaultValue = "0") @Schema(description = "Page number (zero-based)", example = "0") int page,
+            @RequestParam(defaultValue = "10") @Schema(description = "Page size", example = "10") int size,
+            @RequestParam(defaultValue = "email") @Schema(description = "Sort field", example = "email") String sort,
+            @RequestParam(defaultValue = "ASC") @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"}) String direction) {
+        
+        Page<UsuarioResponseDTO> pageResult = usuarioService.listarUsuarios(page, size, sort, direction);
+        return PaginatedResponse.fromPage(pageResult);
     }
     
 

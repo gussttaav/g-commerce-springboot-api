@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.time.LocalDateTime;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,6 +19,8 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -479,29 +482,54 @@ class UsuarioControllerTest {
     class ListarUsuariosTests {
         
         @Test
-        @DisplayName("Should list all users when authenticated as admin")
         @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should list users with pagination when authenticated as admin")
         void listarUsuarios_AuthenticatedAsAdmin_Success() throws Exception {
             // Arrange
             List<UsuarioResponseDTO> usuarios = Arrays.asList(
                 new UsuarioResponseDTO(1L, "User 1", "user1@example.com", Usuario.Role.USER, LocalDateTime.now()),
                 new UsuarioResponseDTO(2L, "User 2", "user2@example.com", Usuario.Role.ADMIN, LocalDateTime.now())
             );
-            
-            when(usuarioService.listarUsuarios()).thenReturn(usuarios);
+            Page<UsuarioResponseDTO> page = new PageImpl<>(usuarios);
+
+            when(usuarioService.listarUsuarios(0, 10, "email", "ASC")).thenReturn(page);
 
             // Act & Assert
-            mockMvc.perform(get(BASE_URL + "/admin/listar"))
+            mockMvc.perform(get("/api/usuarios/admin/listar")
+                    .param("page", "0")
+                    .param("size", "10")
+                    .param("sort", "email")
+                    .param("direction", "ASC"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$", hasSize(2)))
-                    .andExpect(jsonPath("$[0].id").value(1))
-                    .andExpect(jsonPath("$[0].nombre").value("User 1"))
-                    .andExpect(jsonPath("$[0].email").value("user1@example.com"))
-                    .andExpect(jsonPath("$[0].rol").value("USER"))
-                    .andExpect(jsonPath("$[1].id").value(2))
-                    .andExpect(jsonPath("$[1].nombre").value("User 2"))
-                    .andExpect(jsonPath("$[1].email").value("user2@example.com"))
-                    .andExpect(jsonPath("$[1].rol").value("ADMIN"));
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id").value(1))
+                    .andExpect(jsonPath("$.content[0].nombre").value("User 1"))
+                    .andExpect(jsonPath("$.content[0].email").value("user1@example.com"))
+                    .andExpect(jsonPath("$.content[0].rol").value("USER"))
+                    .andExpect(jsonPath("$.content[1].id").value(2))
+                    .andExpect(jsonPath("$.content[1].nombre").value("User 2"))
+                    .andExpect(jsonPath("$.content[1].email").value("user2@example.com"))
+                    .andExpect(jsonPath("$.content[1].rol").value("ADMIN"))
+                    .andExpect(jsonPath("$.totalElements").value(2));
+        }
+
+        @Test
+        @WithMockUser(roles = "ADMIN")
+        @DisplayName("Should handle empty result with pagination")
+        void listarUsuarios_EmptyResult_Success() throws Exception {
+            // Arrange
+            Page<UsuarioResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
+            when(usuarioService.listarUsuarios(0, 10, "email", "ASC")).thenReturn(emptyPage);
+
+            // Act & Assert
+            mockMvc.perform(get("/api/usuarios/admin/listar")
+                    .param("page", "0")
+                    .param("size", "10")
+                    .param("sort", "email")
+                    .param("direction", "ASC"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.content", hasSize(0)))
+                    .andExpect(jsonPath("$.totalElements").value(0));
         }
 
         @Test

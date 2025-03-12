@@ -58,7 +58,22 @@ INSERT INTO productos (nombre, descripcion, precio, activo) VALUES
 ('Webcam HD', '1080p webcam with built-in microphone', 79.99, true),
 ('Gaming Mouse', 'High-precision gaming mouse with adjustable DPI', 89.99, false),
 ('Tablet Pro', '10-inch tablet with stylus support', 599.99, true),
-('External SSD', '1TB portable SSD with USB 3.0', 159.99, true);
+('External SSD', '1TB portable SSD with USB 3.0', 159.99, true),
+('USB Flash Drive', '64GB USB 3.0 flash drive', 14.99, true),
+('Portable Charger', '10,000mAh power bank with fast charging', 24.99, true),
+('Wireless Charger', 'Fast wireless charger for smartphones', 19.99, true),
+('Bluetooth Speaker', 'Compact Bluetooth speaker with deep bass', 39.99, true),
+('HDMI Cable', '6ft high-speed HDMI cable', 9.99, true),
+('Laptop Stand', 'Adjustable aluminum laptop stand', 34.99, true),
+('Smart Light Bulb', 'Wi-Fi enabled smart bulb with voice control', 12.99, true),
+('Noise Cancelling Earbuds', 'Wireless earbuds with active noise cancellation', 49.99, true),
+('Phone Stand', 'Foldable phone stand for desk', 8.99, true),
+('Wireless Keyboard', 'Compact wireless keyboard with silent keys', 39.99, true),
+('Ethernet Cable', '10ft CAT6 Ethernet cable', 7.99, true),
+('Screen Protector', 'Tempered glass screen protector for smartphones', 6.99, true),
+('USB Wall Charger', 'Dual-port USB wall charger', 14.99, true),
+('Car Phone Mount', 'Adjustable car phone holder', 16.99, true),
+('Cooling Pad', 'Laptop cooling pad with dual fans', 29.99, true);
 
 -- Insert purchases
 INSERT INTO compras (usuario_id, total, fecha) VALUES

@@ -6,6 +6,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -14,7 +15,6 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,6 +24,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
 import com.mitienda.gestion_tienda.dtos.compra.CompraDTO;
@@ -119,47 +122,59 @@ class CompraServiceTest {
     @Test
     void listarCompras_UserRole_ReturnsUserCompras() {
         // Arrange
-        List<Compra> compras = Collections.singletonList(compra);
+        Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
-        when(compraRepository.findByUsuario(usuarioNormal))
-            .thenReturn(compras);
+        when(compraRepository.findByUsuario(eq(usuarioNormal), any(Pageable.class)))
+            .thenReturn(comprasPage);
         when(compraMapper.toCompraResponseDTO(compra))
             .thenReturn(compraResponseDTO);
             
         // Act
-        List<CompraResponseDTO> result = compraService.listarCompras(usuarioNormal.getEmail());
+        Page<CompraResponseDTO> result = compraService.listarCompras(
+            usuarioNormal.getEmail(), 
+            0, 
+            10, 
+            "fecha", 
+            "DESC"
+        );
         
         // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(compraResponseDTO, result.get(0));
-        verify(compraRepository).findByUsuario(usuarioNormal);
-        verify(compraRepository, never()).findAll();
+        assertEquals(1, result.getTotalElements());
+        assertEquals(compraResponseDTO, result.getContent().get(0));
+        verify(compraRepository).findByUsuario(eq(usuarioNormal), any(Pageable.class));
+        verify(compraRepository, never()).findAll(any(Pageable.class));
     }
-    
+
     @Test
     void listarCompras_AdminRole_ReturnsAllCompras() {
         // Arrange
-        List<Compra> compras = Collections.singletonList(compra);
+        Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
         when(usuarioRepository.findByEmail(usuarioAdmin.getEmail()))
             .thenReturn(Optional.of(usuarioAdmin));
-        when(compraRepository.findAll())
-            .thenReturn(compras);
+        when(compraRepository.findAll(any(Pageable.class)))
+            .thenReturn(comprasPage);
         when(compraMapper.toCompraResponseDTO(compra))
             .thenReturn(compraResponseDTO);
             
         // Act
-        List<CompraResponseDTO> result = compraService.listarCompras(usuarioAdmin.getEmail());
+        Page<CompraResponseDTO> result = compraService.listarCompras(
+            usuarioAdmin.getEmail(), 
+            0, 
+            10, 
+            "fecha", 
+            "DESC"
+        );
         
         // Assert
         assertNotNull(result);
-        assertEquals(1, result.size());
-        assertEquals(compraResponseDTO, result.get(0));
-        verify(compraRepository).findAll();
-        verify(compraRepository, never()).findByUsuario(any());
+        assertEquals(1, result.getTotalElements());
+        assertEquals(compraResponseDTO, result.getContent().get(0));
+        verify(compraRepository).findAll(any(Pageable.class));
+        verify(compraRepository, never()).findByUsuario(any(), any(Pageable.class));
     }
-    
+
     @Test
     void listarCompras_UserNotFound_ThrowsException() {
         // Arrange
@@ -168,7 +183,7 @@ class CompraServiceTest {
             
         // Act & Assert
         assertThrows(UsernameNotFoundException.class,
-            () -> compraService.listarCompras("nonexistent@example.com"));
+            () -> compraService.listarCompras("nonexistent@example.com", 0, 10, "fecha", "DESC"));
     }
     
     @Test

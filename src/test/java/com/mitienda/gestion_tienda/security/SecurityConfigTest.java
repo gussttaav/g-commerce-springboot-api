@@ -3,13 +3,14 @@ package com.mitienda.gestion_tienda.security;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
-import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
@@ -402,16 +403,16 @@ class SecurityConfigTest {
         // Arrange
         setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
         
-        List<UsuarioResponseDTO> users = Arrays.asList(
+        Page<UsuarioResponseDTO> userPage = new PageImpl<>(Arrays.asList(
             UsuarioResponseDTO.builder()
                 .id(1L)
                 .nombre("Test User")
                 .email("user@test.com")
                 .rol(Usuario.Role.USER)
                 .build()
-        );
+        ));
         
-        when(usuarioService.listarUsuarios()).thenReturn(users);
+        when(usuarioService.listarUsuarios(0, 10, "email", "ASC")).thenReturn(userPage);
 
         // Act & Assert
         mockMvc.perform(get("/api/usuarios/admin/listar")

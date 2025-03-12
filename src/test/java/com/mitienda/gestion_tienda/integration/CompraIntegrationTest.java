@@ -11,12 +11,14 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
@@ -86,9 +88,17 @@ class CompraIntegrationTest extends BaseIntegrationTest {
             CompraResponseDTO.class
         );
         
-        Optional<Compra> compraGuardada = compraRepository.findByIdWithProductos(response.getId());
-        assertTrue(compraGuardada.isPresent());
-        assertEquals(1, compraGuardada.get().getProductos().size());
+        // Use findAllByUsuarioIdWithProductos instead
+        Usuario usuario = usuarioRepository.findByEmail(USER_EMAIL).orElseThrow();
+        Page<Compra> comprasPage = compraRepository.findAllByUsuarioIdWithProductos(
+            usuario.getId(),
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+        );
+        
+        assertTrue(!comprasPage.isEmpty());
+        Compra compraGuardada = comprasPage.getContent().get(0);
+        assertEquals(response.getId(), compraGuardada.getId());
+        assertEquals(1, compraGuardada.getProductos().size());
     }
     
     @Test
@@ -98,11 +108,19 @@ class CompraIntegrationTest extends BaseIntegrationTest {
         
         // Act & Assert - List purchases
         mockMvc.perform(get(BASE_URL + "/listar")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD)))
+                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD))
+                .param("page", "0")
+                .param("size", "10")
+                .param("sort", "fecha")
+                .param("direction", "DESC"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray())
-                .andExpect(jsonPath("$[0].total").value("20.0"))
-                .andExpect(jsonPath("$[0].productos").isArray())
-                .andExpect(jsonPath("$[0].productos[0].cantidad").value(2));
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content[0].total").value("20.0"))
+                .andExpect(jsonPath("$.content[0].productos").isArray())
+                .andExpect(jsonPath("$.content[0].productos[0].cantidad").value(2))
+                .andExpect(jsonPath("$.totalElements").isNumber())
+                .andExpect(jsonPath("$.totalPages").isNumber())
+                .andExpect(jsonPath("$.pageSize").value(10))
+                .andExpect(jsonPath("$.pageNumber").value(0));
     }
 }

@@ -7,16 +7,17 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.media.ArraySchema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import lombok.RequiredArgsConstructor;
-import java.util.List;
 
+import org.springframework.data.domain.Page;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import com.mitienda.gestion_tienda.dtos.api.PaginatedResponse;
 import com.mitienda.gestion_tienda.dtos.producto.*;
 import com.mitienda.gestion_tienda.exceptions.ApiException;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
@@ -28,7 +29,7 @@ import com.mitienda.gestion_tienda.services.ProductoService;
  * This controller provides endpoints for:
  * <ul>
  *   <li>Product creation (admin only)</li>
- *   <li>Product listing (users only get the active products)</li>
+ *   <li>Product listing and search (users only get the active products)</li>
  *   <li>Product update (admin only)</li>
  *   <li>Product deletion (admin only)</li>
  * </ul>
@@ -48,37 +49,51 @@ public class ProductoController {
     private final ProductoService productoService;
 
     /**
-     * Retrieves a list of products based on their status and user's role.
+     * Retrieves a paginated list of products based on their status, search criteria, and user's role.
      * - Users with ROLE_ADMIN can filter products by status (ACTIVE/INACTIVE/ALL)
      * - Users with ROLE_USER can only access active products
+     * - Optional search parameter filters products by matching text in name or description fields
      * 
      * @param status Optional query parameter to filter products by status (ACTIVE/INACTIVE/ALL)
+     * @param searchText Optional query parameter to search within product name and description
+     * @param page The page number (zero-based)
+     * @param size The page size
+     * @param sort The field to sort by
+     * @param direction The sort direction (ASC or DESC)
      * @param authentication Spring Security authentication object
-     * @return List<ProductoResponseDTO> containing the filtered products
+     * @return PaginatedResponse<ProductoResponseDTO> containing the filtered and searched paginated products
      * @throws AccessDeniedException if a non-admin user attempts to access non-active products
      */
     @Operation(
-        summary = "List products", 
+        summary = "List and search products with pagination", 
         description = """
-            Returns a list of products filtered by status.
+            Returns a paginated list of products filtered by status and optional search text.
             - ROLE_ADMIN users can filter by ACTIVE, INACTIVE, or ALL status
             - ROLE_USER users can only access ACTIVE products
+            - Search parameter filters products by matching text in name or description
             """
     )
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Products found successfully", 
                     content = @Content(mediaType = "application/json", 
-                    array = @ArraySchema(schema = @Schema(implementation = ProductoResponseDTO.class)))),
+                    schema = @Schema(implementation = PaginatedResponseProductoDTO.class))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
             @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping("/listar")
-    public List<ProductoResponseDTO> listarProductos(
+    public PaginatedResponse<ProductoResponseDTO> listarProductos(
             @RequestParam(required = false, defaultValue = "ACTIVE") 
-            @Schema(description = "Filter products by status (ADMIN only)", allowableValues = {"ACTIVE", "INACTIVE", "ALL"})
+            @Schema(description = "Filter products by status (ADMIN only)")
             ProductStatus status,
+            @RequestParam(required = false) 
+            @Schema(description = "Search text for product name or description")
+            String searchText,
+            @RequestParam(defaultValue = "0") @Schema(description = "Page number (zero-based)", example = "0") int page,
+            @RequestParam(defaultValue = "10") @Schema(description = "Page size", example = "10") int size,
+            @RequestParam(defaultValue = "nombre") @Schema(description = "Sort field", example = "nombre") String sort,
+            @RequestParam(defaultValue = "ASC") @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"}) String direction,
             Authentication authentication) {
         
         boolean isAdmin = authentication.getAuthorities().stream()
@@ -88,7 +103,8 @@ public class ProductoController {
             throw new AccessDeniedException("Only administrators can access non-active products");
         }
         
-        return productoService.listarProductos(status);
+        Page<ProductoResponseDTO> pageResult = productoService.listarProductos(status, searchText, page, size, sort, direction);
+        return PaginatedResponse.fromPage(pageResult);
     }
 
 

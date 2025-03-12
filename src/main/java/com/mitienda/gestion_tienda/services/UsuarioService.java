@@ -3,6 +3,10 @@ package com.mitienda.gestion_tienda.services;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -23,8 +27,6 @@ import com.mitienda.gestion_tienda.repositories.UsuarioRepository;
 import com.mitienda.gestion_tienda.utilities.DatabaseOperationHandler;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Service class that handles user-related operations including registration,
@@ -174,17 +176,33 @@ public class UsuarioService {
     
 
     /**
-     * Lists all users in the system.
+     * Lists all users in the system with pagination support.
      * 
-     * @return List of UsuarioResponseDTO containing all users' information
+     * @param page The page number (zero-based)
+     * @param size The page size
+     * @param sort The field to sort by
+     * @param direction The sort direction (ASC or DESC)
+     * @return Page of UsuarioResponseDTO containing paginated users' information
      */
-    public List<UsuarioResponseDTO> listarUsuarios() {
-        log.debug("Listing all users");
-        List<UsuarioResponseDTO> users = usuarioRepository.findAll().stream()
-            .map(usuarioMapper::toUsuarioResponseDTO)
-            .collect(Collectors.toList());
-        log.debug("Found {} users", users.size());
-        return users;
+    public Page<UsuarioResponseDTO> listarUsuarios(int page, int size, String sort, String direction) {
+        log.debug("Listing users with pagination - page: {}, size: {}, sort: {}, direction: {}", page, size, sort, direction);
+        
+        // Create Pageable object with sort direction
+        Sort.Direction sortDirection = Sort.Direction.fromString(direction);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
+        
+        // Get paginated result
+        Page<Usuario> usuariosPage = usuarioRepository.findAll(pageable);
+        
+        // Map to DTOs
+        Page<UsuarioResponseDTO> result = usuariosPage.map(usuarioMapper::toUsuarioResponseDTO);
+        
+        log.debug("Found {} users on page {} of {}", 
+                result.getNumberOfElements(), 
+                result.getNumber() + 1,  // +1 for human-readable page number
+                result.getTotalPages());
+                
+        return result;
     }
 
     /**

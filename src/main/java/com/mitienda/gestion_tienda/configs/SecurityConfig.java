@@ -50,7 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
                 .requestMatchers("/api/usuarios/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/productos/listar").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/productos/listar").permitAll()
                 .requestMatchers("/api/productos/**").hasRole("ADMIN")
                 .requestMatchers("/api/compras/nueva").hasRole("USER")
                 .requestMatchers("/api/compras/**").authenticated()

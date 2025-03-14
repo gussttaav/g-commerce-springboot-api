@@ -33,7 +33,7 @@ cors:
 rate-limit:
   window-minutes: 1
   unauthenticated:
-    capacity: 5
+    capacity: 10
     refill: 5
   user:
     capacity: 30

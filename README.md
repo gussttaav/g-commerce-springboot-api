@@ -1,6 +1,6 @@
 # Spring Boot G-commerce API
 
-A RESTful API built with Spring Boot that implements a basic e-commerce system with user authentication, role based features, product management, shoppig cart functionality and purchase tracking.
+The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **user authentication, role-based access control, product management, shopping cart functionality, and purchase tracking**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
 
 ## 🚀 Features
 
@@ -13,6 +13,7 @@ A RESTful API built with Spring Boot that implements a basic e-commerce system w
 - **Product Management**
   - Product creation, update, delete and list
   - Product status management (active/inactive)
+  - Public access to active products
   - Role-based access control for product operations
   - Paginated product listing with status filtering
   - Text search across product name and description fields
@@ -190,7 +191,7 @@ PUT /api/usuarios/admin/change-role # Change user role
 
 ### Product Management
 ```
-GET    /api/productos/listar        # List products (paginated)
+GET    /api/productos/listar        # List active products open to all users (paginated)
 
 # With ADMIN role only:
 GET    /api/productos/listar?status=INACTIVE  # Returns inactive products

@@ -21,6 +21,7 @@ import com.mitienda.gestion_tienda.dtos.api.PaginatedResponse;
 import com.mitienda.gestion_tienda.dtos.producto.*;
 import com.mitienda.gestion_tienda.exceptions.ApiException;
 import com.mitienda.gestion_tienda.exceptions.ResourceNotFoundException;
+import com.mitienda.gestion_tienda.exceptions.UnauthorizedOperationException;
 import com.mitienda.gestion_tienda.services.ProductoService;
 
 /**
@@ -49,9 +50,10 @@ public class ProductoController {
     private final ProductoService productoService;
 
     /**
-     * Retrieves a paginated list of products based on their status, search criteria, and user's role.
+     * Retrieves a paginated list of products based on their status, search criteria, and authentication.
+     * - Unauthenticated users can only access products with ACTIVE status
+     * - Users with ROLE_USER can only access products with ACTIVE status
      * - Users with ROLE_ADMIN can filter products by status (ACTIVE/INACTIVE/ALL)
-     * - Users with ROLE_USER can only access active products
      * - Optional search parameter filters products by matching text in name or description fields
      * 
      * @param status Optional query parameter to filter products by status (ACTIVE/INACTIVE/ALL)
@@ -60,7 +62,7 @@ public class ProductoController {
      * @param size The page size
      * @param sort The field to sort by
      * @param direction The sort direction (ASC or DESC)
-     * @param authentication Spring Security authentication object
+     * @param authentication Spring Security authentication object, may be null for unauthenticated requests
      * @return PaginatedResponse<ProductoResponseDTO> containing the filtered and searched paginated products
      * @throws AccessDeniedException if a non-admin user attempts to access non-active products
      */
@@ -68,8 +70,9 @@ public class ProductoController {
         summary = "List and search products with pagination", 
         description = """
             Returns a paginated list of products filtered by status and optional search text.
+            - Public access is allowed for ACTIVE products
             - ROLE_ADMIN users can filter by ACTIVE, INACTIVE, or ALL status
-            - ROLE_USER users can only access ACTIVE products
+            - ROLE_USER users can access ACTIVE products
             - Search parameter filters products by matching text in name or description
             """
     )
@@ -85,7 +88,7 @@ public class ProductoController {
     @GetMapping("/listar")
     public PaginatedResponse<ProductoResponseDTO> listarProductos(
             @RequestParam(required = false, defaultValue = "ACTIVE") 
-            @Schema(description = "Filter products by status (ADMIN only)")
+            @Schema(description = "Filter products by status (ADMIN only for non-ACTIVE)")
             ProductStatus status,
             @RequestParam(required = false) 
             @Schema(description = "Search text for product name or description")
@@ -95,14 +98,23 @@ public class ProductoController {
             @RequestParam(defaultValue = "nombre") @Schema(description = "Sort field", example = "nombre") String sort,
             @RequestParam(defaultValue = "ASC") @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"}) String direction,
             Authentication authentication) {
-        
+    
+        // Allow unauthenticated access for ACTIVE products
+        if (authentication == null) {
+            if (status != ProductStatus.ACTIVE) {
+                throw new AccessDeniedException("Unauthenticated users can only access active products");
+            }
+            return PaginatedResponse.fromPage(productoService.listarProductos(ProductStatus.ACTIVE, searchText, page, size, sort, direction));
+        }
+    
+        // For authenticated users
         boolean isAdmin = authentication.getAuthorities().stream()
                 .anyMatch(a -> a.getAuthority().equals("ROLE_ADMIN"));
-        
+    
         if (!isAdmin && status != ProductStatus.ACTIVE) {
-            throw new AccessDeniedException("Only administrators can access non-active products");
+            throw new UnauthorizedOperationException("Only administrators can access non-active products");
         }
-        
+    
         Page<ProductoResponseDTO> pageResult = productoService.listarProductos(status, searchText, page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }

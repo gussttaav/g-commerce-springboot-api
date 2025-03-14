@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mitienda.gestion_tienda.configs.CorsProperties;
+import com.mitienda.gestion_tienda.dtos.producto.ProductStatus;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoDTO;
 import com.mitienda.gestion_tienda.dtos.producto.ProductoResponseDTO;
 import com.mitienda.gestion_tienda.dtos.usuario.ActualizacionUsuarioDTO;
@@ -78,10 +79,51 @@ class SecurityConfigTest {
 
     @Test
     void whenPublicEndpoint_thenAllowsAccess() throws Exception {
+        // Test registration endpoint
         mockMvc.perform(post("/api/usuarios/registro")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{\"nombre\":\"test\",\"email\":\"test@test.com\",\"password\":\"password\"}"))
                 .andExpect(status().isOk());
+
+        // Test products listing endpoint
+        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            ProductoResponseDTO.builder()
+                .id(1L)
+                .nombre("Test Product")
+                .activo(true)
+                .build()
+        ));
+        
+        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get("/api/productos/listar"))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenUnauthenticatedAccessToActiveProducts_thenAllowsAccess() throws Exception {
+        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            ProductoResponseDTO.builder()
+                .id(1L)
+                .nombre("Test Product")
+                .activo(true)
+                .build()
+        ));
+        
+        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get("/api/productos/listar"))
+                .andExpect(status().isOk())
+                .andExpect(header().doesNotExist("WWW-Authenticate"));
+    }
+
+    @Test
+    void whenUnauthenticatedAccessToInactiveProducts_thenReturns403() throws Exception {
+        mockMvc.perform(get("/api/productos/listar")
+                .param("status", "INACTIVE"))
+                .andExpect(status().isForbidden());
     }
 
     @Test

@@ -303,6 +303,39 @@ class ProductoControllerTest {
                     .andExpect(jsonPath("$.totalElements").value(0))
                     .andDo(MockMvcResultHandlers.print());
         }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should allow access to active products when user is not authenticated")
+        void listarProductos_UnauthenticatedUser_ReturnsActiveProducts() throws Exception {
+            ProductoResponseDTO product1 = createProductoResponseDTO(1L, true);
+            ProductoResponseDTO product2 = createProductoResponseDTO(2L, true);
+            Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(product1, product2));
+            
+            when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+                    .thenReturn(productPage);
+
+            mockMvc.perform(get("/api/productos/listar")
+                    .with(csrf()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id").value(1))
+                    .andExpect(jsonPath("$.content[1].id").value(2))
+                    .andExpect(jsonPath("$.totalElements").value(2))
+                    .andDo(MockMvcResultHandlers.print());
+        }
+
+        @Test
+        @WithAnonymousUser
+        @DisplayName("Should return 403 when unauthenticated user tries to access inactive products")
+        void listarProductos_UnauthenticatedUser_AccessInactiveProducts_Returns403() throws Exception {
+            mockMvc.perform(get("/api/productos/listar")
+                    .param("status", "INACTIVE")
+                    .with(csrf()))
+                    .andExpect(status().isForbidden())
+                    .andDo(MockMvcResultHandlers.print());
+        }
     }
 
     @Nested

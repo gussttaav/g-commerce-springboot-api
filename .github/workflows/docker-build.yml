@@ -3,7 +3,7 @@ name: Docker Build and Push
 on:
   push:
     branches:
-      - gestion-tienda
+      - main
     paths-ignore:
       - '**.md'
       - '.gitignore'

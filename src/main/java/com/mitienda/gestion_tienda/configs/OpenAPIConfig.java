@@ -40,7 +40,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 )
 public class OpenAPIConfig {
 
-    @Value("${rate-limit.unauthenticated.capacity:5}")
+    @Value("${rate-limit.unauthenticated.capacity:10}")
     private int unauthenticatedCapacity;
     
     @Value("${rate-limit.user.capacity:30}")

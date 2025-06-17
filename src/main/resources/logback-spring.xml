@@ -41,7 +41,7 @@
     </appender>
 
     <!-- Application logs -->
-    <logger name="com.mitienda.gestion_tienda" level="INFO" />
+    <logger name="com.gplanet.commerce_api" level="INFO" />
     
     <!-- Framework logs -->
     <logger name="org.springframework" level="WARN" />

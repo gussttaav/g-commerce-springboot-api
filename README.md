@@ -49,7 +49,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 ## 🛠️ Technologies
 
-- Java 17
+- Java 21
 - Spring Boot 3.4.3
 - Spring Security
 - Bucket4j (for rate limiting)
@@ -66,7 +66,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 ## 📋 Prerequisites
 
-- Java 17 or higher
+- Java 21 or higher
 - Docker and Docker Compose
 - Maven
 - Git
@@ -75,8 +75,8 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 1. Clone the repository:
    ```bash
-   git clone --branch gestion-tienda --single-branch https://github.com/gussttaav/springboot-projects.git
-   cd gestion-tienda
+   git clone https://github.com/gussttaav/g-commerce-springboot-api.git
+   cd g-commerce-springboot-api
    ```
 
 2. Create a `.env` file in the root directory with the following variables:
@@ -266,8 +266,15 @@ Content-Type: application/json
 src/
 ├── main/
 │   ├── java/
-│   │   └── com/mitienda/gestion_tienda/
+│   │   └── com/gplanet/commerce_api/
 │   │       ├── configs/
+│   │       │   ├── app/
+│   │       │   │   ├── data/
+│   │       │   │   ├── docs/
+│   │       │   │   └── props/
+│   │       │   ├── security/
+│   │       │   │   └── rate_timiting/
+│   │       │   └── web/
 │   │       ├── controllers/
 │   │       ├── dtos/
 │   │       ├── entities/
@@ -280,7 +287,7 @@ src/
 │       └── application.yml
 ├── test/
 │   ├── java/
-│   │   └── com/mitienda/gestion_tienda/
+│   │   └── com/gplanet/commerce_api/
 │   │       ├── controllers/
 │   │       ├── repositories/
 │   │       ├── services/

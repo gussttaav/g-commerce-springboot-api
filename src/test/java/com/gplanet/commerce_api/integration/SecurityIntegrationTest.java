@@ -21,10 +21,7 @@ class SecurityIntegrationTest extends BaseIntegrationTest {
     
     @Test
     void accederEndpointPublico_SinAutenticacion_Permitido() throws Exception {
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("New User");
-        usuarioDTO.setEmail("new@example.com");
-        usuarioDTO.setPassword("password123");
+        UsuarioDTO usuarioDTO = new UsuarioDTO("New User", "new@example.com", "password123");
         
         mockMvc.perform(post("/api/usuarios/registro")
                 .contentType(MediaType.APPLICATION_JSON)

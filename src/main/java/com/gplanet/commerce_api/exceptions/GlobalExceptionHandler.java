@@ -54,14 +54,14 @@ public class GlobalExceptionHandler {
                 .map(error -> error.getField() + ": " + error.getDefaultMessage())
                 .collect(Collectors.toList());
 
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Validation Error")
-                .message("Error de validación")
-                .path(request.getRequestURI())
-                .details(details)
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                "Error de validación",
+                request.getRequestURI(),
+                details
+        );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -83,14 +83,14 @@ public class GlobalExceptionHandler {
                 .map(ConstraintViolation::getMessage)
                 .collect(Collectors.toList());
 
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Constraint Violation")
-                .message("Error de validación")
-                .path(request.getRequestURI())
-                .details(details)
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Constraint Violation",
+                "Error de validación",
+                request.getRequestURI(),
+                details
+        );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -114,14 +114,14 @@ public class GlobalExceptionHandler {
         List<String> details = new ArrayList<>();
         details.add(ex.getMessage());
 
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("JSON Parse Error")
-                .message(message)
-                .path(request.getRequestURI())
-                .details(details)
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "JSON Parse Error",
+                message,
+                request.getRequestURI(),
+                details
+        );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -138,16 +138,16 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleApiException(ApiException ex, HttpServletRequest request) {
         log.error("API exception occurred for request to {} with status {}: {}", 
             request.getRequestURI(), ex.getStatus(), ex.getMessage());
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(ex.getStatus().value())
-                .error(ex.getStatus().getReasonPhrase())
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .details(new ArrayList<>())
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                ex.getStatus().value(),
+                ex.getStatus().getReasonPhrase(),
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
 
-        return ResponseEntity.status(error.getStatus()).body(error);
+        return ResponseEntity.status(ex.getStatus()).body(error);
     }
 
     /**
@@ -162,14 +162,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleAuthenticationException(AuthenticationException ex,
                                                                    HttpServletRequest request) {
         log.warn("Authentication failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.UNAUTHORIZED.value())
-                .error("Authentication Error")
-                .message(ex.getMessage())
-                .path(request.getRequestURI())
-                .details(new ArrayList<>())
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Authentication Error",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
     }
@@ -186,14 +186,14 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleAccessDeniedException(AccessDeniedException ex,
                                                                  HttpServletRequest request) {
         log.warn("Access denied for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.FORBIDDEN.value())
-                .error("Access Denied")
-                .message("No tiene permisos para realizar esta operación")
-                .path(request.getRequestURI())
-                .details(new ArrayList<>())
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Access Denied",
+                "No tiene permisos para realizar esta operación",
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
 
         return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
@@ -211,14 +211,14 @@ public class GlobalExceptionHandler {
                                                                 HttpServletRequest request) {
         log.error("Unexpected error occurred for request to {}", request.getRequestURI(), ex);
         
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
-                .error("Internal Server Error")
-                .message("Ha ocurrido un error inesperado")
-                .path(request.getRequestURI())
-                .details(new ArrayList<>())
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Internal Server Error",
+                "Ha ocurrido un error inesperado",
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
 
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
@@ -253,14 +253,14 @@ public class GlobalExceptionHandler {
             details.add(String.format("Tipo esperado: %s", requiredType));
         }
 
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.BAD_REQUEST.value())
-                .error("Type Mismatch")
-                .message(message)
-                .path(request.getRequestURI())
-                .details(details)
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Type Mismatch",
+                message,
+                request.getRequestURI(),
+                details
+        );
 
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
@@ -302,14 +302,14 @@ public class GlobalExceptionHandler {
             details.add("No se puede realizar la operación porque afectaría datos relacionados");
         }
 
-        ApiErrorDTO error = ApiErrorDTO.builder()
-                .timestamp(LocalDateTime.now())
-                .status(HttpStatus.CONFLICT.value())
-                .error("Data Integrity Violation")
-                .message(message)
-                .path(request.getRequestURI())
-                .details(details)
-                .build();
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.CONFLICT.value(),
+                "Data Integrity Violation",
+                message,
+                request.getRequestURI(),
+                details
+        );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
     }

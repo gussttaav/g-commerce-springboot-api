@@ -63,13 +63,10 @@ class CompraIntegrationTest extends BaseIntegrationTest {
     @Test
     void realizarCompra_ProductoDisponible_CompraExitosa() throws Exception {
         // Arrange
-        CompraDTO compraDTO = new CompraDTO();
         List<CompraProductoDTO> productos = new ArrayList<>();
-        CompraProductoDTO productoDTO = new CompraProductoDTO();
-        productoDTO.setProductoId(productoId);
-        productoDTO.setCantidad(2);
+        CompraProductoDTO productoDTO = new CompraProductoDTO(productoId, 2);
         productos.add(productoDTO);
-        compraDTO.setProductos(productos);
+        CompraDTO compraDTO = new CompraDTO(productos);
         
         // Act & Assert
         MvcResult result = mockMvc.perform(post(BASE_URL + "/nueva")
@@ -97,7 +94,7 @@ class CompraIntegrationTest extends BaseIntegrationTest {
         
         assertTrue(!comprasPage.isEmpty());
         Compra compraGuardada = comprasPage.getContent().get(0);
-        assertEquals(response.getId(), compraGuardada.getId());
+        assertEquals(response.id(), compraGuardada.getId());
         assertEquals(1, compraGuardada.getProductos().size());
     }
     

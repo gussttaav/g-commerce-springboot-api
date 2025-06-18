@@ -95,8 +95,8 @@ class CompraControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
             .andExpect(status().isOk())
-            .andExpect(jsonPath("$.id").value(responseDTO.getId()))
-            .andExpect(jsonPath("$.usuarioNombre").value(responseDTO.getUsuarioNombre()))
+            .andExpect(jsonPath("$.id").value(responseDTO.id()))
+            .andExpect(jsonPath("$.usuarioNombre").value(responseDTO.usuarioNombre()))
             .andExpect(jsonPath("$.total").value(150.0))
             .andExpect(jsonPath("$.productos", hasSize(2)))
             .andExpect(jsonPath("$.productos[0].productoNombre").value("Producto 1"))
@@ -109,8 +109,7 @@ class CompraControllerTest {
     @DisplayName("Should return 400 when purchase request has no products")
     void realizarCompra_EmptyProductList_ReturnsBadRequest() throws Exception {
         // Arrange
-        CompraDTO emptyCompraDTO = new CompraDTO();
-        emptyCompraDTO.setProductos(Collections.emptyList());
+        CompraDTO emptyCompraDTO = new CompraDTO(Collections.emptyList());
 
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/nueva")
@@ -126,11 +125,8 @@ class CompraControllerTest {
     @DisplayName("Should return 400 when product quantity is invalid")
     void realizarCompra_InvalidQuantity_ReturnsBadRequest() throws Exception {
         // Arrange
-        CompraDTO invalidCompraDTO = new CompraDTO();
-        CompraProductoDTO invalidProductDTO = new CompraProductoDTO();
-        invalidProductDTO.setProductoId(1L);
-        invalidProductDTO.setCantidad(0); // Invalid quantity
-        invalidCompraDTO.setProductos(Collections.singletonList(invalidProductDTO));
+        CompraProductoDTO invalidProductDTO = new CompraProductoDTO(1L, 0); // Invalid quantity
+        CompraDTO invalidCompraDTO = new CompraDTO(Collections.singletonList(invalidProductDTO));
 
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/nueva")
@@ -265,52 +261,34 @@ class CompraControllerTest {
 
     // Helper methods remain the same
     private CompraDTO createValidCompraDTO() {
-        CompraDTO compraDTO = new CompraDTO();
         List<CompraProductoDTO> productos = new ArrayList<>();
         
-        CompraProductoDTO producto1 = new CompraProductoDTO();
-        producto1.setProductoId(1L);
-        producto1.setCantidad(2);
-        
-        CompraProductoDTO producto2 = new CompraProductoDTO();
-        producto2.setProductoId(2L);
-        producto2.setCantidad(1);
+        CompraProductoDTO producto1 = new CompraProductoDTO(1L, 2);
+        CompraProductoDTO producto2 = new CompraProductoDTO(2L, 1);
         
         productos.add(producto1);
         productos.add(producto2);
-        compraDTO.setProductos(productos);
         
-        return compraDTO;
+        return new CompraDTO(productos);
     }
 
     private CompraResponseDTO createMockCompraResponseDTO() {
-        CompraResponseDTO responseDTO = new CompraResponseDTO();
-        responseDTO.setId(1L);
-        responseDTO.setUsuarioNombre("Test User");
-        responseDTO.setFecha(LocalDateTime.now());
-        responseDTO.setTotal(new BigDecimal("150.00"));
-        
         List<CompraProductoResponseDTO> productos = new ArrayList<>();
         
-        CompraProductoResponseDTO producto1 = new CompraProductoResponseDTO();
-        producto1.setId(1L);
-        producto1.setProductoNombre("Producto 1");
-        producto1.setPrecioUnitario(new BigDecimal("50.00"));
-        producto1.setCantidad(2);
-        producto1.setSubtotal(new BigDecimal("100.00"));
+        CompraProductoResponseDTO producto1 = new CompraProductoResponseDTO(
+            1L, "Producto 1", new BigDecimal("50.00"), 2, new BigDecimal("100.00")
+        );
         
-        CompraProductoResponseDTO producto2 = new CompraProductoResponseDTO();
-        producto2.setId(2L);
-        producto2.setProductoNombre("Producto 2");
-        producto2.setPrecioUnitario(new BigDecimal("50.00"));
-        producto2.setCantidad(1);
-        producto2.setSubtotal(new BigDecimal("50.00"));
+        CompraProductoResponseDTO producto2 = new CompraProductoResponseDTO(
+            2L, "Producto 2", new BigDecimal("50.00"), 1, new BigDecimal("50.00")
+        );
         
         productos.add(producto1);
         productos.add(producto2);
-        responseDTO.setProductos(productos);
         
-        return responseDTO;
+        return new CompraResponseDTO(
+            1L, "Test User", LocalDateTime.now(), new BigDecimal("150.00"), productos
+        );
     }
 
     private List<CompraResponseDTO> createMockComprasList() {
@@ -320,21 +298,15 @@ class CompraControllerTest {
         CompraResponseDTO compra1 = createMockCompraResponseDTO();
         
         // Second purchase with different data
-        CompraResponseDTO compra2 = new CompraResponseDTO();
-        compra2.setId(2L);
-        compra2.setUsuarioNombre("Test User");
-        compra2.setFecha(LocalDateTime.now().minusDays(1));
-        compra2.setTotal(new BigDecimal("75.00"));
-        
         List<CompraProductoResponseDTO> productos2 = new ArrayList<>();
-        CompraProductoResponseDTO producto = new CompraProductoResponseDTO();
-        producto.setId(3L);
-        producto.setProductoNombre("Producto 3");
-        producto.setPrecioUnitario(new BigDecimal("75.00"));
-        producto.setCantidad(1);
-        producto.setSubtotal(new BigDecimal("75.00"));
+        CompraProductoResponseDTO producto = new CompraProductoResponseDTO(
+            3L, "Producto 3", new BigDecimal("75.00"), 1, new BigDecimal("75.00")
+        );
         productos2.add(producto);
-        compra2.setProductos(productos2);
+        
+        CompraResponseDTO compra2 = new CompraResponseDTO(
+            2L, "Test User", LocalDateTime.now().minusDays(1), new BigDecimal("75.00"), productos2
+        );
         
         compras.add(compra1);
         compras.add(compra2);

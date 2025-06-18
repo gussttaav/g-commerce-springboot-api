@@ -64,20 +64,11 @@ class UsuarioControllerTest {
     private static final String TEST_ADMIN_EMAIL = "admin@example.com";
 
     private UsuarioDTO buildValidUsuarioDTO() {
-        UsuarioDTO dto = new UsuarioDTO();
-        dto.setNombre("Test User");
-        dto.setEmail(TEST_USER_EMAIL);
-        dto.setPassword("Password123!");
-        return dto;
+        return new UsuarioDTO("Test User", TEST_USER_EMAIL, "Password123!");
     }
 
     private UsuarioAdminDTO buildValidUsuarioAdminDTO() {
-        UsuarioAdminDTO dto = new UsuarioAdminDTO();
-        dto.setNombre("Admin User");
-        dto.setEmail(TEST_ADMIN_EMAIL);
-        dto.setPassword("AdminPass123!");
-        dto.setRol(Usuario.Role.ADMIN);
-        return dto;
+        return new UsuarioAdminDTO("Admin User", TEST_ADMIN_EMAIL, "AdminPass123!", Usuario.Role.ADMIN);
     }
 
     // /api/usuarios/registro endpoint tests
@@ -92,8 +83,8 @@ class UsuarioControllerTest {
             // Arrange
             UsuarioDTO requestDto = buildValidUsuarioDTO();
             UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.getNombre(), 
-                requestDto.getEmail(), 
+                requestDto.nombre(), 
+                requestDto.email(), 
                 Usuario.Role.USER,
                 LocalDateTime.now());
             
@@ -106,8 +97,8 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
-                    .andExpect(jsonPath("$.email").value(requestDto.getEmail()))
+                    .andExpect(jsonPath("$.nombre").value(requestDto.nombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.email()))
                     .andExpect(jsonPath("$.rol").value("USER"))
                     .andExpect(jsonPath("$.fechaCreacion").exists());
         }
@@ -117,8 +108,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 400 when email is invalid")
         void registrarUsuario_InvalidEmail_BadRequest() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = buildValidUsuarioDTO();
-            requestDto.setEmail("invalid-email");
+            UsuarioDTO requestDto = new UsuarioDTO("Test User", "invalid-email", "Password123!");
 
             // Act & Assert
             mockMvc.perform(post(BASE_URL + "/registro")
@@ -134,7 +124,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 400 when required fields are missing")
         void registrarUsuario_MissingRequiredFields_BadRequest() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = new UsuarioDTO();
+            UsuarioDTO requestDto = new UsuarioDTO("", "", "");
 
             // Act & Assert
             mockMvc.perform(post(BASE_URL + "/registro")
@@ -159,12 +149,12 @@ class UsuarioControllerTest {
             // Arrange
             UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
             UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.getNombre(), 
-                requestDto.getEmail(), 
-                requestDto.getRol(),
+                requestDto.nombre(), 
+                requestDto.email(), 
+                requestDto.rol(),
                 LocalDateTime.now());
             
-            when(usuarioService.registrarUsuario(any(UsuarioAdminDTO.class)))
+            when(usuarioService.registrarAdmin(any(UsuarioAdminDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -173,8 +163,8 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(1))
-                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
-                    .andExpect(jsonPath("$.email").value(requestDto.getEmail()))
+                    .andExpect(jsonPath("$.nombre").value(requestDto.nombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.email()))
                     .andExpect(jsonPath("$.rol").value("ADMIN"));
         }
 
@@ -207,8 +197,8 @@ class UsuarioControllerTest {
                 "Updated Name", "updated@example.com");
             
             UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.getNombre(), 
-                requestDto.getNuevoEmail(), 
+                requestDto.nombre(), 
+                requestDto.nuevoEmail(), 
                 Usuario.Role.USER,
                 LocalDateTime.now());
             
@@ -220,8 +210,8 @@ class UsuarioControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.nombre").value(requestDto.getNombre()))
-                    .andExpect(jsonPath("$.email").value(requestDto.getNuevoEmail()));
+                    .andExpect(jsonPath("$.nombre").value(requestDto.nombre()))
+                    .andExpect(jsonPath("$.email").value(requestDto.nuevoEmail()));
         }
 
         @Test
@@ -266,10 +256,7 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContraseña_ValidData_Authenticated_Success() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO();
-            requestDto.setCurrentPassword("CurrentPass123!");
-            requestDto.setNewPassword("NewPass123!");
-            requestDto.setConfirmPassword("NewPass123!");
+            CambioPasswdDTO requestDto = new CambioPasswdDTO("CurrentPass123!", "NewPass123!", "NewPass123!");
             
             doNothing().when(usuarioService)
                 .cambiarContraseña(anyString(), any(CambioPasswdDTO.class));
@@ -286,10 +273,7 @@ class UsuarioControllerTest {
         @WithMockUser
         void cambiarContraseña_PasswordMismatch_BadRequest() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO();
-            requestDto.setCurrentPassword("CurrentPass123!");
-            requestDto.setNewPassword("NewPass123!");
-            requestDto.setConfirmPassword("DifferentPass123!");
+            CambioPasswdDTO requestDto = new CambioPasswdDTO("CurrentPass123!", "NewPass123!", "DifferentPass123!");
             
             doThrow(new PasswordMismatchException("Las contraseñas no coinciden"))
                 .when(usuarioService)
@@ -308,10 +292,7 @@ class UsuarioControllerTest {
         @WithMockUser
         void cambiarContraseña_IncorrectCurrentPassword_BadRequest() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO();
-            requestDto.setCurrentPassword("WrongPass123!");
-            requestDto.setNewPassword("NewPass123!");
-            requestDto.setConfirmPassword("NewPass123!");
+            CambioPasswdDTO requestDto = new CambioPasswdDTO("WrongPass123!", "NewPass123!", "NewPass123!");
             
             doThrow(new InvalidPasswordException("La contraseña actual es incorrecta"))
                 .when(usuarioService)
@@ -329,10 +310,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void cambiarContraseña_NotAuthenticated_Unauthorized() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO();
-            requestDto.setCurrentPassword("CurrentPass123!");
-            requestDto.setNewPassword("NewPass123!");
-            requestDto.setConfirmPassword("NewPass123!");
+            CambioPasswdDTO requestDto = new CambioPasswdDTO("CurrentPass123!", "NewPass123!", "NewPass123!");
 
             // Act & Assert
             mockMvc.perform(put(BASE_URL + "/password")

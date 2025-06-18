@@ -52,23 +52,42 @@ public class UsuarioService {
      */
     @Transactional
     public UsuarioResponseDTO registrarUsuario(UsuarioDTO usuarioDTO){
-        log.info("Registering new user with email: {}", usuarioDTO.getEmail());
+        log.info("Registering new user with email: {}", usuarioDTO.email());
         Usuario usuario = new Usuario();
-        usuario.setNombre(usuarioDTO.getNombre());
-        usuario.setEmail(usuarioDTO.getEmail());
-        usuario.setPassword(passwordEncoder.encode(usuarioDTO.getPassword()));
-
-        if(usuarioDTO instanceof UsuarioAdminDTO){
-            usuario.setRol(Usuario.Role.ADMIN);
-        }else{
-            usuario.setRol(Usuario.Role.USER);
-        }
+        usuario.setNombre(usuarioDTO.nombre());
+        usuario.setEmail(usuarioDTO.email());
+        usuario.setPassword(passwordEncoder.encode(usuarioDTO.password()));
+        usuario.setRol(Usuario.Role.USER);
         usuario.setFechaCreacion(LocalDateTime.now());
 
         Usuario savedUsuario = DatabaseOperationHandler.executeOperation(() -> 
             usuarioRepository.save(usuario)
         );
         log.info("User successfully registered with ID: {}", savedUsuario.getId());
+        return usuarioMapper.toUsuarioResponseDTO(savedUsuario);
+    }
+
+    /**
+     * Registers a new user in the system but specifying the role.
+     * This method should be called by users with ADMIN role only.
+     * 
+     * @param usuarioAdminDTO Data transfer object containing admin user registration information
+     * @return UsuarioResponseDTO containing the created admin user's information
+     */
+    @Transactional
+    public UsuarioResponseDTO registrarAdmin(UsuarioAdminDTO usuarioAdminDTO){
+        log.info("Registering new admin user with email: {}", usuarioAdminDTO.email());
+        Usuario usuario = new Usuario();
+        usuario.setNombre(usuarioAdminDTO.nombre());
+        usuario.setEmail(usuarioAdminDTO.email());
+        usuario.setPassword(passwordEncoder.encode(usuarioAdminDTO.password()));
+        usuario.setRol(usuarioAdminDTO.rol());
+        usuario.setFechaCreacion(LocalDateTime.now());
+
+        Usuario savedUsuario = DatabaseOperationHandler.executeOperation(() -> 
+            usuarioRepository.save(usuario)
+        );
+        log.info("Admin user successfully registered with ID: {}", savedUsuario.getId());
         return usuarioMapper.toUsuarioResponseDTO(savedUsuario);
     }
 
@@ -81,21 +100,21 @@ public class UsuarioService {
      * @throws InvalidPasswordException if password is incorrect
      */
     public UsuarioResponseDTO login(LoginDTO loginDTO) {
-        log.info("Login attempt for user: {}", loginDTO.getEmail());
+        log.info("Login attempt for user: {}", loginDTO.email());
         try {
-            Usuario usuario = usuarioRepository.findByEmail(loginDTO.getEmail())
+            Usuario usuario = usuarioRepository.findByEmail(loginDTO.email())
                 .orElseThrow(() -> new ResourceNotFoundException(
                     "No existe ningún usuario con el email proporcionado"
                 ));
 
-            if (!passwordEncoder.matches(loginDTO.getPassword(), usuario.getPassword())) {
+            if (!passwordEncoder.matches(loginDTO.password(), usuario.getPassword())) {
                 throw new InvalidPasswordException("Contraseña incorrecta.");
             }
 
-            log.info("Successful login for user: {}", loginDTO.getEmail());
+            log.info("Successful login for user: {}", loginDTO.email());
             return usuarioMapper.toUsuarioResponseDTO(usuario);
         } catch (ResourceNotFoundException | InvalidPasswordException e) {
-            log.warn("Login failed for user: {} - {}", loginDTO.getEmail(), e.getMessage());
+            log.warn("Login failed for user: {} - {}", loginDTO.email(), e.getMessage());
             throw e;
         }
     }
@@ -114,8 +133,8 @@ public class UsuarioService {
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        usuario.setEmail(perfilDTO.getNuevoEmail());
-        usuario.setNombre(perfilDTO.getNombre());
+        usuario.setEmail(perfilDTO.nuevoEmail());
+        usuario.setNombre(perfilDTO.nombre());
 
         Usuario updatedUsuario = DatabaseOperationHandler.executeOperation(() -> 
             usuarioRepository.save(usuario)
@@ -140,22 +159,22 @@ public class UsuarioService {
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         // Verify current password
-        if (!passwordEncoder.matches(contraseñaDTO.getCurrentPassword(), usuario.getPassword())) {
+        if (!passwordEncoder.matches(contraseñaDTO.currentPassword(), usuario.getPassword())) {
             throw new InvalidPasswordException("La contraseña actual es incorrecta");
         }
 
         // Verify new password is not the same as current
-        if (passwordEncoder.matches(contraseñaDTO.getNewPassword(), usuario.getPassword())) {
+        if (passwordEncoder.matches(contraseñaDTO.newPassword(), usuario.getPassword())) {
             throw new InvalidPasswordException("La nueva contraseña debe ser diferente a la actual");
         }
 
         // Verify password confirmation
-        if (!contraseñaDTO.getNewPassword().equals(contraseñaDTO.getConfirmPassword())) {
+        if (!contraseñaDTO.newPassword().equals(contraseñaDTO.confirmPassword())) {
             throw new PasswordMismatchException("La nueva contraseña y su confirmación no coinciden");
         }
 
         // Update password
-        usuario.setPassword(passwordEncoder.encode(contraseñaDTO.getNewPassword()));
+        usuario.setPassword(passwordEncoder.encode(contraseñaDTO.newPassword()));
         usuarioRepository.save(usuario);
         log.info("Password successfully changed for user: {}", email);
     }

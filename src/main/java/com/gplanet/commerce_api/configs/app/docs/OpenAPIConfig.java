@@ -1,5 +1,8 @@
 package com.gplanet.commerce_api.configs.app.docs;
 
+import java.util.Map;
+
+import org.springdoc.core.customizers.OpenApiCustomizer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -14,6 +17,11 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.media.ArraySchema;
+import io.swagger.v3.oas.models.media.BooleanSchema;
+import io.swagger.v3.oas.models.media.IntegerSchema;
+import io.swagger.v3.oas.models.media.ObjectSchema;
+import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
 
@@ -111,4 +119,63 @@ public class OpenAPIConfig {
                 new MediaType()
                     .schema(new Schema<>().$ref("#/components/schemas/ApiErrorDTO")));
     }*/
+
+    @Bean
+    public OpenApiCustomizer paginatedResponseCustomizer() {
+        return openApi -> {
+            Components components = openApi.getComponents();
+            if (components == null) return;
+
+            // Check if schemas exist, if not return early
+            var schemas = components.getSchemas();
+            if (schemas == null) {
+                return;
+            }
+
+            // Map of DTO schema names to their desired PaginatedResponse schema names
+            var typeMap = Map.of(
+                "CompraResponseDTO", "PaginatedResponseCompraDTO",
+                "ProductoResponseDTO", "PaginatedResponseProductoDTO",
+                "UsuarioResponseDTO", "PaginatedResponseUsuarioDTO"
+            );
+
+            typeMap.forEach((dtoSchemaName, paginatedSchemaName) -> {
+                Schema<?> dtoSchema = schemas.get(dtoSchemaName);
+
+                if (dtoSchema != null) {
+                    // Create the paginated schema
+                    ObjectSchema paginatedSchema = new ObjectSchema();
+                    paginatedSchema.setName(paginatedSchemaName);
+                    paginatedSchema.setDescription("Paginated response of " + dtoSchemaName);
+
+                    // Add content array property
+                    ArraySchema contentSchema = new ArraySchema();
+                    contentSchema.setItems(dtoSchema);
+                    paginatedSchema.addProperty("content", contentSchema);
+
+                    // Add pagination properties using the new property() method
+                    paginatedSchema.addProperty("pageNumber", new IntegerSchema()
+                        .format("int32")
+                        .description("Current page number (0-based)"));
+
+                    paginatedSchema.addProperty("pageSize", new IntegerSchema()
+                        .format("int32")
+                        .description("Number of items per page"));
+
+                    paginatedSchema.addProperty("totalElements", new IntegerSchema()
+                        .format("int64")
+                        .description("Total number of elements"));
+
+                    paginatedSchema.addProperty("totalPages", new IntegerSchema()
+                        .format("int32")
+                        .description("Total number of pages"));
+
+                    paginatedSchema.addProperty("isLastPage", new BooleanSchema()
+                        .description("Is this the last page?"));
+
+                    components.addSchemas(paginatedSchemaName, paginatedSchema);
+                }
+            });
+        };
+    }
 }

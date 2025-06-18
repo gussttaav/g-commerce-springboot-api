@@ -87,11 +87,7 @@ class SecurityConfigTest {
 
         // Test products listing endpoint
         Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            ProductoResponseDTO.builder()
-                .id(1L)
-                .nombre("Test Product")
-                .activo(true)
-                .build()
+            new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true)
         ));
         
         when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
@@ -104,11 +100,7 @@ class SecurityConfigTest {
     @Test
     void whenUnauthenticatedAccessToActiveProducts_thenAllowsAccess() throws Exception {
         Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            ProductoResponseDTO.builder()
-                .id(1L)
-                .nombre("Test Product")
-                .activo(true)
-                .build()
+            new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true)
         ));
         
         when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
@@ -161,16 +153,9 @@ class SecurityConfigTest {
     void whenAdminAccessesAdminEndpoint_thenAllowsAccess() throws Exception {
         setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
         
-        ProductoDTO productoDTO = ProductoDTO.builder()
-            .nombre("Test Product")
-            .precio(new BigDecimal("10.00"))
-            .descripcion("Test Description")
-            .build();
+        ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("10.00"), true);
         
-        ProductoResponseDTO responseDTO = ProductoResponseDTO.builder()
-            .id(1L)
-            .nombre("Test Product")
-            .build();
+        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true);
 
         when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDTO);
 
@@ -192,16 +177,9 @@ class SecurityConfigTest {
     void whenCsrfDisabled_thenAllowsPostWithoutToken() throws Exception {
         setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
         
-        ProductoDTO productoDTO = ProductoDTO.builder()
-            .nombre("Test Product")
-            .precio(new BigDecimal("10.00"))
-            .descripcion("Test Description")
-            .build();
+        ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("10.00"), true);
         
-        ProductoResponseDTO responseDTO = ProductoResponseDTO.builder()
-            .id(1L)
-            .nombre("Test Product")
-            .build();
+        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true);
         when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDTO);
 
         // Act & Assert
@@ -220,11 +198,7 @@ class SecurityConfigTest {
         ActualizacionUsuarioDTO actualizacionDTO = new ActualizacionUsuarioDTO(
             "Updated Name", "updated@test.com");
             
-        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder()
-            .id(1L)
-            .nombre("Updated Name")
-            .email("updated@test.com")
-            .build();
+        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Updated Name", "updated@test.com", Usuario.Role.USER, LocalDateTime.now());
             
         when(usuarioService.actualizarPerfil(anyString(), any(ActualizacionUsuarioDTO.class)))
             .thenReturn(responseDTO);
@@ -269,11 +243,7 @@ class SecurityConfigTest {
         setupTestUser("user@test.com", "password", Usuario.Role.USER);
         
         LoginDTO loginDTO = new LoginDTO("user@test.com", "password");
-        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder()
-            .id(1L)
-            .nombre("Test User")
-            .email("user@test.com")
-            .build();
+        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now());
             
         when(usuarioService.login(any(LoginDTO.class))).thenReturn(responseDTO);
 
@@ -361,16 +331,9 @@ class SecurityConfigTest {
         // Arrange
         setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
         
-        ProductoDTO productoDTO = ProductoDTO.builder()
-            .nombre("Updated Product")
-            .precio(new BigDecimal("20.00"))
-            .descripcion("Updated Description")
-            .build();
+        ProductoDTO productoDTO = new ProductoDTO("Updated Product", "Updated Description", new BigDecimal("20.00"), true);
         
-        ProductoResponseDTO responseDTO = ProductoResponseDTO.builder()
-            .id(1L)
-            .nombre("Updated Product")
-            .build();
+        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Updated Product", "Updated Description", new BigDecimal("20.00"), LocalDateTime.now(), true);
 
         when(productoService.actualizarProducto(eq(1L), any(ProductoDTO.class)))
             .thenReturn(responseDTO);
@@ -388,10 +351,7 @@ class SecurityConfigTest {
         // Arrange
         setupTestUser("user@test.com", "password", Usuario.Role.USER);
         
-        ProductoDTO productoDTO = ProductoDTO.builder()
-            .nombre("Unauthorized Update")
-            .precio(new BigDecimal("20.00"))
-            .build();
+        ProductoDTO productoDTO = new ProductoDTO("Unauthorized Update", "Description", new BigDecimal("20.00"), true);
 
         // Act & Assert
         mockMvc.perform(put("/api/productos/actualizar/1")
@@ -403,10 +363,7 @@ class SecurityConfigTest {
 
     @Test
     void whenNoAuthUpdateProduct_thenReturns401() throws Exception {
-        ProductoDTO productoDTO = ProductoDTO.builder()
-            .nombre("Test Update")
-            .precio(new BigDecimal("20.00"))
-            .build();
+        ProductoDTO productoDTO = new ProductoDTO("Test Update", "Description", new BigDecimal("20.00"), true);
 
         mockMvc.perform(put("/api/productos/actualizar/1")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -419,12 +376,7 @@ class SecurityConfigTest {
         // Arrange
         setupTestUser("user@test.com", "password", Usuario.Role.USER);
         
-        UsuarioResponseDTO responseDTO = UsuarioResponseDTO.builder()
-            .id(1L)
-            .nombre("Test User")
-            .email("user@test.com")
-            .rol(Usuario.Role.USER)
-            .build();
+        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now());
             
         when(usuarioService.obtenerPerfil(anyString())).thenReturn(responseDTO);
 
@@ -446,12 +398,7 @@ class SecurityConfigTest {
         setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
         
         Page<UsuarioResponseDTO> userPage = new PageImpl<>(Arrays.asList(
-            UsuarioResponseDTO.builder()
-                .id(1L)
-                .nombre("Test User")
-                .email("user@test.com")
-                .rol(Usuario.Role.USER)
-                .build()
+            new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now())
         ));
         
         when(usuarioService.listarUsuarios(0, 10, "email", "ASC")).thenReturn(userPage);

@@ -110,15 +110,15 @@ public class CompraService {
 
         BigDecimal total = BigDecimal.ZERO;
 
-        for (CompraProductoDTO item : compraDTO.getProductos()) {
-            Producto producto = productoRepository.findById(item.getProductoId())
+        for (CompraProductoDTO item : compraDTO.productos()) {
+            Producto producto = productoRepository.findById(item.productoId())
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
             CompraProducto compraProducto = new CompraProducto();
             compraProducto.setProducto(producto);
-            compraProducto.setCantidad(item.getCantidad());
+            compraProducto.setCantidad(item.cantidad());
             compraProducto.setSubtotal(
-                producto.getPrecio().multiply(BigDecimal.valueOf(item.getCantidad()))
+                producto.getPrecio().multiply(BigDecimal.valueOf(item.cantidad()))
             );
             
             compra.addCompraProducto(compraProducto);

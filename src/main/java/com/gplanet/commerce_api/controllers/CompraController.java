@@ -36,7 +36,7 @@ import com.gplanet.commerce_api.services.CompraService;
  * @author Gustavo
  * @version 1.0
  */
-@Tag(name = "Compras", description = "API para gestionar las compras de la tienda")
+@Tag(name = "Compras", description = "API endpoints to manage user purchases")
 @RestController
 @RequestMapping("/api/compras")
 @RequiredArgsConstructor
@@ -94,7 +94,7 @@ public class CompraController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Purchases found successfully",
             content = @Content(mediaType = "application/json", 
-            schema = @Schema(implementation = PaginatedResponseCompraDTO.class))),
+            schema = @Schema(ref = "#/components/schemas/PaginatedResponseCompraDTO"))),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded"),
     })

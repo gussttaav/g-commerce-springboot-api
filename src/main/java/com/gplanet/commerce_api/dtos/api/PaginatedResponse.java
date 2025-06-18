@@ -4,10 +4,6 @@ import java.util.List;
 
 import org.springframework.data.domain.Page;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
-
 /**
  * Generic paginated response DTO that wraps any type of content with pagination information.
  *
@@ -16,17 +12,14 @@ import lombok.NoArgsConstructor;
  * @author Gustavo
  * @version 1.0
  */
-@Data
-@NoArgsConstructor
-@AllArgsConstructor
-public class PaginatedResponse<T> {
-    private List<T> content;
-    private int pageNumber;
-    private int pageSize;
-    private long totalElements;
-    private int totalPages;
-    private boolean isLastPage;
-
+public record PaginatedResponse<T>(
+    List<T> content,
+    int pageNumber,
+    int pageSize,
+    long totalElements,
+    int totalPages,
+    boolean isLastPage
+) {
     /**
      * Creates a PaginatedResponse from a Spring Page object.
      *

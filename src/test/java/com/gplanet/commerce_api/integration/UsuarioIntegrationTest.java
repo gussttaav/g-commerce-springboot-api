@@ -39,10 +39,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void registroUsuario_DatosValidos_RetornaUsuarioCreado() throws Exception {
         // Arrange
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/registro")
@@ -63,11 +60,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void registroAdmin_DatosValidos_RetornaAdminCreado() throws Exception {
         // Arrange
-        UsuarioAdminDTO adminDTO = new UsuarioAdminDTO();
-        adminDTO.setNombre("New Admin");
-        adminDTO.setEmail("new.admin@example.com");
-        adminDTO.setPassword("admin123");
-        adminDTO.setRol(Usuario.Role.ADMIN);
+        UsuarioAdminDTO adminDTO = new UsuarioAdminDTO("New Admin", "new.admin@example.com", "admin123", Usuario.Role.ADMIN);
         crearUsuarioAdmin();
 
         String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
@@ -90,10 +83,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void registroUsuario_EmailDuplicado_RetornaError() throws Exception {
         // Arrange - Create first user
-        UsuarioDTO primerUsuario = new UsuarioDTO();
-        primerUsuario.setNombre("First User");
-        primerUsuario.setEmail(TEST_EMAIL);
-        primerUsuario.setPassword(TEST_PASSWORD);
+        UsuarioDTO primerUsuario = new UsuarioDTO("First User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -101,10 +91,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Create duplicate user
-        UsuarioDTO usuarioDuplicado = new UsuarioDTO();
-        usuarioDuplicado.setNombre("Duplicate User");
-        usuarioDuplicado.setEmail(TEST_EMAIL);
-        usuarioDuplicado.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDuplicado = new UsuarioDTO("Duplicate User", TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/registro")
@@ -116,10 +103,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void actualizarPerfil_UsuarioAutenticado_ActualizaCorrectamente() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -151,10 +135,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void cambiarContraseña_DatosValidos_CambiaCorrectamente() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -162,10 +143,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO();
-        cambioDTO.setCurrentPassword(TEST_PASSWORD);
-        cambioDTO.setNewPassword("newPassword123");
-        cambioDTO.setConfirmPassword("newPassword123");
+        CambioPasswdDTO cambioDTO = new CambioPasswdDTO(TEST_PASSWORD, "newPassword123", "newPassword123");
         
         String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
         
@@ -186,10 +164,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void cambiarContraseña_ContraseñaActualIncorrecta_RetornaError() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -197,10 +172,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare invalid password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO();
-        cambioDTO.setCurrentPassword("wrongPassword");
-        cambioDTO.setNewPassword("newPassword123");
-        cambioDTO.setConfirmPassword("newPassword123");
+        CambioPasswdDTO cambioDTO = new CambioPasswdDTO("wrongPassword", "newPassword123", "newPassword123");
         
         String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
         
@@ -216,10 +188,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void login_CredencialesCorrectas_RetornaUsuario() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         // Register user first
         mockMvc.perform(post(BASE_URL + "/registro")
@@ -243,10 +212,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void login_ContraseñaIncorrecta_RetornaBadRequest() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         // Register user first
         mockMvc.perform(post(BASE_URL + "/registro")
@@ -268,10 +234,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void obtenerPerfil_UsuarioAutenticado_RetornaDatosCorrectos() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -299,10 +262,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void listarUsuarios_UsuarioAdmin_RetornaListaCompleta() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -330,10 +290,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void listarUsuarios_UsuarioRegular_RetornaForbidden() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -351,10 +308,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void cambiarRol_UsuarioAdmin_CambiaRolCorrectamente() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -387,10 +341,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     @Test
     void cambiarRol_UsuarioRegular_RetornaForbidden() throws Exception {
         // Arrange - Create first regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO();
-        usuarioDTO.setNombre("Test User");
-        usuarioDTO.setEmail(TEST_EMAIL);
-        usuarioDTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
         
         MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -404,10 +355,7 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
         Long userId = userIdNumber.longValue();
 
         // Create second regular user
-        UsuarioDTO usuario2DTO = new UsuarioDTO();
-        usuario2DTO.setNombre("Test User 2");
-        usuario2DTO.setEmail("test2@example.com");
-        usuario2DTO.setPassword(TEST_PASSWORD);
+        UsuarioDTO usuario2DTO = new UsuarioDTO("Test User 2", "test2@example.com", TEST_PASSWORD);
         
         mockMvc.perform(post(BASE_URL + "/registro")
                 .contentType(MediaType.APPLICATION_JSON)

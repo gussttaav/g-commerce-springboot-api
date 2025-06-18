@@ -61,12 +61,12 @@ class ProductoServiceTest {
 
     @BeforeEach
     void setUp() {
-        productoDTO = ProductoDTO.builder()
-                .nombre("Test Product")
-                .descripcion("Test Description")
-                .precio(new BigDecimal("99.99"))
-                .activo(true)
-                .build();
+        productoDTO = new ProductoDTO(
+            "Test Product",
+            "Test Description",
+            new BigDecimal("99.99"),
+            true
+        );
 
         producto = new Producto();
         producto.setId(1L);
@@ -76,14 +76,14 @@ class ProductoServiceTest {
         producto.setFechaCreacion(LocalDateTime.now());
         producto.setActivo(true);
 
-        productoResponseDTO = ProductoResponseDTO.builder()
-                .id(1L)
-                .nombre("Test Product")
-                .descripcion("Test Description")
-                .precio(new BigDecimal("99.99"))
-                .fechaCreacion(producto.getFechaCreacion())
-                .activo(true)
-                .build();
+        productoResponseDTO = new ProductoResponseDTO(
+            1L,
+            "Test Product",
+            "Test Description",
+            new BigDecimal("99.99"),
+            producto.getFechaCreacion(),
+            true
+        );
 
         productoInactivo = new Producto();
         productoInactivo.setId(2L);
@@ -93,14 +93,14 @@ class ProductoServiceTest {
         productoInactivo.setFechaCreacion(LocalDateTime.now());
         productoInactivo.setActivo(false);
 
-        productoInactivoResponseDTO = ProductoResponseDTO.builder()
-                .id(2L)
-                .nombre("Inactive Product")
-                .descripcion("Inactive Description")
-                .precio(new BigDecimal("49.99"))
-                .fechaCreacion(productoInactivo.getFechaCreacion())
-                .activo(false)
-                .build();
+        productoInactivoResponseDTO = new ProductoResponseDTO(
+            2L,
+            "Inactive Product",
+            "Inactive Description",
+            new BigDecimal("49.99"),
+            productoInactivo.getFechaCreacion(),
+            false
+        );
     }
 
     /**
@@ -292,9 +292,9 @@ class ProductoServiceTest {
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(productoResponseDTO.getId(), resultado.getId());
-        assertEquals(productoResponseDTO.getNombre(), resultado.getNombre());
-        assertNotNull(resultado.getFechaCreacion());
+        assertEquals(productoResponseDTO.id(), resultado.id());
+        assertEquals(productoResponseDTO.nombre(), resultado.nombre());
+        assertNotNull(resultado.fechaCreacion());
         verify(productoMapper).toProducto(productoDTO);
         verify(productoRepository).save(any(Producto.class));
         verify(productoMapper).toProductoResponseDTO(producto);
@@ -351,12 +351,12 @@ class ProductoServiceTest {
     @Test
     void actualizarProducto_DebeActualizarYRetornarProductoExistente() {
         // Arrange
-        ProductoDTO productoActualizadoDTO = ProductoDTO.builder()
-                .nombre("Updated Product")
-                .descripcion("Updated Description")
-                .precio(new BigDecimal("199.99"))
-                .activo(true)
-                .build();
+        ProductoDTO productoActualizadoDTO = new ProductoDTO(
+            "Updated Product",
+            "Updated Description",
+            new BigDecimal("199.99"),
+            true
+        );
 
         Producto productoActualizado = new Producto();
         productoActualizado.setId(1L);
@@ -366,14 +366,14 @@ class ProductoServiceTest {
         productoActualizado.setFechaCreacion(producto.getFechaCreacion());
         productoActualizado.setActivo(true);
 
-        ProductoResponseDTO productoActualizadoResponseDTO = ProductoResponseDTO.builder()
-                .id(1L)
-                .nombre("Updated Product")
-                .descripcion("Updated Description")
-                .precio(new BigDecimal("199.99"))
-                .fechaCreacion(producto.getFechaCreacion())
-                .activo(true)
-                .build();
+        ProductoResponseDTO productoActualizadoResponseDTO = new ProductoResponseDTO(
+            1L,
+            "Updated Product",
+            "Updated Description",
+            new BigDecimal("199.99"),
+            producto.getFechaCreacion(),
+            true
+        );
 
         when(productoRepository.findById(1L)).thenReturn(Optional.of(producto));
         doNothing().when(productoMapper).updateProductoFromDTO(productoActualizadoDTO, producto);
@@ -386,10 +386,10 @@ class ProductoServiceTest {
 
         // Assert
         assertNotNull(resultado);
-        assertEquals(productoActualizadoResponseDTO.getId(), resultado.getId());
-        assertEquals(productoActualizadoResponseDTO.getNombre(), resultado.getNombre());
-        assertEquals(productoActualizadoResponseDTO.getDescripcion(), resultado.getDescripcion());
-        assertEquals(productoActualizadoResponseDTO.getPrecio(), resultado.getPrecio());
+        assertEquals(productoActualizadoResponseDTO.id(), resultado.id());
+        assertEquals(productoActualizadoResponseDTO.nombre(), resultado.nombre());
+        assertEquals(productoActualizadoResponseDTO.descripcion(), resultado.descripcion());
+        assertEquals(productoActualizadoResponseDTO.precio(), resultado.precio());
         verify(productoRepository).findById(1L);
         verify(productoMapper).updateProductoFromDTO(productoActualizadoDTO, producto);
         verify(productoRepository).save(any(Producto.class));

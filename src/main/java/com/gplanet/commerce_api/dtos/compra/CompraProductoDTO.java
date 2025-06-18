@@ -2,26 +2,24 @@ package com.gplanet.commerce_api.dtos.compra;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Positive;
-import lombok.Data;
 
 /**
  * Data Transfer Object (DTO) for product purchase requests.
- * This class represents the information needed to purchase a specific
+ * This record represents the information needed to purchase a specific
  * product, including the product identifier and the desired quantity.
  *
  * @author Gustavo
  * @version 1.0
  */
 @Schema(name = "PurchaseProductRequest", description = "Product purchase request information")
-@Data
-public class CompraProductoDTO {
+public record CompraProductoDTO(
     /**
      * The ID of the product to be purchased.
      * Must be a positive number.
      */
     @Schema(description = "Product ID to purchase", example = "1")
     @Positive(message = "El ID del producto debe ser válido")
-    private Long productoId;
+    Long productoId,
     
     /**
      * The quantity of the product to purchase.
@@ -29,5 +27,5 @@ public class CompraProductoDTO {
      */
     @Schema(description = "Quantity to purchase", example = "1")
     @Positive(message = "La cantidad debe ser mayor a 0")
-    private Integer cantidad;
-}
+    Integer cantidad
+) {}

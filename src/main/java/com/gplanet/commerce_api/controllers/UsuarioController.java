@@ -12,7 +12,6 @@ import com.gplanet.commerce_api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce_api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce_api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce_api.dtos.usuario.LoginDTO;
-import com.gplanet.commerce_api.dtos.usuario.PaginatedResponseUsuarioDTO;
 import com.gplanet.commerce_api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce_api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce_api.dtos.usuario.UsuarioResponseDTO;
@@ -132,7 +131,7 @@ public class UsuarioController {
     public UsuarioResponseDTO registrarAdmin(
             @Valid @RequestBody @Parameter(description = "Admin user credentials", required = true) 
             UsuarioAdminDTO usuarioDTO) {
-        return usuarioService.registrarUsuario(usuarioDTO);
+        return usuarioService.registrarAdmin(usuarioDTO);
     }
 
 
@@ -223,7 +222,7 @@ public class UsuarioController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users successfully retrieved", 
                 content = @Content(mediaType = "application/json", 
-                schema = @Schema(implementation = PaginatedResponseUsuarioDTO.class))),
+                schema = @Schema(ref = "#/components/schemas/PaginatedResponseUsuarioDTO"))),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
             @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")

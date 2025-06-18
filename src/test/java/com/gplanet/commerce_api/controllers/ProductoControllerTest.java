@@ -398,8 +398,8 @@ class ProductoControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should return 400 when product data is invalid")
         void crearProducto_InvalidData_Returns400() throws Exception {
-            ProductoDTO invalidProducto = ProductoDTO.builder().build();
-            // Empty product data
+            ProductoDTO invalidProducto = new ProductoDTO("", "", new BigDecimal("-10.00"), false);
+            // Invalid product data with empty name and negative price
 
             mockMvc.perform(post("/api/productos/crear")
                     .with(csrf())
@@ -415,8 +415,7 @@ class ProductoControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should return 400 when price is negative")
         void crearProducto_NegativePrice_Returns400() throws Exception {
-            ProductoDTO productoDTO = createValidProductoDTO();
-            productoDTO.setPrecio(new BigDecimal("-10.00"));
+            ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("-10.00"), true);
 
             mockMvc.perform(post("/api/productos/crear")
                     .with(csrf())
@@ -512,8 +511,8 @@ class ProductoControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should return 400 when product data is invalid")
         void actualizarProducto_InvalidData_Returns400() throws Exception {
-            ProductoDTO invalidProducto = ProductoDTO.builder().build();
-            // Empty product data
+            ProductoDTO invalidProducto = new ProductoDTO("", "", new BigDecimal("-10.00"), false);
+            // Invalid product data with empty name and negative price
 
             mockMvc.perform(put("/api/productos/actualizar/1")
                     .with(csrf())
@@ -544,8 +543,7 @@ class ProductoControllerTest {
         @WithMockUser(roles = "ADMIN")
         @DisplayName("Should return 400 when price is negative")
         void actualizarProducto_NegativePrice_Returns400() throws Exception {
-            ProductoDTO productoDTO = createValidProductoDTO();
-            productoDTO.setPrecio(new BigDecimal("-10.00"));
+            ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("-10.00"), true);
 
             mockMvc.perform(put("/api/productos/actualizar/1")
                     .with(csrf())

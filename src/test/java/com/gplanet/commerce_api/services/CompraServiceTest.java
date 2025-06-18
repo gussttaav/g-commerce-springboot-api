@@ -93,16 +93,9 @@ class CompraServiceTest {
         producto2.setPrecio(new BigDecimal("200.00"));
         
         // Setup CompraDTO
-        CompraProductoDTO compraProductoDTO1 = new CompraProductoDTO();
-        compraProductoDTO1.setProductoId(1L);
-        compraProductoDTO1.setCantidad(2);
-        
-        CompraProductoDTO compraProductoDTO2 = new CompraProductoDTO();
-        compraProductoDTO2.setProductoId(2L);
-        compraProductoDTO2.setCantidad(1);
-        
-        compraDTO = new CompraDTO();
-        compraDTO.setProductos(Arrays.asList(compraProductoDTO1, compraProductoDTO2));
+        CompraProductoDTO compraProductoDTO1 = new CompraProductoDTO(1L, 2);
+        CompraProductoDTO compraProductoDTO2 = new CompraProductoDTO(2L, 1);
+        compraDTO = new CompraDTO(Arrays.asList(compraProductoDTO1, compraProductoDTO2));
         
         // Setup Compra
         compra = new Compra();
@@ -112,11 +105,13 @@ class CompraServiceTest {
         compra.setTotal(new BigDecimal("400.00"));
         
         // Setup CompraResponseDTO
-        compraResponseDTO = new CompraResponseDTO();
-        compraResponseDTO.setId(1L);
-        compraResponseDTO.setUsuarioNombre(usuarioNormal.getNombre());
-        compraResponseDTO.setFecha(compra.getFecha());
-        compraResponseDTO.setTotal(compra.getTotal());
+        compraResponseDTO = new CompraResponseDTO(
+            1L,
+            usuarioNormal.getNombre(),
+            compra.getFecha(),
+            compra.getTotal(),
+            null // productos, no se usan en los asserts
+        );
     }
     
     @Test
@@ -205,8 +200,8 @@ class CompraServiceTest {
         
         // Assert
         assertNotNull(result);
-        assertEquals(compraResponseDTO.getId(), result.getId());
-        assertEquals(compraResponseDTO.getTotal(), result.getTotal());
+        assertEquals(compraResponseDTO.id(), result.id());
+        assertEquals(compraResponseDTO.total(), result.total());
         verify(compraRepository).save(any(Compra.class));
     }
     

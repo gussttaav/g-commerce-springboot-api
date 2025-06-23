@@ -79,7 +79,7 @@ public class ProductoController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Products found successfully", 
                     content = @Content(mediaType = "application/json",
-                    schema = @Schema(ref = "#/components/schemas/PaginatedResponseProductoDTO"))),
+                    schema = @Schema(ref = "#/components/schemas/PaginatedProducts"))),
             @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),

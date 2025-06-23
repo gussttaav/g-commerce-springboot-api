@@ -222,7 +222,7 @@ public class UsuarioController {
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Users successfully retrieved", 
                 content = @Content(mediaType = "application/json", 
-                schema = @Schema(ref = "#/components/schemas/PaginatedResponseUsuarioDTO"))),
+                schema = @Schema(ref = "#/components/schemas/PaginatedUsers"))),
             @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
             @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
             @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")

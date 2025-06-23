@@ -199,8 +199,8 @@ docker compose ps
 
 ## 🛠️ Technologies
 
-- **Backend Framework**: Spring Boot 3.4.3
-- **Language**: Java 17
+- **Backend Framework**: Spring Boot 3.4.7
+- **Language**: Java 21
 - **Security**: Spring Security with Basic Authentication
 - **Database**: MySQL 9
 - **Documentation**: OpenAPI 3.0 (Swagger)

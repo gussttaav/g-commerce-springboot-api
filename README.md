@@ -50,7 +50,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 ## 🛠️ Technologies
 
 - Java 21
-- Spring Boot 3.4.3
+- Spring Boot 3.4.7
 - Spring Security
 - Bucket4j (for rate limiting)
 - OpenAPI/Swagger

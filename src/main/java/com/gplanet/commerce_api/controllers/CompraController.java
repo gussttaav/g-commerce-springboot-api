@@ -94,7 +94,7 @@ public class CompraController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Purchases found successfully",
             content = @Content(mediaType = "application/json", 
-            schema = @Schema(ref = "#/components/schemas/PaginatedResponseCompraDTO"))),
+            schema = @Schema(ref = "#/components/schemas/PaginatedPurchases"))),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded"),
     })

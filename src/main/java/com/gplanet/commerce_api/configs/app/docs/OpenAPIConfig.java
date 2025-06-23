@@ -134,9 +134,9 @@ public class OpenAPIConfig {
 
             // Map of DTO schema names to their desired PaginatedResponse schema names
             var typeMap = Map.of(
-                "CompraResponseDTO", "PaginatedResponseCompraDTO",
-                "ProductoResponseDTO", "PaginatedResponseProductoDTO",
-                "UsuarioResponseDTO", "PaginatedResponseUsuarioDTO"
+                "Purchase", "PaginatedPurchases",
+                "Product", "PaginatedProducts",
+                "User", "PaginatedUsers"
             );
 
             typeMap.forEach((dtoSchemaName, paginatedSchemaName) -> {
@@ -146,7 +146,7 @@ public class OpenAPIConfig {
                     // Create the paginated schema
                     ObjectSchema paginatedSchema = new ObjectSchema();
                     paginatedSchema.setName(paginatedSchemaName);
-                    paginatedSchema.setDescription("Paginated response of " + dtoSchemaName);
+                    paginatedSchema.setDescription("Paginated response of " + dtoSchemaName.toLowerCase() + "s");
 
                     // Add content array property
                     ArraySchema contentSchema = new ArraySchema();

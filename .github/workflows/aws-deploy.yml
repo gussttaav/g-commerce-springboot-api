@@ -1,0 +1,46 @@
+name: Deploy to EC2
+
+on:
+  workflow_run:
+    workflows: ["Docker Build and Push"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Navigate to your application directory
+            cd /home/${{ secrets.EC2_USER }}/g-commerce
+            
+            # Pull the latest images
+            docker compose pull
+            
+            # Stop and remove existing containers
+            docker compose down
+            
+            # Start the application with the new images
+            docker compose up -d
+            
+            # Clean up unused images to save space
+            docker image prune -f
+            
+            # Check if containers are running
+            docker compose ps
+            
+            # Show recent logs
+            docker compose logs --tail=50

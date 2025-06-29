@@ -51,6 +51,69 @@ springdoc:
   packages-to-scan: com.gplanet.commerce_api
   paths-to-match: /api/**
 
+# Management/Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        # Expose essential endpoints for monitoring
+        include: health,info,metrics,prometheus
+      base-path: /actuator
+      cors:
+        allowed-origins: "*"
+        allowed-methods: GET,POST
+        allowed-headers: "*"
+        
+  endpoint:
+    # Health endpoint configuration
+    health:
+      show-details: when-authorized
+      show-components: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db
+        liveness:
+          include: livenessState,diskSpace
+
+  # Health indicators configuration
+  health:
+    db:
+      enabled: true
+    diskspace:
+      enabled: true
+      threshold: 100MB
+    defaults:
+      enabled: true
+
+  # Application info
+  info:
+    env:
+      enabled: true
+    java:
+      enabled: true
+    os:
+      enabled: true
+    git:
+      mode: full
+    build:
+      enabled: true
+
+  # Metrics configuration
+  metrics:
+    enable:
+      jvm: true
+      system: true
+      web: true
+      jdbc: true
+      hikaricp: true
+    distribution:
+      percentiles-histogram:
+        "[http.server.requests]": true
+    tags:
+      application: ${spring.application.name}
+
 ---
 # HTTP-only profile (default)
 spring:

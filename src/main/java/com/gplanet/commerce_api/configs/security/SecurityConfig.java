@@ -48,6 +48,8 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .authorizeHttpRequests(authz -> authz
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/favicon.ico").permitAll()
+                .requestMatchers("/actuator/health/**").permitAll()
+                .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers("/api/usuarios/admin/**").hasRole("ADMIN")
                 .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
                 .requestMatchers("/api/usuarios/**").permitAll()

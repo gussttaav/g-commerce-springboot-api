@@ -28,19 +28,19 @@ jobs:
             cd /home/${{ secrets.EC2_USER }}/g-commerce
             
             # Pull the latest images
-            docker compose pull
+            docker-compose pull
             
             # Stop and remove existing containers
-            docker compose down
+            docker-compose down
             
             # Start the application with the new images
-            docker compose up -d
+            docker-compose up -d
             
             # Clean up unused images to save space
-            docker image prune -f
+            docker-image prune -f
             
             # Check if containers are running
-            docker compose ps
+            docker-compose ps
             
             # Show recent logs
-            docker compose logs --tail=50
+            docker-compose logs --tail=50

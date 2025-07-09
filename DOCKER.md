@@ -35,6 +35,13 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
   - OpenAPI (Swagger) for interactive API documentation
   - Detailed endpoint descriptions and schemas
 
+- **Monitoring & Management**
+  - Spring Boot Actuator integration for application monitoring
+  - Health checks with readiness and liveness probes
+  - Metrics collection and exposure (JVM, system, web, database)
+  - Application info endpoint with environment and build details
+  - Prometheus metrics support for external monitoring systems
+
 ## 🚦 Quick Start
 
 ### Prerequisites
@@ -161,6 +168,13 @@ POST /api/compras/nueva           # Create purchase
 GET  /api/compras/listar          # List user purchases  (paginated)
 GET  /api/compras/{id}            # Get purchase details
 ```
+
+### Monitoring Endpoints
+```
+GET  /actuator/health              # Application health status
+GET  /actuator/info                # Application information
+GET  /actuator/metrics             # Application metrics
+GET  /actuator/prometheus          # Prometheus-formatted metrics
 
 ## ⚙️ Environment Variables
 

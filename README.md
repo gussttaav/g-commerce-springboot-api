@@ -47,6 +47,13 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
   - Automatic image publishing to Docker Hub
   - Environment-based configuration management
 
+- **Monitoring & Management**
+  - Spring Boot Actuator integration for application monitoring
+  - Health checks with readiness and liveness probes
+  - Metrics collection and exposure (JVM, system, web, database)
+  - Application info endpoint with environment and build details
+  - Prometheus metrics support for external monitoring systems
+
 ## 🛠️ Technologies
 
 - Java 21
@@ -63,6 +70,8 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 - Maven
 - Lombok
 - GitHub Actions
+- Spring Boot Actuator
+- Prometheus (metrics)
 
 ## 📋 Prerequisites
 
@@ -125,6 +134,8 @@ The application is split into two Docker images:
 
 Both images are automatically built and pushed to Docker Hub on every push to this branch using GitHub Actions. Refer to the [repository documentation](https://hub.docker.com/repository/docker/gussttaav/g-commerce-backend/general) if you want to deploy the full application with docker compose.
 
+After the image is pushed to Docker Hub the application is automatically deployed to an AWS EC2 instance pulling the created images and running the associated containers using Docker Compose.
+
 ## 📚 API Documentation
 
 ### OpenAPI (Swagger) Documentation
@@ -148,6 +159,26 @@ To generate Javadoc:
 ```bash
 mvn javadoc:javadoc
 ```
+
+### Health and Monitoring Endpoints
+
+Spring Boot Actuator provides several monitoring endpoints:
+
+- **Health Check**: `/actuator/health`
+  - Basic health status available to all users
+  - Detailed health information available to authenticated users
+  - Includes database connectivity and disk space checks
+
+- **Application Info**: `/actuator/info`
+  - Application metadata including version, build info, and environment details
+  - Git information and Java/OS details
+
+- **Metrics**: `/actuator/metrics`
+  - JVM, system, web, and database metrics
+  - Custom application metrics
+
+- **Prometheus**: `/actuator/prometheus`
+  - Prometheus-formatted metrics for external monitoring systems
 
 ## 🧪 Testing
 
@@ -205,6 +236,14 @@ PUT    /api/productos/actualizar/{id}         # Update a product information
 ```
 POST /api/compras/nueva            # Create a new purchase
 GET  /api/compras/listar           # List user purchases (paginated)
+```
+
+### Monitoring Endpoints
+```
+GET  /actuator/health              # Application health status
+GET  /actuator/info                # Application information
+GET  /actuator/metrics             # Application metrics
+GET  /actuator/prometheus          # Prometheus-formatted metrics
 ```
 
 ## 🔒 Security
@@ -271,6 +310,7 @@ src/
 │   │       │   ├── app/
 │   │       │   │   ├── data/
 │   │       │   │   ├── docs/
+│   │       │   │   ├── health/
 │   │       │   │   └── props/
 │   │       │   ├── security/
 │   │       │   │   └── rate_timiting/

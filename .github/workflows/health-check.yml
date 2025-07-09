@@ -1,0 +1,48 @@
+name: Health Check
+
+on:
+  workflow_run:
+    workflows: ["Deploy to EC2"]
+    types:
+      - completed
+    branches:
+      - main
+
+jobs:
+  health-check:
+    runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    
+    steps:
+      - name: Wait for application to start
+        run: sleep 30
+
+      - name: Check application health
+        run: |
+          HEALTH_URL="https://${{ secrets.EC2_HOST }}/actuator/health"
+          
+          # Try to reach the health endpoint
+          for i in {1..5}; do
+            if curl -f -s "$HEALTH_URL" > /dev/null; then
+              echo "✅ Application is healthy!"
+              exit 0
+            else
+              echo "⏳ Attempt $i: Application not ready yet, waiting..."
+              sleep 10
+            fi
+          done
+          
+          echo "❌ Application health check failed"
+          exit 1
+
+      - name: Notify on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            cd /home/${{ secrets.EC2_USER }}/g-commerce
+            echo "Deployment may have failed. Here are the logs:"
+            docker-compose logs --tail=50

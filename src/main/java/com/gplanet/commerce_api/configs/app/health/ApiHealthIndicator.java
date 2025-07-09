@@ -13,8 +13,12 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
 /**
- * Custom health indicator for the commerce API.
- * Checks critical business components and provides application-specific health information.
+ * Health indicator for the G-Commerce API service.
+ * Monitors the overall health of the application by checking critical
+ * components including database tables availability and application status.
+ *
+ * @author Gustavo
+ * @version 1.0
  */
 @Component("commerceApi")
 public class ApiHealthIndicator implements HealthIndicator {
@@ -27,6 +31,12 @@ public class ApiHealthIndicator implements HealthIndicator {
         this.environment = environment;
     }
 
+    /**
+     * Evaluates the health status of the G-Commerce API.
+     * Checks the application version, active profiles, and critical database tables.
+     *
+     * @return Health object containing the service status and relevant details
+     */
     @Override
     public Health health() {
         try {
@@ -68,6 +78,11 @@ public class ApiHealthIndicator implements HealthIndicator {
         }
     }
 
+    /**
+     * Verifies the existence and accessibility of critical database tables.
+     *
+     * @return true if all critical tables are accessible, false otherwise
+     */
     private boolean checkCriticalTables() {
         try (Connection connection = dataSource.getConnection()) {
             // Check if critical tables exist and are accessible

@@ -10,6 +10,14 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
+/**
+ * Custom database health indicator for the G-Commerce API.
+ * Monitors the database connection status and performance by
+ * performing connection tests and simple queries.
+ *
+ * @author Gustavo
+ * @version 1.0
+ */
 @Component("customDatabase")
 public class DatabaseHealthIndicator implements HealthIndicator {
 
@@ -19,6 +27,12 @@ public class DatabaseHealthIndicator implements HealthIndicator {
         this.dataSource = dataSource;
     }
 
+    /**
+     * Evaluates the health status of the database connection.
+     * Performs connection validation and basic query testing.
+     *
+     * @return Health object containing the database status and connection details
+     */
     @Override
     public Health health() {
         try {
@@ -32,6 +46,13 @@ public class DatabaseHealthIndicator implements HealthIndicator {
         }
     }
 
+    /**
+     * Performs detailed database health checks including connection validation
+     * and response time measurement.
+     *
+     * @return Health object with detailed database connection information
+     * @throws SQLException if database connection or query execution fails
+     */
     private Health checkDatabaseHealth() throws SQLException {
         long startTime = System.currentTimeMillis();
         

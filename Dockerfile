@@ -8,6 +8,9 @@ COPY pom.xml .
 COPY .mvn .mvn
 COPY mvnw .
 COPY mvnw.cmd .
+COPY checkstyle-rules.xml .
+COPY suppressions.xml .
+COPY pmd-ruleset.xml .
 
 # Make the mvnw script executable
 RUN chmod +x mvnw

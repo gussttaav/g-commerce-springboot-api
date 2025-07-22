@@ -305,7 +305,7 @@ Content-Type: application/json
 src/
 ├── main/
 │   ├── java/
-│   │   └── com/gplanet/commerce_api/
+│   │   └── com/gplanet/commerce/api
 │   │       ├── configs/
 │   │       │   ├── app/
 │   │       │   │   ├── data/
@@ -313,7 +313,7 @@ src/
 │   │       │   │   ├── health/
 │   │       │   │   └── props/
 │   │       │   ├── security/
-│   │       │   │   └── rate_timiting/
+│   │       │   │   └── ratelimiting/
 │   │       │   └── web/
 │   │       ├── controllers/
 │   │       ├── dtos/
@@ -327,7 +327,7 @@ src/
 │       └── application.yml
 ├── test/
 │   ├── java/
-│   │   └── com/gplanet/commerce_api/
+│   │   └── com/gplanet/commerce/api/
 │   │       ├── controllers/
 │   │       ├── repositories/
 │   │       ├── services/

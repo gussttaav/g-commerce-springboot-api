@@ -23,7 +23,7 @@ jobs:
           
           # Try to reach the health endpoint
           for i in {1..5}; do
-            if curl -f -s "$HEALTH_URL" > /dev/null; then
+            if curl -f -s -k "$HEALTH_URL" > /dev/null; then
               echo "✅ Application is healthy!"
               exit 0
             else

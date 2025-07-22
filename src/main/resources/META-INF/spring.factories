@@ -1,1 +1,1 @@
-org.springframework.boot.env.EnvironmentPostProcessor=com.gplanet.commerce_api.configs.security.SslProfileDetector
+org.springframework.boot.env.EnvironmentPostProcessor=com.gplanet.commerce.api.configs.security.SslProfileDetector

@@ -1,0 +1,305 @@
+<?xml version="1.0"?>
+<ruleset name="G-Commerce API PMD Rules"
+    xmlns="http://pmd.sourceforge.net/ruleset/2.0.0"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://pmd.sourceforge.net/ruleset/2.0.0 
+                        https://pmd.sourceforge.io/ruleset_2_0_0.xsd">
+
+    <description>
+        Custom PMD rules for G-Commerce Spring Boot API
+    </description>
+
+    <!-- Best Practices -->
+    <rule ref="category/java/bestpractices.xml">
+        <exclude name="GuardLogStatement"/>
+        <exclude name="UnitTestContainsTooManyAsserts"/>
+        <exclude name="UnitTestAssertionsShouldIncludeMessage"/>
+        <exclude name="UseVarargs"/>
+        <exclude name="LiteralsFirstInComparisons"/>
+    </rule>
+
+    <!-- Code Style -->
+    <rule ref="category/java/codestyle.xml">
+        <exclude name="OnlyOneReturn"/>
+        <exclude name="TooManyStaticImports"/>
+        <exclude name="AtLeastOneConstructor"/>
+        <exclude name="CallSuperInConstructor"/>
+        <exclude name="CommentDefaultAccessModifier"/>
+        <exclude name="LocalVariableCouldBeFinal"/>
+        <exclude name="MethodArgumentCouldBeFinal"/>
+        <exclude name="ShortVariable"/>
+        <exclude name="LongVariable"/>
+        <exclude name="ShortClassName"/>
+        <exclude name="ClassNamingConventions"/>
+        <exclude name="FieldNamingConventions"/>
+        <exclude name="MethodNamingConventions"/>
+        <exclude name="ConfusingTernary"/>
+        <exclude name="UnnecessaryConstructor"/>
+        <exclude name="UnnecessaryModifier"/>
+        <exclude name="UselessParentheses"/>
+        <exclude name="UselessQualifiedThis"/>
+    </rule>
+
+    <!-- Custom Code Style Rules -->
+    <rule ref="category/java/codestyle.xml/ClassNamingConventions">
+        <properties>
+            <property name="classPattern" value="[A-Z][a-zA-Z0-9]*"/>
+            <property name="abstractClassPattern" value="[A-Z][a-zA-Z0-9]*"/>
+            <property name="interfacePattern" value="[A-Z][a-zA-Z0-9]*"/>
+            <property name="enumPattern" value="[A-Z][a-zA-Z0-9]*"/>
+            <property name="annotationPattern" value="[A-Z][a-zA-Z0-9]*"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/MethodNamingConventions">
+        <properties>
+            <property name="methodPattern" value="[a-z][a-zA-Z0-9]*"/>
+            <property name="staticPattern" value="[a-z][a-zA-Z0-9]*"/>
+            <property name="nativePattern" value="[a-z][a-zA-Z0-9]*"/>
+            <property name="junit3TestPattern" value="test[A-Z0-9][a-zA-Z0-9]*"/>
+            <property name="junit4TestPattern" value="[a-z][a-zA-Z0-9]*"/>
+            <property name="junit5TestPattern" value="[a-z][a-zA-Z0-9_]*"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/ShortVariable">
+        <properties>
+            <property name="minimum" value="2"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/LongVariable">
+        <properties>
+            <property name="minimum" value="30"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/codestyle.xml/TooManyStaticImports">
+        <properties>
+            <property name="maximumStaticImports" value="10"/>
+        </properties>
+    </rule>
+
+    <!-- Design -->
+    <rule ref="category/java/design.xml">
+        <exclude name="LawOfDemeter"/>
+        <exclude name="LoosePackageCoupling"/>
+        <exclude name="DataClass"/>
+        <exclude name="UseUtilityClass"/>
+        <exclude name="TooManyMethods"/>
+        <exclude name="ExcessiveImports"/>
+        <exclude name="CouplingBetweenObjects"/>
+        <exclude name="AvoidDeeplyNestedIfStmts"/>
+        <exclude name="CyclomaticComplexity"/>
+        <exclude name="NcssCount"/>
+        <exclude name="NPathComplexity"/>
+        <exclude name="TooManyFields"/>
+        <exclude name="UseObjectForClearerAPI"/>
+    </rule>
+
+    <!-- Custom Design Rules -->
+    <rule ref="category/java/design.xml/TooManyMethods">
+        <properties>
+            <property name="maxmethods" value="25"/>
+            <property name="violationSuppressRegex" value=".*Test\.java"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/ExcessiveImports">
+        <properties>
+            <property name="minimum" value="35"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/CouplingBetweenObjects">
+        <properties>
+            <property name="threshold" value="25"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/AvoidDeeplyNestedIfStmts">
+        <properties>
+            <property name="problemDepth" value="4"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/CyclomaticComplexity">
+        <properties>
+            <property name="classReportLevel" value="80"/>
+            <property name="methodReportLevel" value="15"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/NcssCount">
+        <properties>
+            <property name="methodReportLevel" value="60"/>
+            <property name="classReportLevel" value="1000"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/NPathComplexity">
+        <properties>
+            <property name="reportLevel" value="200"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/design.xml/TooManyFields">
+        <properties>
+            <property name="maxfields" value="20"/>
+            <property name="violationSuppressRegex" value=".*/entities/.*\.java|.*/dtos/.*\.java"/>
+        </properties>
+    </rule>
+
+    <!-- Documentation -->
+    <rule ref="category/java/documentation.xml">
+        <exclude name="CommentRequired"/>
+        <exclude name="CommentSize"/>
+        <exclude name="UncommentedEmptyConstructor"/>
+        <exclude name="UncommentedEmptyMethodBody"/>
+    </rule>
+
+    <!-- Custom Documentation Rules -->
+    <rule ref="category/java/documentation.xml/CommentRequired">
+        <properties>
+            <property name="methodWithOverrideCommentRequirement" value="Ignored"/>
+            <property name="accessorCommentRequirement" value="Ignored"/>
+            <property name="classCommentRequirement" value="Required"/>
+            <property name="fieldCommentRequirement" value="Ignored"/>
+            <property name="publicMethodCommentRequirement" value="Required"/>
+            <property name="protectedMethodCommentRequirement" value="Ignored"/>
+            <property name="enumCommentRequirement" value="Required"/>
+            <property name="violationSuppressRegex" value=".*Test\.java"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/documentation.xml/CommentSize">
+        <properties>
+            <property name="maxLines" value="15"/>
+            <property name="maxLineLength" value="120"/>
+        </properties>
+    </rule>
+
+    <!-- Error Prone -->
+    <rule ref="category/java/errorprone.xml">
+        <exclude name="NullAssignment"/>
+        <exclude name="UseLocaleWithCaseConversions"/>
+        <exclude name="AvoidLiteralsInIfCondition"/>
+        <exclude name="SimpleDateFormatNeedsLocale"/>
+        <exclude name="CompareObjectsWithEquals"/>
+        <exclude name="ConstructorCallsOverridableMethod"/>
+        <exclude name="DoNotCallGarbageCollectionExplicitly"/>
+        <exclude name="DontImportSun"/>
+        <exclude name="ReturnFromFinallyBlock"/>
+        <exclude name="SuspiciousHashcodeMethodName"/>
+        <exclude name="TestClassWithoutTestCases"/>
+        <exclude name="UnusedNullCheckInEquals"/>
+        <exclude name="UseProperClassLoader"/>
+    </rule>
+
+    <!-- Custom Error Prone Rules -->
+    <rule ref="category/java/errorprone.xml/AvoidLiteralsInIfCondition">
+        <properties>
+            <property name="ignoreMagicNumbers" value="-1,0,1,2"/>
+        </properties>
+    </rule>
+
+    <!-- Multithreading -->
+    <rule ref="category/java/multithreading.xml">
+        <exclude name="UseConcurrentHashMap"/>
+        <exclude name="DoNotUseThreads"/>
+        <exclude name="AvoidSynchronizedAtMethodLevel"/>
+        <exclude name="AvoidThreadGroup"/>
+        <exclude name="DontCallThreadRun"/>
+        <exclude name="DoubleCheckedLocking"/>
+        <exclude name="NonThreadSafeSingleton"/>
+        <exclude name="UseNotifyAllInsteadOfNotify"/>
+    </rule>
+
+    <!-- Performance -->
+    <rule ref="category/java/performance.xml">
+        <exclude name="AvoidInstantiatingObjectsInLoops"/>
+        <exclude name="RedundantFieldInitializer"/>
+        <exclude name="TooFewBranchesForSwitch"/>
+        <exclude name="UseStringBufferForStringAppends"/>
+        <exclude name="ConsecutiveLiteralAppends"/>
+        <exclude name="UseIndexOfChar"/>
+        <exclude name="InefficientStringBuffering"/>
+        <exclude name="InsufficientStringBufferDeclaration"/>
+        <exclude name="StringInstantiation"/>
+        <exclude name="StringToString"/>
+        <exclude name="UseStringBufferLength"/>
+        <exclude name="UselessStringValueOf"/>
+        <exclude name="OptimizableToArrayCall"/>
+        <exclude name="AddEmptyString"/>
+        <exclude name="AppendCharacterWithChar"/>
+        <exclude name="ConsecutiveAppendsShouldReuse"/>
+        <exclude name="UseArrayListInsteadOfVector"/>
+        <exclude name="UseArraysAsList"/>
+    </rule>
+
+    <!-- Custom Performance Rules -->
+    <rule ref="category/java/performance.xml/TooFewBranchesForSwitch">
+        <properties>
+            <property name="minimumNumberCaseForASwitch" value="3"/>
+        </properties>
+    </rule>
+
+    <!-- Security -->
+    <rule ref="category/java/security.xml">
+        <exclude name="HardCodedCryptoKey"/>
+        <exclude name="InsecureCryptoIv"/>
+    </rule>
+
+    <!-- Spring Boot Specific Exclusions -->
+    <rule ref="category/java/bestpractices.xml/SystemPrintln">
+        <properties>
+            <property name="violationSuppressRegex" value=".*Application\.java"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/bestpractices.xml/AvoidPrintStackTrace">
+        <properties>
+            <property name="violationSuppressRegex" value=".*Application\.java"/>
+        </properties>
+    </rule>
+
+    <!-- Test-specific exclusions -->
+    <rule ref="category/java/bestpractices.xml/UnitTestContainsTooManyAsserts">
+        <properties>
+            <property name="violationSuppressRegex" value=".*Test\.java"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/bestpractices.xml/UnitTestAssertionsShouldIncludeMessage">
+        <properties>
+            <property name="violationSuppressRegex" value=".*Test\.java"/>
+        </properties>
+    </rule>
+
+    <!-- Configuration classes exclusions -->
+    <rule ref="category/java/design.xml/UseUtilityClass">
+        <properties>
+            <property name="violationSuppressRegex" value=".*Config\.java|.*Configuration\.java"/>
+        </properties>
+    </rule>
+
+    <!-- Entity/DTO classes exclusions -->
+    <rule ref="category/java/design.xml/DataClass">
+        <properties>
+            <property name="violationSuppressRegex" value=".*/entities/.*\.java|.*/dtos/.*\.java"/>
+        </properties>
+    </rule>
+
+    <!-- Lombok annotations exclusions -->
+    <rule ref="category/java/codestyle.xml/AtLeastOneConstructor">
+        <properties>
+            <property name="violationSuppressRegex" value=".*/entities/.*\.java|.*/dtos/.*\.java"/>
+        </properties>
+    </rule>
+
+    <rule ref="category/java/documentation.xml/UncommentedEmptyConstructor">
+        <properties>
+            <property name="violationSuppressRegex" value=".*/entities/.*\.java|.*/dtos/.*\.java"/>
+        </properties>
+    </rule>
+</ruleset>

@@ -72,6 +72,8 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 - GitHub Actions
 - Spring Boot Actuator
 - Prometheus (metrics)
+- Checkstyle (code style enforcement)
+- PMD (static code analysis)
 
 ## 📋 Prerequisites
 
@@ -202,6 +204,25 @@ mvn test -Dtest=UsuarioControllerTest
 
 # Run tests with coverage report
 mvn verify
+```
+
+## ✅ Code Quality
+
+The project uses Checkstyle and PMD for code quality analysis:
+
+- **Checkstyle**: Enforces coding standards (`checkstyle-rules.xml`)
+- **PMD**: Static code analysis for best practices (`pmd-ruleset.xml`)
+
+Run the checks with:
+```bash
+# Checkstyle only
+mvn checkstyle:check
+
+# PMD only
+mvn pmd:check
+
+# Both (also runs during normal build)
+mvn clean verify
 ```
 
 ## 🔑 API Endpoints

@@ -38,8 +38,8 @@
 		<java.version>21</java.version>
 		<checkstyle.version>10.14.2</checkstyle.version>
 		<maven-checkstyle-plugin.version>3.3.1</maven-checkstyle-plugin.version>
-		<pmd.version>6.55.0</pmd.version>
-		<maven-pmd-plugin.version>3.21.0</maven-pmd-plugin.version>
+		<pmd.version>7.14.0</pmd.version>
+		<maven-pmd-plugin.version>3.27.0</maven-pmd-plugin.version>
 		<maven.compiler.source>21</maven.compiler.source>
 		<maven.compiler.target>21</maven.compiler.target>
 	</properties>

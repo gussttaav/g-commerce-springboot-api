@@ -8,6 +8,8 @@ import org.springframework.boot.env.EnvironmentPostProcessor;
 import org.springframework.core.env.ConfigurableEnvironment;
 import org.springframework.core.io.ClassPathResource;
 
+import lombok.extern.slf4j.Slf4j;
+
 /**
  * This class detects the presence of an SSL certificate and configures the appropriate profile.
  * Implements EnvironmentPostProcessor to process the environment before application startup.
@@ -18,6 +20,7 @@ import org.springframework.core.io.ClassPathResource;
  * @author Gustavo
  * @version 1.0
  */
+@Slf4j
 public class SslProfileDetector implements EnvironmentPostProcessor {
 
     private static final String FILESYSTEM_KEYSTORE_PATH = "/certs/keystore.p12"; // For Docker
@@ -37,17 +40,17 @@ public class SslProfileDetector implements EnvironmentPostProcessor {
         // Check if keystore exists in filesystem (Dockerized environment)
         File keystoreFile = new File(FILESYSTEM_KEYSTORE_PATH);
         if (keystoreFile.exists()) {
-            System.out.println("SSL certificate found at " + FILESYSTEM_KEYSTORE_PATH + ", enabling HTTPS profile.");
+            log.info("SSL certificate found at {} , enabling HTTPS profile.", FILESYSTEM_KEYSTORE_PATH);
             sslEnabled = true;
         } else {
             // Check if keystore exists in classpath (Development mode)
             try {
                 if (new ClassPathResource(CLASSPATH_KEYSTORE_PATH).getFile().exists()) {
-                    System.out.println("SSL certificate found in classpath, enabling HTTPS profile.");
+                    log.info("SSL certificate found in classpath, enabling HTTPS profile.");
                     sslEnabled = true;
                 }
             } catch (IOException e) {
-                System.out.println("No SSL certificate found in classpath.");
+                log.info("No SSL certificate found in classpath.");
             }
         }
 
@@ -56,7 +59,7 @@ public class SslProfileDetector implements EnvironmentPostProcessor {
             environment.setActiveProfiles("https");
         } else {
             environment.setActiveProfiles("http");
-            System.out.println("No SSL certificate found, using HTTP profile.");
+            log.info("No SSL certificate found, using HTTP profile.");
         }
     }
 }

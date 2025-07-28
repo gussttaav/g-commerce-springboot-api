@@ -13,6 +13,7 @@ import com.gplanet.commerce.api.entities.Usuario;
  * @version 1.0
  */
 @Mapper(componentModel = "spring")
+@SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface UsuarioMapper {
     /**
      * Converts a Usuario entity to a UsuarioResponseDTO.

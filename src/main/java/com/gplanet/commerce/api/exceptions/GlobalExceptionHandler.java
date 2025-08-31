@@ -244,14 +244,16 @@ public class GlobalExceptionHandler {
             MethodArgumentTypeMismatchException matex = (MethodArgumentTypeMismatchException) ex;
             String paramName = matex.getParameter().getParameterName();
             String requiredType;
-            if (matex.getRequiredType() != null) {
-                requiredType = matex.getRequiredType().getSimpleName();
+            Class<?> reqType = matex.getRequiredType();
+            if (reqType != null) {
+                requiredType = reqType.getSimpleName();
             } else {
                 requiredType = "desconocido";
             }
             String invalidValue;
-            if (matex.getValue() != null) {
-                invalidValue = matex.getValue().toString();
+            Object valueObj = matex.getValue();
+            if (valueObj != null) {
+                invalidValue = valueObj.toString();
             } else {
                 invalidValue = "null";
             }

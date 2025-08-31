@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.configs.security.ratelimiting;
 
+import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import com.gplanet.commerce.api.exceptions.RateLimitExceededException;
@@ -41,9 +42,9 @@ public class RateLimitInterceptor implements HandlerInterceptor {
      */
     @Override
     public boolean preHandle(
-        HttpServletRequest request, 
-        HttpServletResponse response, 
-        Object handler
+        @NonNull HttpServletRequest request, 
+        @NonNull HttpServletResponse response, 
+        @NonNull Object handler
     ) throws Exception {
         Bucket bucket = rateLimitingConfig.resolveBucket();
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);

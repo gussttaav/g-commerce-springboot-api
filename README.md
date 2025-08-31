@@ -144,7 +144,7 @@ After the image is pushed to Docker Hub the application is automatically deploye
 
 The project uses SpringDoc OpenAPI for interactive API documentation:
 
-- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
+- **Swagger UI**: `http://localhost:8080/swagger-ui`
   - Interactive documentation of all API endpoints
   - Ability to test endpoints directly from the browser
   - Detailed request and response schemas

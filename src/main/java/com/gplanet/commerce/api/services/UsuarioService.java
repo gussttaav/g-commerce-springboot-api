@@ -6,14 +6,17 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.LoginDTO;
+import com.gplanet.commerce.api.dtos.usuario.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
@@ -24,6 +27,7 @@ import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
+import com.gplanet.commerce.api.utilities.JwtTokenUtil;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -44,6 +48,9 @@ public class UsuarioService {
     private final UsuarioMapper usuarioMapper;
     private final UsuarioRepository usuarioRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenUtil jwtTokenUtil;
+    private final JwtProperties jwtProperties;
+    private final UsuarioDetallesService usuarioDetallesService; 
 
     /**
      * Registers a new user in the system.
@@ -96,13 +103,15 @@ public class UsuarioService {
      * Authenticates a user using email and password.
      * 
      * @param loginDTO Data transfer object containing login credentials
-     * @return UsuarioResponseDTO containing the authenticated user's information
+     * @return LoginResponseDTO containing the authenticated user's information and JWT token
      * @throws ResourceNotFoundException if user is not found
      * @throws InvalidPasswordException if password is incorrect
      */
-    public UsuarioResponseDTO login(LoginDTO loginDTO) {
+    public LoginResponseDTO login(LoginDTO loginDTO) {
         log.info("Login attempt for user: {}", loginDTO.email());
         try {
+            UserDetails userDetails = usuarioDetallesService.loadUserByUsername(loginDTO.email());
+
             Usuario usuario = usuarioRepository.findByEmail(loginDTO.email())
                 .orElseThrow(() -> new ResourceNotFoundException(
                     "No existe ningún usuario con el email proporcionado"
@@ -112,8 +121,17 @@ public class UsuarioService {
                 throw new InvalidPasswordException("Contraseña incorrecta.");
             }
 
+            // Generate JWT token
+            String token = jwtTokenUtil.generateToken(userDetails);
+
             log.info("Successful login for user: {}", loginDTO.email());
-            return usuarioMapper.toUsuarioResponseDTO(usuario);
+            return new LoginResponseDTO(
+                usuarioMapper.toUsuarioResponseDTO(usuario),
+                token,
+                "Bearer",
+                jwtProperties.getExpirationMs() / 1000
+            );
+            
         } catch (ResourceNotFoundException | InvalidPasswordException e) {
             log.warn("Login failed for user: {} - {}", loginDTO.email(), e.getMessage());
             throw e;

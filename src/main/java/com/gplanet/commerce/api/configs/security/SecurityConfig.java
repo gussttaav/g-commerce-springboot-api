@@ -7,14 +7,18 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
+import com.gplanet.commerce.api.filters.JwtAuthenticationFilter;
 import com.gplanet.commerce.api.services.UsuarioDetallesService;
 
 import lombok.RequiredArgsConstructor;
@@ -27,6 +31,7 @@ import lombok.RequiredArgsConstructor;
  * @version 1.0
  */
 @Configuration
+@EnableWebSecurity
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
@@ -35,6 +40,8 @@ public class SecurityConfig {
 
     private final CorsProperties corsProperties;
     private final UsuarioDetallesService customUserDetailsService;
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
     /**
      * Configures the security filter chain with specific security rules and permissions.
@@ -44,25 +51,52 @@ public class SecurityConfig {
      * @throws Exception if there's an error during configuration
      */
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http,  
+            JwtAuthenticationFilter jwtAuthenticationFilter) throws Exception {
+
         http
+            // CORS configuration
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+
+            // Disable CSRF for stateless API
             .csrf(csrf -> csrf.disable())
+
+            // Configure session management for stateless authentication
+            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+
+            // Configure exception handling - this is crucial for proper error responses
+            .exceptionHandling(exceptions -> exceptions
+                .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                .accessDeniedHandler(jwtAccessDeniedHandler)
+            )
+
+            // Configure authorization rules
             .authorizeHttpRequests(authz -> authz
+                // Public endpoints - no authentication required
                 .requestMatchers("/swagger-ui/**", "/v3/api-docs/**", "/favicon.ico").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
+
+                // Admin-only endpoints
                 .requestMatchers("/api/usuarios/admin/**").hasRole(ROLE_ADMIN)
-                .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
-                .requestMatchers("/api/usuarios/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/productos/listar").permitAll()
                 .requestMatchers("/api/productos/**").hasRole(ROLE_ADMIN)
+                .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)
+
+                // User-specific endpoints
+                .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
                 .requestMatchers("/api/compras/nueva").hasRole("USER")
                 .requestMatchers("/api/compras/**").authenticated()
-                .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)
+
+                // Mixed access endpoints
+                .requestMatchers("/api/usuarios/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/productos/listar").permitAll()
+                
+                // All other requests require authentication                
                 .anyRequest().authenticated()
             )
-            .httpBasic(httpBasic -> httpBasic.realmName("MyAppRealm"));
+
+            // Add JWT filter before the standard username/password authentication filter
+            .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
         
         return http.build();
     }

@@ -1,5 +1,14 @@
 # Spring Boot G-commerce API
 
+[![Build Status](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/docker-build.yml?branch=main&logo=github&logoColor=white)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/docker-build.yml)
+[![Deploy Status](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/aws-deploy.yml?branch=main&logo=amazonaws&logoColor=white&label=deploy)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/aws-deploy.yml)
+[![Health Check](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/health-check.yml?branch=main&logo=heart&logoColor=white&label=health)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/health-check.yml)
+[![API Documentation](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?logo=swagger&logoColor=white)](https://g-commerce.duckdns.org/swagger-ui/index.html)
+[![Code Quality](https://img.shields.io/badge/Code%20Quality-Checkstyle%20%7C%20PMD-blue?logo=codeclimate&logoColor=white)](https://github.com/gussttaav/g-commerce-springboot-api)
+[![Backend Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-backend?logo=docker&logoColor=white&label=backend%20pulls)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
+[![Database Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-mysql?logo=docker&logoColor=white&label=database%20pulls)](https://hub.docker.com/r/gussttaav/g-commerce-mysql)
+[![Docker Image Size](https://img.shields.io/docker/image-size/gussttaav/g-commerce-backend/latest?logo=docker&logoColor=white)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
+
 The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **user authentication, role-based access control, product management, shopping cart functionality, and purchase tracking**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
 
 ## 🚀 Features
@@ -42,10 +51,11 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
   - Mock MVC tests for controllers
   - In-memory H2 database for testing
 
-- **Continuous Integration**
-  - Automated Docker image builds via GitHub Actions
-  - Automatic image publishing to Docker Hub
+- **Continuous Integration via GitHub Actions**
+  - Automated Docker image build and publish to Docker Hub
   - Environment-based configuration management
+  - Automated deploy to an AWS EC2 instance pulling the created images
+  - Automated availabality monitoring after deployed
 
 - **Monitoring & Management**
   - Spring Boot Actuator integration for application monitoring
@@ -57,7 +67,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 ## 🛠️ Technologies
 
 - Java 21
-- Spring Boot 3.4.7
+- Spring Boot 3.4.9
 - Spring Security
 - Bucket4j (for rate limiting)
 - OpenAPI/Swagger

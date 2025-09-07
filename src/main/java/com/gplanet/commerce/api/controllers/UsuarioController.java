@@ -15,6 +15,7 @@ import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.LoginDTO;
+import com.gplanet.commerce.api.dtos.usuario.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
@@ -96,7 +97,7 @@ public class UsuarioController {
      * Authenticates a user with their credentials.
      * 
      * @param loginDTO the login credentials containing email and password
-     * @return UsuarioResponseDTO containing the authenticated user's information
+     * @return LoginResponseDTO containing the authenticated user's information
      * @throws ResourceNotFoundException if the user email is not found
      * @throws InvalidPasswordException if the user password is incorrect
      */
@@ -111,7 +112,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
     @PostMapping("/login")
-    public UsuarioResponseDTO login(
+    public LoginResponseDTO login(
             @Valid @RequestBody @Parameter(description = "User credentials", required = true) 
             LoginDTO loginDTO) {
         return usuarioService.login(loginDTO);

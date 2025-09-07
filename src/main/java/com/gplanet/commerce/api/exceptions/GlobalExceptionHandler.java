@@ -10,8 +10,6 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -150,54 +148,6 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(ex.getStatus()).body(error);
-    }
-
-    /**
-     * Handles Spring Security authentication exceptions.
-     * Triggered when authentication fails for any reason.
-     *
-     * @param ex The authentication exception
-     * @param request The current HTTP request
-     * @return ResponseEntity containing ApiErrorDTO with authentication error details
-     */
-    @ExceptionHandler(AuthenticationException.class)
-    public ResponseEntity<ApiErrorDTO> handleAuthenticationException(AuthenticationException ex,
-                                                                   HttpServletRequest request) {
-        log.warn("Authentication failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        ApiErrorDTO error = new ApiErrorDTO(
-                LocalDateTime.now(),
-                HttpStatus.UNAUTHORIZED.value(),
-                "Authentication Error",
-                ex.getMessage(),
-                request.getRequestURI(),
-                new ArrayList<>()
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-    }
-
-    /**
-     * Handles access denied exceptions from Spring Security.
-     * Triggered when an authenticated user lacks required permissions.
-     *
-     * @param ex The access denied exception
-     * @param request The current HTTP request
-     * @return ResponseEntity containing ApiErrorDTO with access denied details
-     */
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiErrorDTO> handleAccessDeniedException(AccessDeniedException ex,
-                                                                 HttpServletRequest request) {
-        log.warn("Access denied for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        ApiErrorDTO error = new ApiErrorDTO(
-                LocalDateTime.now(),
-                HttpStatus.FORBIDDEN.value(),
-                "Access Denied",
-                "No tiene permisos para realizar esta operación",
-                request.getRequestURI(),
-                new ArrayList<>()
-        );
-
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     /**

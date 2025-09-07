@@ -25,3 +25,6 @@ target/
 
 ### Exclude logs ###
 logs/
+
+### Exclude the endpoint testing files
+*.http

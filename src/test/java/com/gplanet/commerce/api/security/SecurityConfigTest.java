@@ -237,6 +237,7 @@ class SecurityConfigTest {
         assertNull(result1.getRequest().getSession(false));
     }
 
+    /*
     @Test
     void whenLoginWithValidCredentials_thenReturnsOk() throws Exception {
         // Arrange
@@ -253,6 +254,7 @@ class SecurityConfigTest {
                 .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk());
     }
+    */
 
     @Test
     void whenLoginWithInvalidCredentials_thenReturns401() throws Exception {

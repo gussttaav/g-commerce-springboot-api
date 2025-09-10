@@ -34,6 +34,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.producto.ProductStatus;
 import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;

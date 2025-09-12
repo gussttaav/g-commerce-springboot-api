@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.dtos.usuario;
+package com.gplanet.commerce.api.dtos.auth;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -9,10 +9,11 @@ import jakarta.validation.constraints.NotBlank;
  * This record encapsulates the credentials (email and password)
  * required for user authentication.
  *
- * @author Gustavo
- * @version 1.0
  * @param email The email address associated with the user account.
  * @param password The password for authentication.
+ * 
+ * @author Gustavo
+ * @version 1.0
  */
 @Schema(name = "Login", description = "Login request data")
 public record LoginDTO(

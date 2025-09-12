@@ -58,11 +58,10 @@ import com.gplanet.commerce.api.dtos.compra.CompraProductoResponseDTO;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.filters.JwtAuthenticationFilter;
 import com.gplanet.commerce.api.services.CompraService;
 import com.gplanet.commerce.api.services.UsuarioDetallesService;
 
-@WebMvcTest(controllers = CompraController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE, classes = JwtAuthenticationFilter.class))
+@WebMvcTest(controllers = CompraController.class, excludeFilters = @ComponentScan.Filter(type = FilterType.ASSIGNABLE_TYPE))
 @Import(TestSecurityConfig.class)
 class CompraControllerTest {
     

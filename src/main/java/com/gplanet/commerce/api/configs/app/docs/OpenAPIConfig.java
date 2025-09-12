@@ -28,7 +28,7 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 /**
  * Configuration class for OpenAPI documentation.
  * <p>This class sets up the Swagger/OpenAPI documentation for the API,
- * including security schemes, API information, and common responses.</p>
+ * including JWT security schemes, API information, and common responses.</p>
  *
  * <p><b>NOTE:</b> The class name 'OpenAPIConfig' intentionally uses the 
  * abbreviation 'API' with more than two uppercase letters to follow the 
@@ -41,15 +41,16 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
 @Configuration
 @OpenAPIDefinition(
     security = {
-        @SecurityRequirement(name = "basicAuth")
+        @SecurityRequirement(name = "bearerAuth")
     }
 )
 @SecurityScheme(
-    name = "basicAuth",
+    name = "bearerAuth",
     type = SecuritySchemeType.HTTP,
-    scheme = "basic",
+    scheme = "bearer",
+    bearerFormat = "JWT",
     in = SecuritySchemeIn.HEADER,
-    description = "Basic authentication credentials"
+    description = "JWT Bearer token authentication. Use format: Bearer {your-token}"
 )
 public class OpenAPIConfig {
 
@@ -79,7 +80,8 @@ public class OpenAPIConfig {
                 .info(new Info().title("G-commerce API")
                         .description(
                             "Spring Boot REST API that implements a basic e-commerce system with user authentication, "
-                            + "product management, and purchase tracking."
+                            + "product management, and purchase tracking. Features JWT-based authentication with RSA "
+                            + "signatures, role-based access control, and OpenID Connect discovery endpoints."
                         )
                         .version("v1.0")
                         .contact(new Contact()
@@ -89,18 +91,38 @@ public class OpenAPIConfig {
                             .url("https://opensource.org/licenses/MIT")))
                 .components(new Components()
                         .responses(new ApiResponses()
+                            // User-related errors
                             .addApiResponse("DuplicatedEmail", createErrorApiResponse("User email already exists"))
                             .addApiResponse("UserNotFound", createErrorApiResponse("User not found"))
                             .addApiResponse("InvalidPassword", createErrorApiResponse("Invalid password"))
+                            
+                            // General validation errors
                             .addApiResponse("InvalidInput", createErrorApiResponse("Invalid input data"))
-                            .addApiResponse("AccessDenied", createErrorApiResponse("Authentication failed"))
+                            
+                            // Authentication and authorization errors
+                            .addApiResponse("AccessDenied", createErrorApiResponse(
+                                "Authentication failed or access denied"))
                             .addApiResponse("AccessDeniedUser", createErrorApiResponse(
                                 "Access denied - Requires authentication with ADMIN role"))
                             .addApiResponse("AccessDeniedAdmin", createErrorApiResponse(
                                 "Access denied - Requires authentication with USER role"))
+                            
+                            // Product-related errors
                             .addApiResponse("DuplicatedProduct", createErrorApiResponse("Product already exists"))
                             .addApiResponse("ProductNotFound", createErrorApiResponse("Product not found"))
+                            
+                            // Data constraint errors
                             .addApiResponse("ConstraintError", createErrorApiResponse("Data constraint error"))
+                            
+                            // JWT Token-related errors
+                            .addApiResponse("InvalidToken", createErrorApiResponse("Invalid or malformed JWT token"))
+                            .addApiResponse("TokenExpired", createErrorApiResponse("JWT token has expired"))
+                            .addApiResponse("TokenBlacklisted", createErrorApiResponse("Token has been invalidated"))
+                            .addApiResponse("InvalidRefreshToken", createErrorApiResponse(
+                                "Invalid or expired refresh token"))
+                            .addApiResponse("RefreshTokenNotFound", createErrorApiResponse("Refresh token not found"))
+                            
+                            // Rate limiting errors
                             .addApiResponse("UnauthenticatedRateLimitExceeded", createErrorApiResponse(
                                 String.format(RATE_LIMIT_MSG, unauthenticatedCapacity, windowMinutes)))
                             .addApiResponse("UserRateLimitExceeded", createErrorApiResponse(

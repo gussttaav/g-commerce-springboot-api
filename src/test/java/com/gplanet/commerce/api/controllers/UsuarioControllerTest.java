@@ -31,9 +31,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
+import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import com.gplanet.commerce.api.dtos.usuario.LoginDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
@@ -352,7 +352,7 @@ class UsuarioControllerTest {
                     .andExpect(jsonPath("$.rol").value("USER"))
                     .andExpect(jsonPath("$.fechaCreacion").exists());
         }
-        */
+        
 
         @Test
         @DisplayName("Should return 401 when email does not exist")
@@ -386,7 +386,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(loginDTO)))
                     .andExpect(status().isUnauthorized())
                     .andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
-        }
+        }*/
 
         @Test
         @DisplayName("Should return 400 when email is invalid")

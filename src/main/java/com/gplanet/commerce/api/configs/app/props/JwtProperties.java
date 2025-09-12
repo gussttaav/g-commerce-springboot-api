@@ -25,15 +25,21 @@ import lombok.Data;
 @Component
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
-    /**
-     * The secret key used for signing and verifying JWT tokens.
-     */
-    private String secret;
 
     /**
      * The expiration time (in milliseconds) for the JWT token.
      */
     private long expirationMs;
+
+    /**
+     * Access token expiration (milliseconds).
+     */
+    private long accessExpirationMs;
+
+    /**
+     * Refresh token expiration (milliseconds).
+     */
+    private long refreshExpirationMs;
 
     /**
      * The issuer to be included in the JWT token's claims.

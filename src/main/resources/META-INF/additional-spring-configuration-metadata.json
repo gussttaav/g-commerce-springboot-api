@@ -82,11 +82,6 @@
       "defaultValue": 50
     },
     {
-      "name": "jwt.secret",
-      "type": "java.lang.String",
-      "description": "The secret key used for signing and verifying JWT tokens."
-    },
-    {
       "name": "jwt.expiration-ms",
       "type": "java.lang.Long",
       "description": "The expiration time (in milliseconds) for the JWT token."
@@ -95,6 +90,27 @@
       "name": "jwt.issuer",
       "type": "java.lang.String",
       "description": "The issuer to be included in the JWT token's claims."
+    },
+    {
+      "name": "jwt.access-expiration-ms",
+      "type": "java.lang.Long",
+      "description": "The expiration time (in milliseconds) for the access token."
+    },
+    {
+      "name": "jwt.refresh-expiration-ms",
+      "type": "java.lang.Long",
+      "description": "The expiration time (in milliseconds) for the refresh token."
+    },
+    {
+      "name": "oauth2.key-rotation.enabled",
+      "type": "java.lang.String",
+      "description": "Indicates if the key rotation is enabled.",
+      "defaultValue": "true"
+    },
+    {
+      "name": "oauth2.key-rotation.cron",
+      "type": "java.lang.String",
+      "description": "A cron job to schedule the key rotations."
     }
   ],
   "hints": [{

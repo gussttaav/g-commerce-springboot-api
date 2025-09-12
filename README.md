@@ -5,11 +5,9 @@
 [![Health Check](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/health-check.yml?branch=main&logo=heart&logoColor=white&label=health)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/health-check.yml)
 [![API Documentation](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?logo=swagger&logoColor=white)](https://g-commerce.duckdns.org/swagger-ui/index.html)
 [![Code Quality](https://img.shields.io/badge/Code%20Quality-Checkstyle%20%7C%20PMD-blue?logo=codeclimate&logoColor=white)](https://github.com/gussttaav/g-commerce-springboot-api)
-[![Backend Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-backend?logo=docker&logoColor=white&label=backend%20pulls)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
-[![Database Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-mysql?logo=docker&logoColor=white&label=database%20pulls)](https://hub.docker.com/r/gussttaav/g-commerce-mysql)
-[![Docker Image Size](https://img.shields.io/docker/image-size/gussttaav/g-commerce-backend/latest?logo=docker&logoColor=white)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
+[![Backend Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-backend?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
 
-The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **user authentication, role-based access control, product management, shopping cart functionality, and purchase tracking**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
+The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **JWT authentication with refresh tokens, role-based access control, product management, purchases and history tracking with pagination**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
 
 ## 🚀 Features
 
@@ -32,13 +30,21 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
   - Purchase history tracking with pagination
   - Role-specific purchase restrictions
 
+- **JWT Authentication & Authorization**
+  - OAuth2 Resource Server with RSA-signed JWT tokens
+  - Access and refresh token system with automatic token rotation
+  - Token blacklisting and secure logout functionality
+  - RSA key pair generation, storage, and scheduled rotation
+  - OpenID Connect discovery endpoints and JWKS support
+
 - **Security & SSL Support**
   - Rate limiting with token bucket algorithm
   - Role-based rate limits (Admin/User/Unauthenticated)
   - Automatic profile detection based on available SSL certificate
   - HTTPS configuration with SSL keystore
   - Environment-based profile activation
-  - Secure authentication with Spring Security
+  - RSA-based JWT token signing and validation
+  - Redis-based token storage and blacklisting
 
 - **Comprehensive Documentation**
   - Javadoc for code-level documentation
@@ -68,7 +74,9 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 - Java 21
 - Spring Boot 3.4.9
-- Spring Security
+- Spring Security (OAuth2 Resource Server)
+- NimbusDS JOSE+JWT library
+- Redis (for token storage and blacklisting)
 - Bucket4j (for rate limiting)
 - OpenAPI/Swagger
 - Spring Data JPA
@@ -102,11 +110,26 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 2. Create a `.env` file in the root directory with the following variables:
    ```env
+   # Database Configuration
    MYSQL_ROOT_PASSWORD=your_root_password
    MYSQL_USER=your_database_user
    MYSQL_PASSWORD=your_database_password
+   
+   # Redis Configuration
+   REDIS_PASSWORD=your_redis_password
+   
+   # Admin User Configuration
    ADMIN_EMAIL=admin@example.com
    ADMIN_PASSWORD=your_admin_password
+   
+   # JWT Configuration
+   JWT_ISSUER=g-commerce-api
+   JWT_ACCESS_EXPIRATION_MS=3600000
+   JWT_REFRESH_EXPIRATION_MS=86400000
+   
+   # OAuth2 Key Rotation (optional)
+   OAUTH2_KEY_ROTATION_ENABLED=true
+   OAUTH2_KEY_ROTATION_CRON=0 0 2 1 * ?
    ```
 
    #### HTTPS support (optional)
@@ -117,7 +140,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
     SSL_PASSWORD=your_ssl_password
     ```
 
-3. Start the MySQL database using Docker Compose:
+3. Start the MySQL database and Redis using Docker Compose:
    ```bash
    docker-compose -f docker-compose.db.yml up -d
    ```
@@ -162,6 +185,18 @@ The project uses SpringDoc OpenAPI for interactive API documentation:
 - **API Docs JSON**: `http://localhost:8080/v3/api-docs`
   - Machine-readable OpenAPI specification
   - Can be used for client code generation
+
+### JWKS and OpenID Connect Discovery
+
+The API exposes standard discovery endpoints for OAuth2 clients:
+
+- **JWKS Endpoint**: `/.well-known/jwks.json`
+  - JSON Web Key Set containing public keys for JWT verification
+  - Used by external services to validate JWT signatures
+
+- **OpenID Configuration**: `/.well-known/openid-configuration`
+  - OpenID Provider metadata following RFC 8414
+  - Configuration information for OAuth2 clients
 
 ### Javadoc
 
@@ -237,10 +272,17 @@ mvn clean verify
 
 ## 🔑 API Endpoints
 
+### Authentication
+```
+POST /api/auth/login            # Login with credentials, returns JWT tokens
+POST /api/auth/refresh          # Refresh access token using refresh token
+POST /api/auth/logout           # Logout and blacklist tokens
+GET  /api/auth/validate         # Validate JWT token
+```
+
 ### User Management
 ```
 POST /api/usuarios/registro         # Register a new user
-POST /api/usuarios/login            # Login a user
 PUT  /api/usuarios/perfil           # Update user profile
 GET  /api/usuarios/perfil           # Obtain the user profile
 PUT  /api/usuarios/password         # Change password
@@ -269,6 +311,12 @@ POST /api/compras/nueva            # Create a new purchase
 GET  /api/compras/listar           # List user purchases (paginated)
 ```
 
+### Discovery Endpoints
+```
+GET  /.well-known/jwks.json                   # JSON Web Key Set
+GET  /.well-known/openid-configuration        # OpenID Provider metadata
+```
+
 ### Monitoring Endpoints
 ```
 GET  /actuator/health              # Application health status
@@ -279,13 +327,69 @@ GET  /actuator/prometheus          # Prometheus-formatted metrics
 
 ## 🔒 Security
 
-- Basic authentication is implemented using Spring Security
+- JWT authentication using OAuth2 Resource Server with RSA-signed tokens
+- Access and refresh token system with secure token rotation
+- RSA key pair generation, storage, and scheduled rotation in Redis
+- Token blacklisting for secure logout functionality
 - Rate limiting implemented using token bucket algorithm
 - HTTPS support to encrypt communication between clients and the server
 - Passwords are encrypted using BCrypt
 - Role-based access control for different endpoints
 - Input validation for all endpoints
 - Comprehensive security documentation in OpenAPI spec
+
+## 📝 JWT Authentication Flow
+
+### 1. Login
+```bash
+POST /api/auth/login
+Content-Type: application/json
+
+{
+    "email": "user@example.com",
+    "password": "password123"
+}
+```
+
+**Response:**
+```json
+{
+    "usuario": {
+        "id": 1,
+        "nombre": "John Doe",
+        "email": "user@example.com",
+        "rol": "USER"
+    },
+    "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "tokenType": "Bearer",
+    "expiresIn": 3600,
+    "refreshToken": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshExpiresIn": 86400
+}
+```
+
+### 2. Authenticated Requests
+```bash
+GET /api/usuarios/perfil
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+### 3. Token Refresh
+```bash
+POST /api/auth/refresh
+Authorization: Bearer <refresh_token>
+```
+
+### 4. Logout
+```bash
+POST /api/auth/logout
+Authorization: Bearer <access_token>
+Content-Type: application/json
+
+{
+    "refreshToken": "<refresh_token>"
+}
+```
 
 ## 📝 Example Requests
 
@@ -304,7 +408,7 @@ Content-Type: application/json
 ### Create a Product (Admin only)
 ```bash
 POST /api/productos/crear
-Authorization: Basic base64(admin@example.com:password)
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
@@ -317,7 +421,7 @@ Content-Type: application/json
 ### Make a Purchase
 ```bash
 POST /api/compras/nueva
-Authorization: Basic base64(user@example.com:password)
+Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
@@ -348,9 +452,14 @@ src/
 │   │       │   └── web/
 │   │       ├── controllers/
 │   │       ├── dtos/
+│   │       │   ├── api/
+│   │       │   ├── auth/
+│   │       │   ├── compra/
+│   │       │   ├── jwks/
+│   │       │   ├── producto/
+│   │       │   └── usuario/
 │   │       ├── entities/
 │   │       ├── exceptions/
-│   │       ├── filters/
 │   │       ├── repositories/
 │   │       ├── services/
 │   │       └── utilities/

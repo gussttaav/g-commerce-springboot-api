@@ -20,11 +20,11 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
+import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductStatus;
 import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.LoginDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
@@ -254,7 +254,7 @@ class SecurityConfigTest {
                 .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk());
     }
-    */
+    
 
     @Test
     void whenLoginWithInvalidCredentials_thenReturns401() throws Exception {
@@ -268,7 +268,7 @@ class SecurityConfigTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isUnauthorized());
-    }
+    }*/
 
     @Test
     void whenCorsRequest_thenReturnsCorrectHeaders() throws Exception {

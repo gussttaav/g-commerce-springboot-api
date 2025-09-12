@@ -25,12 +25,6 @@ import lombok.Data;
 @Component
 @ConfigurationProperties(prefix = "jwt")
 public class JwtProperties {
-
-    /**
-     * The expiration time (in milliseconds) for the JWT token.
-     */
-    private long expirationMs;
-
     /**
      * Access token expiration (milliseconds).
      */

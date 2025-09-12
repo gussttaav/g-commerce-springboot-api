@@ -1,5 +1,8 @@
 package com.gplanet.commerce.api.services;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_NAME;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -28,7 +31,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
@@ -36,12 +38,13 @@ import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ApiException;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
+    private static final Long NON_EXISTENT_USER_ID = 999L;
+
     @Mock
     private UsuarioRepository usuarioRepository;
     
@@ -57,20 +60,20 @@ class UsuarioServiceTest {
     private Usuario createTestUsuario() {
         Usuario usuario = new Usuario();
         usuario.setId(1L);
-        usuario.setNombre("Test User");
-        usuario.setEmail("test@example.com");
-        usuario.setPassword("encodedPassword");
+        usuario.setNombre(TEST_NAME);
+        usuario.setEmail(TEST_USERNAME);
+        usuario.setPassword(TEST_PASSWD);
         usuario.setRol(Usuario.Role.USER);
         usuario.setFechaCreacion(LocalDateTime.now());
         return usuario;
     }
     
     private UsuarioDTO createTestUsuarioDTO() {
-        return new UsuarioDTO("Test User", "test@example.com", "password123");
+        return new UsuarioDTO(TEST_NAME, TEST_USERNAME, "password123");
     }
     
     @Test
-    void registrarUsuario_ValidData_Success() {
+    void registrarUsuarioValidDataSuccess() {
         // Arrange
         UsuarioDTO usuarioDTO = createTestUsuarioDTO();
         Usuario savedUsuario = createTestUsuario();
@@ -78,7 +81,7 @@ class UsuarioServiceTest {
             1L, usuarioDTO.nombre(), usuarioDTO.email(), 
             Usuario.Role.USER, savedUsuario.getFechaCreacion());
         
-        when(passwordEncoder.encode(usuarioDTO.password())).thenReturn("encodedPassword");
+        when(passwordEncoder.encode(usuarioDTO.password())).thenReturn(TEST_PASSWD);
         when(usuarioRepository.save(any(Usuario.class))).thenReturn(savedUsuario);
         when(usuarioMapper.toUsuarioResponseDTO(savedUsuario)).thenReturn(expectedResponse);
         
@@ -97,11 +100,11 @@ class UsuarioServiceTest {
     }
     
     @Test
-    void registrarUsuario_ExistingEmail_ThrowsException() {
+    void registrarUsuarioExistingEmailThrowsException() {
         // Arrange
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", "existing@example.com", "password123");
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_NAME, "existing@example.com", "password123");
         
-        when(passwordEncoder.encode(usuarioDTO.password())).thenReturn("encodedPassword");
+        when(passwordEncoder.encode(usuarioDTO.password())).thenReturn(TEST_PASSWD);
         when(usuarioRepository.save(any(Usuario.class)))
             .thenThrow(new DataIntegrityViolationException("Duplicate email"));
         
@@ -113,7 +116,7 @@ class UsuarioServiceTest {
     }
     
     @Test
-    void actualizarPerfil_ValidData_Success() {
+    void actualizarPerfilValidDataSuccess() {
         // Arrange
         Usuario existingUser = createTestUsuario();
         String userEmail = existingUser.getEmail();
@@ -140,9 +143,9 @@ class UsuarioServiceTest {
     }
     
     @Test
-    void cambiarContrasena_ValidData_Success() {
+    void cambiarContrasenaValidDataSuccess() {
         // Arrange
-        String userEmail = "test@example.com";
+        String userEmail = TEST_USERNAME;
         CambioPasswdDTO contrasenaDTO = new CambioPasswdDTO("oldPassword", "newPassword", "newPassword");
         
         Usuario usuario = new Usuario();
@@ -160,78 +163,21 @@ class UsuarioServiceTest {
         assertEquals("encodedNewPassword", usuario.getPassword());
     }
 
-    /*
-    @Test
-    void login_ValidCredentials_Success() {
-        // Arrange
-        String email = "test@example.com";
-        String password = "password123";
-        Usuario usuario = createTestUsuario();
-        LoginDTO loginDTO = new LoginDTO(email, password);
-        UsuarioResponseDTO expectedResponse = new UsuarioResponseDTO(
-            usuario.getId(), usuario.getNombre(), usuario.getEmail(), 
-            usuario.getRol(), usuario.getFechaCreacion()
-        );
-
-        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
-        when(passwordEncoder.matches(password, usuario.getPassword())).thenReturn(true);
-        when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(expectedResponse);
-
-        // Act
-        UsuarioResponseDTO result = usuarioService.login(loginDTO);
-
-        // Assert
-        assertNotNull(result);
-        assertEquals(expectedResponse.id(), result.id());
-        assertEquals(expectedResponse.nombre(), result.nombre());
-        assertEquals(expectedResponse.email(), result.email());
-        assertEquals(expectedResponse.rol(), result.rol());
-    }
-    */
-
-    /*@Test
-    void login_InvalidPassword_ThrowsException() {
-        // Arrange
-        String email = "test@example.com";
-        String password = "wrongPassword";
-        Usuario usuario = createTestUsuario();
-        LoginDTO loginDTO = new LoginDTO(email, password);
-
-        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
-        when(passwordEncoder.matches(password, usuario.getPassword())).thenReturn(false);
-
-        // Act & Assert
-        assertThrows(InvalidPasswordException.class, () -> usuarioService.login(loginDTO));
-    }
 
     @Test
-    void login_NonExistentEmail_ThrowsException() {
+    void obtenerPerfilExistingUserSuccess() {
         // Arrange
-        String email = "nonexistent@example.com";
-        String password = "password123";
-        LoginDTO loginDTO = new LoginDTO(email, password);
-
-        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> usuarioService.login(loginDTO));
-    }*/
-
-    @Test
-    void obtenerPerfil_ExistingUser_Success() {
-        // Arrange
-        String email = "test@example.com";
         Usuario usuario = createTestUsuario();
         UsuarioResponseDTO expectedResponse = new UsuarioResponseDTO(
             usuario.getId(), usuario.getNombre(), usuario.getEmail(), 
             usuario.getRol(), usuario.getFechaCreacion()
         );
 
-        when(usuarioRepository.findByEmail(email)).thenReturn(Optional.of(usuario));
+        when(usuarioRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(usuario));
         when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(expectedResponse);
 
         // Act
-        UsuarioResponseDTO result = usuarioService.obtenerPerfil(email);
+        UsuarioResponseDTO result = usuarioService.obtenerPerfil(TEST_USERNAME);
 
         // Assert
         assertNotNull(result);
@@ -240,12 +186,12 @@ class UsuarioServiceTest {
         assertEquals(expectedResponse.email(), result.email());
         assertEquals(expectedResponse.rol(), result.rol());
         
-        verify(usuarioRepository).findByEmail(email);
+        verify(usuarioRepository).findByEmail(TEST_USERNAME);
         verify(usuarioMapper).toUsuarioResponseDTO(usuario);
     }
 
     @Test
-    void obtenerPerfil_NonExistentUser_ThrowsException() {
+    void obtenerPerfilNonExistentUserThrowsException() {
         // Arrange
         String email = "nonexistent@example.com";
         when(usuarioRepository.findByEmail(email)).thenReturn(Optional.empty());
@@ -259,7 +205,7 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void listarUsuarios_Success() {
+    void listarUsuariosSuccess() {
         // Arrange
         List<Usuario> usuarios = Arrays.asList(
             createTestUsuario(),
@@ -270,7 +216,6 @@ class UsuarioServiceTest {
             .map(u -> new UsuarioResponseDTO(u.getId(), u.getNombre(), 
                 u.getEmail(), u.getRol(), u.getFechaCreacion()))
             .collect(Collectors.toList());
-        Page<UsuarioResponseDTO> expectedPage = new PageImpl<>(expectedResponses);
 
         when(usuarioRepository.findAll(any(Pageable.class))).thenReturn(usuariosPage);
         when(usuarioMapper.toUsuarioResponseDTO(any(Usuario.class)))
@@ -280,6 +225,7 @@ class UsuarioServiceTest {
         Page<UsuarioResponseDTO> result = usuarioService.listarUsuarios(0, 10, "email", "ASC");
 
         // Assert
+        Page<UsuarioResponseDTO> expectedPage = new PageImpl<>(expectedResponses);
         assertNotNull(result);
         assertEquals(2, result.getContent().size());
         assertEquals(expectedPage.getTotalElements(), result.getTotalElements());
@@ -288,7 +234,7 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void cambiarRol_ExistingUser_Success() {
+    void cambiarRolExistingUserSuccess() {
         // Arrange
         Long userId = 1L;
         Usuario usuario = createTestUsuario();
@@ -307,23 +253,22 @@ class UsuarioServiceTest {
     }
 
     @Test
-    void cambiarRol_NonExistentUser_ThrowsException() {
+    void cambiarRolNonExistentUserThrowsException() {
         // Arrange
-        Long userId = 999L;
         Usuario.Role newRole = Usuario.Role.ADMIN;
 
-        when(usuarioRepository.findById(userId)).thenReturn(Optional.empty());
+        when(usuarioRepository.findById(NON_EXISTENT_USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> 
-            usuarioService.cambiarRol(userId, newRole));
+            usuarioService.cambiarRol(NON_EXISTENT_USER_ID, newRole));
         
-        verify(usuarioRepository).findById(userId);
+        verify(usuarioRepository).findById(NON_EXISTENT_USER_ID);
         verify(usuarioRepository, never()).save(any());
     }
 
     @Test
-    void cambiarRol_SameRole_Success() {
+    void cambiarRolSameRoleSuccess() {
         // Arrange
         Long userId = 1L;
         Usuario usuario = createTestUsuario();

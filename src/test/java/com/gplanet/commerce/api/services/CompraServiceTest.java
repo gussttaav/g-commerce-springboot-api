@@ -93,9 +93,9 @@ class CompraServiceTest {
         producto2.setPrecio(new BigDecimal("200.00"));
         
         // Setup CompraDTO
-        CompraProductoDTO compraProductoDTO1 = new CompraProductoDTO(1L, 2);
-        CompraProductoDTO compraProductoDTO2 = new CompraProductoDTO(2L, 1);
-        compraDTO = new CompraDTO(Arrays.asList(compraProductoDTO1, compraProductoDTO2));
+        CompraProductoDTO compraProductoDto1 = new CompraProductoDTO(1L, 2);
+        CompraProductoDTO compraProductoDto2 = new CompraProductoDTO(2L, 1);
+        compraDTO = new CompraDTO(Arrays.asList(compraProductoDto1, compraProductoDto2));
         
         // Setup Compra
         compra = new Compra();
@@ -113,9 +113,13 @@ class CompraServiceTest {
             null // productos, no se usan en los asserts
         );
     }
+
+    private Page<CompraResponseDTO> listOnePagePurchasesSortDescByDate(String username) {
+        return compraService.listarCompras(username, 0, 10, "fecha", "DESC");
+    }
     
     @Test
-    void listarCompras_UserRole_ReturnsUserCompras() {
+    void listarComprasUserRoleReturnsUserCompras() {
         // Arrange
         Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
@@ -126,13 +130,7 @@ class CompraServiceTest {
             .thenReturn(compraResponseDTO);
             
         // Act
-        Page<CompraResponseDTO> result = compraService.listarCompras(
-            usuarioNormal.getEmail(), 
-            0, 
-            10, 
-            "fecha", 
-            "DESC"
-        );
+        Page<CompraResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioNormal.getEmail());
         
         // Assert
         assertNotNull(result);
@@ -143,7 +141,7 @@ class CompraServiceTest {
     }
 
     @Test
-    void listarCompras_AdminRole_ReturnsAllCompras() {
+    void listarComprasAdminRoleReturnsAllCompras() {
         // Arrange
         Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
         when(usuarioRepository.findByEmail(usuarioAdmin.getEmail()))
@@ -154,13 +152,7 @@ class CompraServiceTest {
             .thenReturn(compraResponseDTO);
             
         // Act
-        Page<CompraResponseDTO> result = compraService.listarCompras(
-            usuarioAdmin.getEmail(), 
-            0, 
-            10, 
-            "fecha", 
-            "DESC"
-        );
+        Page<CompraResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioAdmin.getEmail());
         
         // Assert
         assertNotNull(result);
@@ -171,18 +163,18 @@ class CompraServiceTest {
     }
 
     @Test
-    void listarCompras_UserNotFound_ThrowsException() {
+    void listarComprasUserNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
         assertThrows(UsernameNotFoundException.class,
-            () -> compraService.listarCompras("nonexistent@example.com", 0, 10, "fecha", "DESC"));
+            () -> listOnePagePurchasesSortDescByDate("nonexistent@example.com"));
     }
     
     @Test
-    void realizarCompra_Success() {
+    void realizarCompraSuccess() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
@@ -206,7 +198,7 @@ class CompraServiceTest {
     }
     
     @Test
-    void realizarCompra_UserNotFound_ThrowsException() {
+    void realizarCompraUserNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
@@ -217,7 +209,7 @@ class CompraServiceTest {
     }
     
     @Test
-    void realizarCompra_ProductNotFound_ThrowsException() {
+    void realizarCompraProductNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
@@ -230,7 +222,7 @@ class CompraServiceTest {
     }
     
     @Test
-    void realizarCompra_CalculatesCorrectTotal() {
+    void realizarCompraCalculatesCorrectTotal() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));

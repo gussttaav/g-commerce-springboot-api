@@ -24,6 +24,11 @@ import com.gplanet.commerce.api.entities.Usuario;
 @DataJpaTest
 @ActiveProfiles("test")
 class CompraRepositoryTest {
+
+    private static final BigDecimal PRICE_10 = new BigDecimal("10.00");
+    private static final BigDecimal PRICE_20 = new BigDecimal("20.00");
+    private static final Sort SORT_DESC_BY_DATE = Sort.by(Sort.Direction.DESC, "fecha");
+
     @Autowired
     private CompraRepository compraRepository;
     
@@ -49,23 +54,23 @@ class CompraRepositoryTest {
         // Setup test product
         producto = new Producto();
         producto.setNombre("Test Product");
-        producto.setPrecio(new BigDecimal("10.00"));
+        producto.setPrecio(PRICE_10);
         producto.setActivo(true);
         productoRepository.save(producto);
     }
     
     @Test
-    void save_ValidCompra_Success() {
+    void saveValidCompraSuccess() {
         // Arrange
         Compra compra = new Compra();
         compra.setUsuario(usuario);
         compra.setFecha(LocalDateTime.now());
-        compra.setTotal(new BigDecimal("20.00"));
+        compra.setTotal(PRICE_20);
         
         CompraProducto compraProducto = new CompraProducto();
         compraProducto.setProducto(producto);
         compraProducto.setCantidad(2);
-        compraProducto.setSubtotal(new BigDecimal("20.00"));
+        compraProducto.setSubtotal(PRICE_20);
         
         compra.addCompraProducto(compraProducto);
         
@@ -80,24 +85,24 @@ class CompraRepositoryTest {
     }
     
     @Test
-    void findByUsuarioId_ExistingUser_ReturnsCompras() {
+    void findByUsuarioIdExistingUserReturnsCompras() {
         // Arrange
         Compra compra1 = new Compra();
         compra1.setUsuario(usuario);
         compra1.setFecha(LocalDateTime.now());
-        compra1.setTotal(new BigDecimal("10.00"));
+        compra1.setTotal(PRICE_10);
         compraRepository.save(compra1);
         
         Compra compra2 = new Compra();
         compra2.setUsuario(usuario);
         compra2.setFecha(LocalDateTime.now());
-        compra2.setTotal(new BigDecimal("20.00"));
+        compra2.setTotal(PRICE_20);
         compraRepository.save(compra2);
         
         // Act
         Page<Compra> comprasPage = compraRepository.findByUsuario(
             usuario,
-            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+            PageRequest.of(0, 10, SORT_DESC_BY_DATE)
         );
         
         // Assert
@@ -107,24 +112,24 @@ class CompraRepositoryTest {
     }
 
     @Test
-    void findByUsuario_ExistingUser_ReturnsCompras() {
+    void findByUsuarioExistingUserReturnsCompras() {
         // Arrange
         Compra compra1 = new Compra();
         compra1.setUsuario(usuario);
         compra1.setFecha(LocalDateTime.now());
-        compra1.setTotal(new BigDecimal("10.00"));
+        compra1.setTotal(PRICE_10);
         compraRepository.save(compra1);
         
         Compra compra2 = new Compra();
         compra2.setUsuario(usuario);
         compra2.setFecha(LocalDateTime.now());
-        compra2.setTotal(new BigDecimal("20.00"));
+        compra2.setTotal(PRICE_20);
         compraRepository.save(compra2);
         
         // Act
         Page<Compra> comprasPage = compraRepository.findByUsuario(
             usuario, 
-            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+            PageRequest.of(0, 10, SORT_DESC_BY_DATE)
         );
         
         // Assert
@@ -134,22 +139,21 @@ class CompraRepositoryTest {
     }
 
     @Test
-    void findByFechaBetween_DateRange_ReturnsCorrectCompras() {
+    void findByFechaBetweenDateRangeReturnsCorrectCompras() {
         // Arrange
-        LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
-        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
-        
         Compra compra = new Compra();
         compra.setUsuario(usuario);
         compra.setFecha(LocalDateTime.now());
-        compra.setTotal(new BigDecimal("10.00"));
+        compra.setTotal(PRICE_10);
         compraRepository.save(compra);
         
         // Act
+        LocalDateTime yesterday = LocalDateTime.now().minusDays(1);
+        LocalDateTime tomorrow = LocalDateTime.now().plusDays(1);
         Page<Compra> comprasPage = compraRepository.findByFechaBetween(
             yesterday, 
             tomorrow,
-            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+            PageRequest.of(0, 10, SORT_DESC_BY_DATE)
         );
         
         // Assert

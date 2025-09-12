@@ -19,7 +19,10 @@ import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
+import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
+import com.gplanet.commerce.api.exceptions.TokenBlacklistException;
+import com.gplanet.commerce.api.exceptions.TokenStorageException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.nimbusds.jwt.SignedJWT;
 
@@ -162,7 +165,7 @@ public class AuthService {
             log.info("User logged out successfully. Tokens blacklisted.");
         } catch (Exception e) {
             log.error("Error during logout", e);
-            throw new RuntimeException("Logout failed");
+            throw new LogoutFailedException("Logout failed");
         }
     }
 
@@ -212,7 +215,7 @@ public class AuthService {
             );
         } catch (Exception e) {
             log.error("Failed to store refresh token", e);
-            throw new RuntimeException("Failed to store refresh token");
+            throw new TokenStorageException("Failed to store refresh token");
         }
     }
 
@@ -232,7 +235,7 @@ public class AuthService {
         
         // Check if refresh token is blacklisted
         if (isTokenBlacklisted(refreshToken)) {
-            throw new RuntimeException("Refresh token is blacklisted");
+            throw new TokenBlacklistException("Refresh token is blacklisted");
         }
     }
 
@@ -257,7 +260,7 @@ public class AuthService {
             }
         } catch (Exception e) {
             log.error("Failed to blacklist token", e);
-            throw new RuntimeException("Failed to blacklist token");
+            throw new TokenBlacklistException("Failed to blacklist token");
         }
     }
 

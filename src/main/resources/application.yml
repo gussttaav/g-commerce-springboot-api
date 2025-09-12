@@ -30,7 +30,6 @@ admin:
 
 # JWT Configuration from environment variables
 jwt:
-  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
   issuer: ${JWT_ISSUER:g-commerce-api}
   access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:3600000}
   refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:86400000}

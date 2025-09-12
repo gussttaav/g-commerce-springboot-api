@@ -2,10 +2,10 @@ package com.gplanet.commerce.api.configs;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ROLE_ADMIN;
 import static com.gplanet.commerce.api.testutils.TestConstants.ROLE_USER;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_EMAIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_USERNAME;
 import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_PASSWD;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USER_EMAIL;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USER_PASSWD;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
 
 import java.util.Arrays;
 

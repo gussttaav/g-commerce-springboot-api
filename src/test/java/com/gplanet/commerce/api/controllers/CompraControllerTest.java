@@ -2,10 +2,10 @@ package com.gplanet.commerce.api.controllers;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ROLE_ADMIN;
 import static com.gplanet.commerce.api.testutils.TestConstants.ROLE_USER;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_EMAIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_USERNAME;
 import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_PASSWD;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USER_EMAIL;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USER_PASSWD;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
 import static org.hamcrest.Matchers.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -78,7 +78,6 @@ class CompraControllerTest {
     private UsuarioDetallesService usuarioDetallesService;
     
     private static final String BASE_URL = "/api/compras";
-    private static final String TEST_USER_EMAIL = "test@example.com";
     
     @BeforeEach
     void setUp() {
@@ -88,14 +87,14 @@ class CompraControllerTest {
     }
 
     @Test
-    @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
+    @WithMockUser(username = TEST_USERNAME, roles = "USER")
     @DisplayName("Should create purchase successfully when valid data is provided")
     void realizarCompra_ValidData_ReturnsCreatedPurchase() throws Exception {
         // Arrange
         CompraDTO requestDTO = createValidCompraDTO();
         CompraResponseDTO responseDTO = createMockCompraResponseDTO();
 
-        when(compraService.realizarCompra(eq(TEST_USER_EMAIL), any(CompraDTO.class)))
+        when(compraService.realizarCompra(eq(TEST_USERNAME), any(CompraDTO.class)))
             .thenReturn(responseDTO);
 
         // Act & Assert
@@ -110,7 +109,7 @@ class CompraControllerTest {
             .andExpect(jsonPath("$.productos[0].productoNombre").value("Producto 1"))
             .andExpect(jsonPath("$.productos[1].productoNombre").value("Producto 2"));
 
-        verify(compraService).realizarCompra(eq(TEST_USER_EMAIL), any(CompraDTO.class));
+        verify(compraService).realizarCompra(eq(TEST_USERNAME), any(CompraDTO.class));
     }
 
     /*@Test
@@ -121,7 +120,7 @@ class CompraControllerTest {
 
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/nueva")
-                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .with(user(TEST_USERNAME).roles("USER"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(emptyCompraDTO)))
             .andExpect(status().isBadRequest())
@@ -138,7 +137,7 @@ class CompraControllerTest {
 
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/nueva")
-                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .with(user(TEST_USERNAME).roles("USER"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(invalidCompraDTO)))
             .andExpect(status().isBadRequest())
@@ -152,12 +151,12 @@ class CompraControllerTest {
         // Arrange
         CompraDTO validCompraDTO = createValidCompraDTO();
         
-        when(compraService.realizarCompra(eq(TEST_USER_EMAIL), any(CompraDTO.class)))
+        when(compraService.realizarCompra(eq(TEST_USERNAME), any(CompraDTO.class)))
             .thenThrow(new ResourceNotFoundException("Producto no encontrado"));
 
         // Act & Assert
         mockMvc.perform(post(BASE_URL + "/nueva")
-                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .with(user(TEST_USERNAME).roles("USER"))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validCompraDTO)))
             .andExpect(status().isNotFound())
@@ -191,7 +190,7 @@ class CompraControllerTest {
         );
         
         when(compraService.listarCompras(
-                eq(TEST_USER_EMAIL), 
+                eq(TEST_USERNAME), 
                 eq(0), 
                 eq(10), 
                 eq("fecha"), 
@@ -200,7 +199,7 @@ class CompraControllerTest {
 
         // Act & Assert
         mockMvc.perform(get(BASE_URL + "/listar")
-                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .with(user(TEST_USERNAME).roles("USER"))
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", "fecha")
@@ -216,7 +215,7 @@ class CompraControllerTest {
             .andExpect(jsonPath("$.pageSize").value(10))
             .andExpect(jsonPath("$.pageNumber").value(0));
 
-        verify(compraService).listarCompras(eq(TEST_USER_EMAIL), eq(0), eq(10), eq("fecha"), eq("DESC"));
+        verify(compraService).listarCompras(eq(TEST_USERNAME), eq(0), eq(10), eq("fecha"), eq("DESC"));
     }
 
     @Test
@@ -230,7 +229,7 @@ class CompraControllerTest {
         );
         
         when(compraService.listarCompras(
-            eq(TEST_USER_EMAIL),
+            eq(TEST_USERNAME),
             eq(0),
             eq(10),
             eq("fecha"),
@@ -239,7 +238,7 @@ class CompraControllerTest {
 
         // Act & Assert
         mockMvc.perform(get(BASE_URL + "/listar")
-                .with(user(TEST_USER_EMAIL).roles("USER"))
+                .with(user(TEST_USERNAME).roles("USER"))
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", "fecha")
@@ -250,7 +249,7 @@ class CompraControllerTest {
             .andExpect(jsonPath("$.totalPages").value(0));
 
         verify(compraService).listarCompras(
-            eq(TEST_USER_EMAIL),
+            eq(TEST_USERNAME),
             eq(0),
             eq(10),
             eq("fecha"),

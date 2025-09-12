@@ -1,5 +1,10 @@
 package com.gplanet.commerce.api.repositories;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_USERNAME;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_PASSWD;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_NAME;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
+import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -24,12 +29,12 @@ class UsuarioRepositoryTest {
     private UsuarioRepository usuarioRepository;
     
     @Test
-    void save_ValidUser_Success() {
+    void saveValidUserSuccess() {
         // Arrange
         Usuario usuario = new Usuario();
-        usuario.setNombre("Test User");
-        usuario.setEmail("test@example.com");
-        usuario.setPassword("password");
+        usuario.setNombre(TEST_NAME);
+        usuario.setEmail(TEST_USERNAME);
+        usuario.setPassword(TEST_ADMIN_PASSWD);
         usuario.setRol(Usuario.Role.USER);
         usuario.setFechaCreacion(LocalDateTime.now());
         
@@ -38,23 +43,23 @@ class UsuarioRepositoryTest {
         
         // Assert
         assertNotNull(savedUsuario.getId());
-        assertEquals("test@example.com", savedUsuario.getEmail());
+        assertEquals(TEST_USERNAME, savedUsuario.getEmail());
         assertEquals(Usuario.Role.USER, savedUsuario.getRol());
     }
     
     @Test
-    void save_DuplicateEmail_ThrowsException() {
+    void saveDuplicateEmailThrowsException() {
         // Arrange
         Usuario usuario1 = new Usuario();
         usuario1.setNombre("User 1");
-        usuario1.setEmail("duplicate@example.com");
+        usuario1.setEmail(TEST_USERNAME);
         usuario1.setPassword("password1");
         usuario1.setRol(Usuario.Role.USER);
         usuarioRepository.save(usuario1);
         
         Usuario usuario2 = new Usuario();
         usuario2.setNombre("User 2");
-        usuario2.setEmail("duplicate@example.com"); // Same email
+        usuario2.setEmail(TEST_USERNAME); // Same username
         usuario2.setPassword("password2");
         usuario2.setRol(Usuario.Role.USER);
         
@@ -66,37 +71,37 @@ class UsuarioRepositoryTest {
     }
     
     @Test
-    void findByEmail_ExistingEmail_ReturnsUser() {
+    void findByEmailExistingEmailReturnsUser() {
         // Arrange
         Usuario usuario = new Usuario();
-        usuario.setNombre("Test User");
-        usuario.setEmail("test@example.com");
-        usuario.setPassword("password");
+        usuario.setNombre(TEST_NAME);
+        usuario.setEmail(TEST_USERNAME);
+        usuario.setPassword(TEST_PASSWD);
         usuario.setRol(Usuario.Role.USER);
         usuarioRepository.save(usuario);
         
         // Act
-        Optional<Usuario> foundUsuario = usuarioRepository.findByEmail("test@example.com");
+        Optional<Usuario> foundUsuario = usuarioRepository.findByEmail(TEST_USERNAME);
         
         // Assert
         assertTrue(foundUsuario.isPresent());
-        assertEquals("test@example.com", foundUsuario.get().getEmail());
+        assertEquals(TEST_USERNAME, foundUsuario.get().getEmail());
     }
     
     @Test
-    void findByRol_AdminRole_ReturnsAdminUsers() {
+    void findByRolAdminRoleReturnsAdminUsers() {
         // Arrange
         Usuario adminUser = new Usuario();
-        adminUser.setNombre("Admin User");
-        adminUser.setEmail("admin@example.com");
-        adminUser.setPassword("password");
+        adminUser.setNombre(TEST_NAME);
+        adminUser.setEmail(TEST_ADMIN_USERNAME);
+        adminUser.setPassword(TEST_ADMIN_PASSWD);
         adminUser.setRol(Usuario.Role.ADMIN);
         usuarioRepository.save(adminUser);
         
         Usuario regularUser = new Usuario();
-        regularUser.setNombre("Regular User");
-        regularUser.setEmail("user@example.com");
-        regularUser.setPassword("password");
+        regularUser.setNombre(TEST_NAME);
+        regularUser.setEmail(TEST_USERNAME);
+        regularUser.setPassword(TEST_ADMIN_PASSWD);
         regularUser.setRol(Usuario.Role.USER);
         usuarioRepository.save(regularUser);
         

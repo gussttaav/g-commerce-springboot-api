@@ -21,16 +21,22 @@ import com.gplanet.commerce.api.entities.Producto;
 @DataJpaTest
 @ActiveProfiles("test")
 class ProductoRepositoryTest {
+
+    private static final String TEST_PRODUCT_NAME = "Test Product";
+    private static final String TEST_PRODUCT_DESC = "Test Product Description";
+    private static final BigDecimal PRICE_99 = new BigDecimal("99.99");
+    
+
     @Autowired
     private ProductoRepository productoRepository;
     
     @Test
-    void save_ValidProduct_Success() {
+    void saveValidProductSuccess() {
         // Arrange
         Producto producto = new Producto();
-        producto.setNombre("Test Product");
-        producto.setDescripcion("Test Description");
-        producto.setPrecio(new BigDecimal("99.99"));
+        producto.setNombre(TEST_PRODUCT_NAME);
+        producto.setDescripcion(TEST_PRODUCT_DESC);
+        producto.setPrecio(PRICE_99);
         producto.setActivo(true);
         producto.setFechaCreacion(LocalDateTime.now());
         
@@ -39,21 +45,21 @@ class ProductoRepositoryTest {
         
         // Assert
         assertNotNull(savedProducto.getId());
-        assertEquals("Test Product", savedProducto.getNombre());
-        assertEquals(new BigDecimal("99.99"), savedProducto.getPrecio());
+        assertEquals(TEST_PRODUCT_NAME, savedProducto.getNombre());
+        assertEquals(PRICE_99, savedProducto.getPrecio());
     }
     
     @Test
-    void save_DuplicateProductName_ThrowsException() {
+    void saveDuplicateProductNameThrowsException() {
         // Arrange
         Producto producto1 = new Producto();
-        producto1.setNombre("Test Product");
-        producto1.setPrecio(new BigDecimal("99.99"));
+        producto1.setNombre(TEST_PRODUCT_NAME);
+        producto1.setPrecio(PRICE_99);
         producto1.setActivo(true);
         productoRepository.save(producto1);
         
         Producto producto2 = new Producto();
-        producto2.setNombre("Test Product"); // Same name
+        producto2.setNombre(TEST_PRODUCT_NAME); // Same name
         producto2.setPrecio(new BigDecimal("149.99"));
         producto2.setActivo(true);
         
@@ -65,17 +71,17 @@ class ProductoRepositoryTest {
     }
     
     @Test
-    void findByActivo_ActiveProducts_ReturnsOnlyActive() {
+    void findByActivoActiveProductsReturnsOnlyActive() {
         // Arrange
         Producto activeProduct = new Producto();
-        activeProduct.setNombre("Active Product");
-        activeProduct.setPrecio(new BigDecimal("99.99"));
+        activeProduct.setNombre(TEST_PRODUCT_NAME);
+        activeProduct.setPrecio(PRICE_99);
         activeProduct.setActivo(true);
         productoRepository.save(activeProduct);
         
         Producto inactiveProduct = new Producto();
         inactiveProduct.setNombre("Inactive Product");
-        inactiveProduct.setPrecio(new BigDecimal("79.99"));
+        inactiveProduct.setPrecio(PRICE_99);
         inactiveProduct.setActivo(false);
         productoRepository.save(inactiveProduct);
         
@@ -85,6 +91,6 @@ class ProductoRepositoryTest {
         // Assert
         assertEquals(1, activeProducts.getTotalElements());
         assertTrue(activeProducts.getContent().get(0).isActivo());
-        assertEquals("Active Product", activeProducts.getContent().get(0).getNombre());
+        assertEquals(TEST_PRODUCT_NAME, activeProducts.getContent().get(0).getNombre());
     }
 }

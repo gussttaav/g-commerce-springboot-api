@@ -48,9 +48,10 @@ public final class TestConstants {
     // Tests users
     // ========================
 
-    public static final String TEST_USER_EMAIL = "test@example.com";
-    public static final String TEST_USER_PASSWD = "testPasswd123!";
-    public static final String TEST_ADMIN_EMAIL = "admin@example.com";
+    public static final String TEST_NAME = "Test User";
+    public static final String TEST_USERNAME = "test@example.com";
+    public static final String TEST_PASSWD = "testPasswd123!";
+    public static final String TEST_ADMIN_USERNAME = "admin@example.com";
     public static final String TEST_ADMIN_PASSWD = "adminPasswd123!";
 
     private TestConstants() {}

@@ -82,13 +82,18 @@ public class JwkController {
     public JwksResponseDTO jwks() {
         try {
             RSAKey rsaKey = keyStoreService.getOrCreateActiveKeyPair();
+            if (rsaKey == null) {
+                log.warn("No RSA key available for JWKS");
+                return new JwksResponseDTO(List.of());
+            }
+            
             RSAKey publicKey = rsaKey.toPublicJWK();
             
             JwkDTO jwkDto = new JwkDTO(
                 publicKey.getKeyType().getValue(),    // kty
-                publicKey.getKeyUse().getValue(),     // use
+                resolveKeyUse(publicKey),             // use
                 publicKey.getKeyID(),                 // kid  
-                publicKey.getAlgorithm().getName(),   // alg
+                resolveAlgorithm(publicKey),          // alg
                 publicKey.getModulus().toString(),    // n
                 publicKey.getPublicExponent().toString() // e
             );
@@ -141,5 +146,37 @@ public class JwkController {
             new String[] {"password", "refresh_token"},
             new String[] {"RS256"}
         );
+    }
+
+    /**
+     * Resolves the JWK "use" (key use) value from the given RSA public key.
+     * 
+     * <p>If the key does not explicitly define a use, this method defaults to
+     * {@code "sig"} (signature), which is the common value for signing keys.</p>
+     *
+     * @param publicKey the RSA public key from which to resolve the key use
+     * @return the key use value, never {@code null}
+     */
+    private String resolveKeyUse(RSAKey publicKey) {
+        if (publicKey.getKeyUse() == null) {
+            return "sig";
+        }
+        return publicKey.getKeyUse().getValue();
+    }
+
+    /**
+     * Resolves the JWK "alg" (algorithm) value from the given RSA public key.
+     *
+     * <p>If the key does not explicitly define an algorithm, this method defaults to
+     * {@code "RS256"} (RSA Signature with SHA-256).</p>
+     *
+     * @param publicKey the RSA public key from which to resolve the algorithm
+     * @return the algorithm name, never {@code null}
+     */
+    private String resolveAlgorithm(RSAKey publicKey) {
+        if (publicKey.getAlgorithm() == null) {
+            return "RS256";
+        }
+        return publicKey.getAlgorithm().getName();
     }
 }

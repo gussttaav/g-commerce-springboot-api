@@ -10,7 +10,9 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingRequestHeaderException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -148,6 +150,156 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(ex.getStatus()).body(error);
+    }
+
+    /**
+     * Handles missing request header exceptions.
+     * Returns 401 Unauthorized when required Authorization header is missing.
+     *
+     * @param ex The missing request header exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with missing header details
+     */
+    @ExceptionHandler(MissingRequestHeaderException.class)
+    public ResponseEntity<ApiErrorDTO> handleMissingRequestHeader(MissingRequestHeaderException ex,
+                                                                HttpServletRequest request) {
+        log.warn("Missing request header for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Missing Authorization Header",
+                "Se requiere cabecera de autorización",
+                request.getRequestURI(),
+                List.of("Falta la cabecera Authorization con el token Bearer")
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles Spring Security authentication exceptions.
+     * Returns 401 Unauthorized for authentication failures.
+     *
+     * @param ex The authentication exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with authentication error details
+     */
+    @ExceptionHandler(UsernameNotFoundException.class)
+    public ResponseEntity<ApiErrorDTO> handleUsernameNotFound(UsernameNotFoundException ex,
+                                                            HttpServletRequest request) {
+        log.warn("Authentication failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Authentication Failed",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles invalid token exceptions from AuthService.
+     * Returns 401 Unauthorized for invalid or expired tokens.
+     *
+     * @param ex The invalid token exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with token error details
+     */
+    @ExceptionHandler(InvalidTokenException.class)
+    public ResponseEntity<ApiErrorDTO> handleInvalidToken(InvalidTokenException ex,
+                                                        HttpServletRequest request) {
+        log.warn("Invalid token for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Invalid Token",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles token blacklist exceptions.
+     * Returns 401 Unauthorized for blacklisted tokens.
+     *
+     * @param ex The token blacklist exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with blacklist details
+     */
+    @ExceptionHandler(TokenBlacklistException.class)
+    public ResponseEntity<ApiErrorDTO> handleTokenBlacklist(TokenBlacklistException ex,
+                                                        HttpServletRequest request) {
+        log.warn("Blacklisted token for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.UNAUTHORIZED.value(),
+                "Token Blacklisted",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+    }
+
+    /**
+     * Handles logout failed exceptions.
+     * Returns appropriate error code for logout failures.
+     *
+     * @param ex The logout failed exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with logout error details
+     */
+    @ExceptionHandler(LogoutFailedException.class)
+    public ResponseEntity<ApiErrorDTO> handleLogoutFailed(LogoutFailedException ex,
+                                                        HttpServletRequest request) {
+        log.error("Logout failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Logout Failed",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+    }
+
+    /**
+     * Handles token storage exceptions.
+     * Returns appropriate error code for token storage failures.
+     *
+     * @param ex The token storage exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with storage error details
+     */
+    @ExceptionHandler(TokenStorageException.class)
+    public ResponseEntity<ApiErrorDTO> handleTokenStorage(TokenStorageException ex,
+                                                        HttpServletRequest request) {
+        log.error("Token storage failed for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.INTERNAL_SERVER_ERROR.value(),
+                "Token Storage Failed",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
     }
 
     /**

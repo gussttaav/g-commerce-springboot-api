@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.controllers;
 
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -14,7 +15,9 @@ import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
-import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
+import com.gplanet.commerce.api.exceptions.LogoutFailedException;
+import com.gplanet.commerce.api.exceptions.TokenBlacklistException;
+import com.gplanet.commerce.api.exceptions.TokenStorageException;
 import com.gplanet.commerce.api.services.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -60,8 +63,8 @@ public class AuthController {
      * 
      * @param loginDTO the login credentials containing email and password
      * @return LoginResponseDTO containing the authenticated user's information
-     * @throws ResourceNotFoundException if the user email is not found
      * @throws InvalidPasswordException if the user password is incorrect
+     * @throws UsernameNotFoundException if the user cannot be loaded
      */
     @SecurityRequirements
     @Operation(summary = "Authenticate user", description = "Authenticates a user with email and password")
@@ -69,7 +72,6 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Successfully authenticated",
             content = @Content(schema = @Schema(implementation = UsuarioResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
@@ -88,6 +90,9 @@ public class AuthController {
      * @param authorization the Authorization header containing the refresh token
      * @return LoginResponseDTO containing the new access and refresh tokens
      * @throws InvalidTokenException if the refresh token is invalid or expired
+     * @throws TokenBlacklistException if the refresh token is blacklisted
+     * @throws UsernameNotFoundException if the user cannot be loaded
+     * @throws TokenStorageException if there's an error storing the new refresh token
      */
     @SecurityRequirements
     @Operation(summary = "Refresh access token", 
@@ -118,6 +123,7 @@ public class AuthController {
      * @param logoutRequest the logout request containing token information
      * @param authorization the Authorization header containing the access token
      * @throws InvalidTokenException if the provided token is invalid
+     * @throws LogoutFailedException if the logout operation fails
      */
     @Operation(summary = "User logout", 
                description = "Logs out the authenticated user by blacklisting both access and refresh tokens, "

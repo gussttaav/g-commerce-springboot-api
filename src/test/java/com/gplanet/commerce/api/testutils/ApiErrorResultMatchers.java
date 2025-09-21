@@ -3,6 +3,8 @@ package com.gplanet.commerce.api.testutils;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import static org.hamcrest.Matchers.containsString;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 /**
@@ -13,6 +15,7 @@ public final class ApiErrorResultMatchers {
     // JSON Paths
     public static final String JSON_ERROR = "$.error";
     public static final String JSON_DETAILS = "$.details";
+    public static final String JSON_MSG = "$.message";
 
     // Common error messages
     public static final String VALIDATION_ERROR = "Validation Error";
@@ -43,9 +46,30 @@ public final class ApiErrorResultMatchers {
     }
 
     /**
+     * Assert that details is an Array.
+     */
+    public static ResultMatcher errorDetailsAsArray() throws Exception {
+        return jsonPath(JSON_DETAILS).isArray();
+    }
+
+    /**
+     * Assert that details is an Array.
+     */
+    public static ResultMatcher errorDetailsIsNotEmpty() throws Exception {
+        return jsonPath(JSON_DETAILS, hasSize(greaterThan(0)));
+    }
+
+    /**
      * Assert that details contain a given substring (useful for field validation messages).
      */
-    public static ResultMatcher detailContains(String expectedSubstring) throws Exception {
+    public static ResultMatcher errorDetailContains(String expectedSubstring) throws Exception {
         return jsonPath(JSON_DETAILS + "[0]").value(containsString(expectedSubstring));
+    }
+
+    /**
+     * Assert that error message is equal to the given message.
+     */
+    public static ResultMatcher errorMessage(String msg) throws Exception {
+        return jsonPath(JSON_MSG).value(msg);
     }
 }

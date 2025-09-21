@@ -10,7 +10,6 @@ public final class TestConstants {
     public static final String ENDPOINT_USUARIOS = BASE_URL + "/usuarios";
 
     public static final String ENDPOINT_USUARIOS_REGISTRO = ENDPOINT_USUARIOS + "/registro";
-    public static final String ENDPOINT_USUARIOS_LOGIN = ENDPOINT_USUARIOS + "/login";
     public static final String ENDPOINT_USUARIOS_PERFIL = ENDPOINT_USUARIOS + "/perfil";
     public static final String ENDPOINT_USUARIOS_PASSWORD = ENDPOINT_USUARIOS + "/password";
 
@@ -37,6 +36,25 @@ public final class TestConstants {
 
     public static final String ENDPOINT_COMPRAS_NUEVA = ENDPOINT_COMPRAS + "/nueva";
     public static final String ENDPOINT_COMPRAS_LISTAR = ENDPOINT_COMPRAS + "/listar";
+
+
+    // ========================
+    // Authentication Endpoints
+    // ========================
+    public static final String ENDPOINT_AUTH = BASE_URL + "/auth";
+
+    public static final String ENDPOINT_AUTH_LOGIN = ENDPOINT_AUTH + "/login";
+    public static final String ENDPOINT_AUTH_LOGOUT = ENDPOINT_AUTH + "/logout";
+    public static final String ENDPOINT_AUTH_REFRESH = ENDPOINT_AUTH + "/refresh";
+    public static final String ENDPOINT_AUTH_VALIDATE = ENDPOINT_AUTH + "/validate";
+
+
+    // ========================
+    // JSON Web Key Set (JWKS) and OpenID Connect configuration
+    // ========================
+
+    public static final String ENDPOINT_JWKS = "/.well-known/jwks.json";
+    public static final String ENDPOINT_OPENID_CONFIG = "/.well-known/openid-configuration";
 
     // ========================
     // Roles

@@ -57,7 +57,7 @@ public class AuthService {
      * 
      * @param loginDTO Data transfer object containing login credentials
      * @return LoginResponseDTO containing the authenticated user's information and JWT token
-     * @throws ResourceNotFoundException if user is not found
+     * @throws UsernameNotFoundException if user is not found
      * @throws InvalidPasswordException if password is incorrect
      */
     public LoginResponseDTO login(LoginDTO loginDTO) {
@@ -87,7 +87,7 @@ public class AuthService {
                 jwtProperties.getRefreshExpirationMs() / 1000
             );
             
-        } catch (ResourceNotFoundException | InvalidPasswordException e) {
+        } catch (UsernameNotFoundException | InvalidPasswordException e) {
             log.warn("Login failed for user: {} - {}", loginDTO.email(), e.getMessage());
             throw e;
         }
@@ -99,8 +99,10 @@ public class AuthService {
      * 
      * @param authorizationHeader the Authorization header containing the refresh token
      * @return LoginResponseDTO containing the new access and refresh tokens
+     * @throws UsernameNotFoundException if user is not found
      * @throws InvalidTokenException if the refresh token is invalid or expired
-     * @throws ResourceNotFoundException if the user associated with the token is not found
+     * @throws TokenBlacklistException if refresh token is blacklisted
+     * @throws TokenStorageException if there's an error storing the new refresh token
      */
     @Transactional
     public LoginResponseDTO refresh(String authorizationHeader) {
@@ -145,7 +147,8 @@ public class AuthService {
      * 
      * @param logoutRequest the logout request containing refresh token information
      * @param authorizationHeader the Authorization header containing the access token
-     * @throws RuntimeException if logout operations fail
+     * @throws InvalidTokenException if the provided token is invalid
+     * @throws LogoutFailedException if logout operations fail
      */
     @Transactional
     public void logout(LogoutRequestDTO logoutRequest, String authorizationHeader) {
@@ -200,7 +203,7 @@ public class AuthService {
      * 
      * @param refreshToken the refresh token to store
      * @param username the username associated with the token
-     * @throws RuntimeException if token storage fails
+     * @throws TokenStorageException if token storage fails
      */
     private void storeRefreshToken(String refreshToken, String username) {
         try {
@@ -223,14 +226,14 @@ public class AuthService {
      * Validates that a refresh token exists and is not blacklisted.
      * 
      * @param refreshToken the refresh token to validate
-     * @throws ResourceNotFoundException if refresh token is not found or expired
-     * @throws RuntimeException if refresh token is blacklisted
+     * @throws InvalidTokenException if refresh token is not found or expired
+     * @throws TokenBlacklistException if refresh token is blacklisted
      */
     private void validateRefreshToken(String refreshToken) {
         // Check if refresh token exists in valid tokens
         String username = stringRedisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + refreshToken);
         if (username == null) {
-            throw new ResourceNotFoundException("Refresh token not found or expired");
+            throw new InvalidTokenException("Refresh token not found or expired");
         }
         
         // Check if refresh token is blacklisted
@@ -243,7 +246,7 @@ public class AuthService {
      * Blacklists a token by storing it in Redis with TTL.
      * 
      * @param token the token to blacklist
-     * @throws RuntimeException if token blacklisting fails
+     * @throws TokenBlacklistException if token blacklisting fails
      */
     private void blacklistToken(String token) {
         try {
@@ -279,11 +282,11 @@ public class AuthService {
      * 
      * @param authorization the Authorization header value
      * @return the extracted token
-     * @throws UsernameNotFoundException if Authorization header is missing or malformed
+     * @throws InvalidTokenException if Authorization header is missing or malformed
      */
     private String extractToken(String authorization) {
         if (authorization == null || !authorization.startsWith("Bearer ")) {
-            throw new UsernameNotFoundException("Missing Bearer token");
+            throw new InvalidTokenException("Missing or invalid Bearer token");
         }
         return authorization.substring("Bearer ".length());
     }

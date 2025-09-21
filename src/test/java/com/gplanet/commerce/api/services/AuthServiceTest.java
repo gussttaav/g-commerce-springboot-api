@@ -28,7 +28,6 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
@@ -40,6 +39,7 @@ import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
+import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.nimbusds.jose.JOSEObjectType;
@@ -203,7 +203,7 @@ class AuthServiceTest {
         when(valueOperations.get(anyString())).thenReturn(null);
 
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class,
+        assertThrows(InvalidTokenException.class,
                 () -> authService.refresh("Bearer invalidToken"));
     }
 
@@ -264,7 +264,7 @@ class AuthServiceTest {
     @Test
     void validateTokenInvalidFormatThrowsException() {
         // Act & Assert - The service throws UsernameNotFoundException for invalid token format
-        assertThrows(UsernameNotFoundException.class,
+        assertThrows(InvalidTokenException.class,
                 () -> authService.validateToken("InvalidTokenFormat"));
     }
 

@@ -72,5 +72,6 @@ public final class TestConstants {
     public static final String TEST_ADMIN_USERNAME = "admin@example.com";
     public static final String TEST_ADMIN_PASSWD = "adminPasswd123!";
 
-    private TestConstants() {}
+    private TestConstants() {
+    }
 }

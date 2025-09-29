@@ -36,6 +36,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.compra.CompraDTO;
 import com.gplanet.commerce.api.dtos.compra.CompraProductoDTO;
 import com.gplanet.commerce.api.dtos.compra.CompraProductoResponseDTO;

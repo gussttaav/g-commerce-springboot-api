@@ -55,7 +55,6 @@ class AuthServiceTest {
     private static final String TEST_EMAIL = "test@example.com";
     private static final String TEST_PASSWORD = "password123";
     private static final String ACCESS_TOKEN = "access.token.123";
-    private static final String REFRESH_TOKEN = "refresh.token.456";
     private static final String TOKEN_TYPE = "Bearer";
     private static final String TOKEN_TYPE_PREFIX = "Bearer ";
     private static final String BLACKLIST_PREFIX = "token:blacklist:";
@@ -122,14 +121,22 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginValidCredentialsReturnsLoginResponse() {
+    void loginValidCredentialsReturnsLoginResponse() throws Exception {
         // Arrange
+        String validRefreshToken = createValidJWT(); // Use valid JWT for refresh token
         when(usuarioRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(usuario));
         when(usuarioDetallesService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
         when(passwordEncoder.matches(TEST_PASSWORD, usuario.getPassword())).thenReturn(true);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn(ACCESS_TOKEN);
-        when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(REFRESH_TOKEN);
+        when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(validRefreshToken); // Use valid JWT
         when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(usuarioResponseDTO);
+        // Mock Redis set operation for storeRefreshToken
+        doNothing().when(valueOperations).set(
+            anyString(),
+            anyString(),
+            anyLong(),
+            eq(TimeUnit.MILLISECONDS)
+        );
 
         // Act
         LoginResponseDTO result = authService.login(loginDTO);
@@ -138,10 +145,16 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals(usuarioResponseDTO, result.usuario());
         assertEquals(ACCESS_TOKEN, result.token());
-        assertEquals(REFRESH_TOKEN, result.refreshToken());
+        assertEquals(validRefreshToken, result.refreshToken());
         assertEquals(TOKEN_TYPE, result.tokenType());
         verify(usuarioRepository).findByEmail(TEST_EMAIL);
         verify(passwordEncoder).matches(TEST_PASSWORD, usuario.getPassword());
+        verify(valueOperations).set(
+            eq(REFRESH_TOKEN_PREFIX + validRefreshToken),
+            eq(TEST_EMAIL),
+            anyLong(),
+            eq(TimeUnit.MILLISECONDS)
+        );
     }
 
     @Test

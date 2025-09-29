@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_ACTUALIZAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -23,22 +25,25 @@ import com.gplanet.commerce.api.entities.Usuario;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class ProductoIntegrationTest extends BaseIntegrationTest {
-    private static final String BASE_URL = "/api/productos";
+class ProductoIntegrationTest extends AbstractIntegrationTest {
     private static final String ADMIN_EMAIL = "admin@example.com";
     private static final String ADMIN_PASSWORD = "admin123";
     private static final String USER_EMAIL = "user@example.com";
     private static final String USER_PASSWORD = "user123";
+    private static final String ENDPOINT_ACTUALIZAR = ENDPOINT_PRODUCTOS_ACTUALIZAR + "/";
     
     @Test
-    void crearProducto_Admin_CreaCorrectamente() throws Exception {
+    void crearProductoAdminCreaCorrectamente() throws Exception {
         // Arrange
         crearUsuarioAdmin();
-        ProductoDTO productoDTO = new ProductoDTO("Nuevo Producto", "Descripción del producto", new BigDecimal("99.99"), true);
+        ProductoDTO productoDTO = new ProductoDTO(
+            "Nuevo Producto", 
+            "Descripción del producto", 
+            new BigDecimal("99.99"), true);
         
         // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/crear")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isOk())
@@ -47,7 +52,7 @@ class ProductoIntegrationTest extends BaseIntegrationTest {
     }
     
     @Test
-    void crearProducto_Usuario_RetornaForbidden() throws Exception {
+    void crearProductoUsuarioRetornaForbidden() throws Exception {
         // Create regular user
         Usuario user = new Usuario();
         user.setNombre("User");
@@ -58,26 +63,32 @@ class ProductoIntegrationTest extends BaseIntegrationTest {
         usuarioRepository.save(user);
 
         // Arrange
-        ProductoDTO productoDTO = new ProductoDTO("Producto No Autorizado", "Descripción", new BigDecimal("50.00"), true);
+        ProductoDTO productoDTO = new ProductoDTO(
+            "Producto No Autorizado", 
+            "Descripción", 
+            new BigDecimal("50.00"), true);
         
         // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/crear")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD))
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void actualizarProducto_Admin_ActualizaCorrectamente() throws Exception {
+    void actualizarProductoAdminActualizaCorrectamente() throws Exception {
         // Arrange
         crearUsuarioAdmin();
         
         // First create a product
-        ProductoDTO originalProducto = new ProductoDTO("Producto Original", "Descripción original", new BigDecimal("99.99"), true);
+        ProductoDTO originalProducto = new ProductoDTO(
+            "Producto Original", 
+            "Descripción original", 
+            new BigDecimal("49.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(BASE_URL + "/crear")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(ADMIN_EMAIL, ADMIN_PASSWORD))
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(originalProducto)))
                 .andReturn();
@@ -88,11 +99,14 @@ class ProductoIntegrationTest extends BaseIntegrationTest {
         );
         
         // Prepare update data
-        ProductoDTO updateProducto = new ProductoDTO("Producto Actualizado", "Nueva descripción", new BigDecimal("149.99"), true);
+        ProductoDTO updateProducto = new ProductoDTO(
+            "Producto Actualizado", 
+            "Nueva descripción", 
+            new BigDecimal("149.99"), true);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/actualizar/" + createdProducto.id())
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + createdProducto.id())
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateProducto)))
                 .andExpect(status().isOk())
@@ -102,16 +116,19 @@ class ProductoIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void actualizarProducto_Usuario_RetornaForbidden() throws Exception {
+    void actualizarProductoUsuarioRetornaForbidden() throws Exception {
         // Arrange
         crearUsuarioAdmin();
         crearUsuario("Regular user", USER_EMAIL, USER_PASSWORD, Usuario.Role.USER);
         
         // First create a product as admin
-        ProductoDTO originalProducto = new ProductoDTO("Producto Original", "Descripción original", new BigDecimal("99.99"), true);
+        ProductoDTO originalProducto = new ProductoDTO(
+            "Producto Original", 
+            "Descripción original", 
+            new BigDecimal("17.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(BASE_URL + "/crear")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(ADMIN_EMAIL, ADMIN_PASSWORD))
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(originalProducto)))
                 .andReturn();
@@ -122,25 +139,31 @@ class ProductoIntegrationTest extends BaseIntegrationTest {
         );
         
         // Attempt to update as regular user
-        ProductoDTO updateProducto = new ProductoDTO("Intento Actualización", "Descripción", new BigDecimal("50.00"), true);
+        ProductoDTO updateProducto = new ProductoDTO(
+            "Intento Actualización", 
+            "Descripción", 
+            new BigDecimal("50.00"), true);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/actualizar/" + createdProducto.id())
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + createdProducto.id())
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateProducto)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void actualizarProducto_ProductoNoExistente_RetornaNotFound() throws Exception {
+    void actualizarProductoProductoNoExistenteRetornaNotFound() throws Exception {
         // Arrange
         crearUsuarioAdmin();
-        ProductoDTO updateProducto = new ProductoDTO("Producto Inexistente", "Descripción", new BigDecimal("99.99"), true);
+        ProductoDTO updateProducto = new ProductoDTO(
+            "Producto Inexistente", 
+            "Descripción de Producto Inexistente", 
+            new BigDecimal("19.99"), true);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/actualizar/999")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + "999")
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateProducto)))
                 .andExpect(status().isNotFound());

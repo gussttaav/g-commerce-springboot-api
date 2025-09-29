@@ -23,6 +23,7 @@ import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
+import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.services.KeyStoreService;
 import com.nimbusds.jose.Algorithm;

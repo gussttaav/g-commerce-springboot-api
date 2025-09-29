@@ -7,4 +7,6 @@
               files="CommerceApiApplication\.java"/>
     <suppress checks="LambdaBodyLength"
               files="SecurityConfig\.java"/>
+    <suppress checks="JavadocVariable"
+              files="src/test/java/.*"/>
 </suppressions> 

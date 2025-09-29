@@ -1,11 +1,11 @@
 package com.gplanet.commerce.api.testutils;
 
-import org.springframework.test.web.servlet.ResultMatcher;
-
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.hamcrest.Matchers.hasSize;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+
+import org.springframework.test.web.servlet.ResultMatcher;
 
 /**
  * Utility class for asserting API error responses in tests.
@@ -22,7 +22,8 @@ public final class ApiErrorResultMatchers {
     public static final String AUTHORIZATION_ERROR = "Forbidden";
     public static final String NOT_FOUND_ERROR = "Not Found";
 
-    private ApiErrorResultMatchers() {}
+    private ApiErrorResultMatchers() {   
+    }
 
     /**
      * Assert that the error type equals "Validation Error".

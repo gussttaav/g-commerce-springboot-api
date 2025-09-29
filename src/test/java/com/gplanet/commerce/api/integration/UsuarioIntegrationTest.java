@@ -1,5 +1,12 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_REGISTRO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PASSWORD;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -17,8 +24,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
+import org.springframework.test.web.servlet.ResultMatcher;
 
-import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
@@ -29,26 +36,42 @@ import com.jayway.jsonpath.JsonPath;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class UsuarioIntegrationTest extends BaseIntegrationTest {
-    private static final String BASE_URL = "/api/usuarios";
+class UsuarioIntegrationTest extends AbstractIntegrationTest {
+    private static final String TEST_USER_NAME = "Test User";
     private static final String TEST_EMAIL = "test@example.com";
     private static final String TEST_PASSWORD = "password123";
     private static final String TEST_ADMIN_EMAIL = "admin@example.com";
     private static final String TEST_ADMIN_PASSWORD = "admin123";
+    private static final String USER_ROLE = "USER";
+    private static final String ADMIN_ROLE = "ADMIN";
+    private static final String USER_ID_PARAM = "userId";
+    private static final String NEW_ROLE_PARAM = "newRole";
+
+    public static ResultMatcher userName(String name) throws Exception {
+        return jsonPath("$.nombre").value(name);
+    }
+
+    public static ResultMatcher userEmail(String email) throws Exception {
+        return jsonPath("$.email").value(email);
+    }
+
+    public static ResultMatcher userRol(String rol) throws Exception {
+        return jsonPath("$.rol").value(rol);
+    }
 
     @Test
-    void registroUsuario_DatosValidos_RetornaUsuarioCreado() throws Exception {
+    void registroUsuarioDatosValidosRetornaUsuarioCreado() throws Exception {
         // Arrange
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
-                .andExpect(jsonPath("$.rol").value("USER"))
-                .andExpect(jsonPath("$.nombre").value("Test User"));
+                .andExpect(userEmail(TEST_EMAIL))
+                .andExpect(userRol(USER_ROLE))
+                .andExpect(userName(TEST_USER_NAME));
         
         // Verify database
         Usuario usuarioGuardado = usuarioRepository.findByEmail(TEST_EMAIL)
@@ -58,34 +81,38 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     }
     
     @Test
-    void registroAdmin_DatosValidos_RetornaAdminCreado() throws Exception {
+    void registroAdminDatosValidosRetornaAdminCreado() throws Exception {
         // Arrange
-        UsuarioAdminDTO adminDTO = new UsuarioAdminDTO("New Admin", "new.admin@example.com", "admin123", Usuario.Role.ADMIN);
+        final String newEmail = "new.admin@example.com";
+        UsuarioAdminDTO adminDTO = new UsuarioAdminDTO(
+                "New Admin", 
+                newEmail, 
+                "admin123", Usuario.Role.ADMIN);
         crearUsuarioAdmin();
 
-        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/admin/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_REGISTRO)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(adminDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("new.admin@example.com"))
-                .andExpect(jsonPath("$.rol").value("ADMIN"));
+                .andExpect(userEmail(newEmail))
+                .andExpect(userRol(ADMIN_ROLE));
                 
         // Verify database
-        Usuario adminGuardado = usuarioRepository.findByEmail("new.admin@example.com")
+        Usuario adminGuardado = usuarioRepository.findByEmail(newEmail)
             .orElseThrow(() -> new AssertionError("Admin no encontrado en la base de datos"));
         assertEquals(Usuario.Role.ADMIN, adminGuardado.getRol());
     }
     
     @Test
-    void registroUsuario_EmailDuplicado_RetornaError() throws Exception {
+    void registroUsuarioEmailDuplicadoRetornaError() throws Exception {
         // Arrange - Create first user
         UsuarioDTO primerUsuario = new UsuarioDTO("First User", TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(primerUsuario)))
                 .andExpect(status().isOk());
@@ -94,61 +121,63 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
         UsuarioDTO usuarioDuplicado = new UsuarioDTO("Duplicate User", TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDuplicado)))
                 .andExpect(status().isConflict());
     }
     
     @Test
-    void actualizarPerfil_UsuarioAutenticado_ActualizaCorrectamente() throws Exception {
+    void actualizarPerfilUsuarioAutenticadoActualizaCorrectamente() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        final String updatedEmail = "updated@example.com";
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
         // Arrange - Prepare update data
         ActualizacionUsuarioDTO actualizacionDTO = new ActualizacionUsuarioDTO(
-            "Updated Name", "updated@example.com");
+            "Updated Name", updatedEmail);
         
-        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/perfil")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(actualizacionDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Updated Name"))
-                .andExpect(jsonPath("$.email").value("updated@example.com"));
+                .andExpect(userName("Updated Name"))
+                .andExpect(userEmail(updatedEmail));
                 
         // Verify database update
         assertFalse(usuarioRepository.findByEmail(TEST_EMAIL).isPresent(), 
             "Old email should not exist");
-        assertTrue(usuarioRepository.findByEmail("updated@example.com").isPresent(), 
+        assertTrue(usuarioRepository.findByEmail(updatedEmail).isPresent(), 
             "New email should exist");
     }
     
     @Test
-    void cambiarContrasena_ValidData_ChangesSuccessfully() throws Exception {
+    void cambiarContrasenaValidDataChangesSuccessfully() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        final String newPassword = "newPassword123";
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
         // Arrange - Prepare password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO(TEST_PASSWORD, "newPassword123", "newPassword123");
+        CambioPasswdDTO cambioDTO = new CambioPasswdDTO(TEST_PASSWORD, newPassword, newPassword);
         
-        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/password")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(cambioDTO)))
@@ -157,160 +186,114 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
         // Verify password change
         Usuario usuario = usuarioRepository.findByEmail(TEST_EMAIL)
             .orElseThrow(() -> new AssertionError("Usuario no encontrado"));
-        assertTrue(passwordEncoder.matches("newPassword123", usuario.getPassword()), 
+        assertTrue(passwordEncoder.matches(newPassword, usuario.getPassword()), 
             "Password should be updated in database");
     }
     
     @Test
-    void cambiarContrasena_IncorrectCurrentPassword_ReturnsError() throws Exception {
+    void cambiarContrasenaIncorrectCurrentPasswordReturnsError() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
         // Arrange - Prepare invalid password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO("wrongPassword", "newPassword123", "newPassword123");
+        CambioPasswdDTO cambioDTO = new CambioPasswdDTO("wrongPassword", "newPassword", "newPassword");
         
-        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/password")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(cambioDTO)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("La contraseña actual es incorrecta"));
+                .andExpect(errorMessage("La contraseña actual es incorrecta"));
     }
 
     @Test
-    void login_CredencialesCorrectas_RetornaUsuario() throws Exception {
+    void obtenerPerfilUsuarioAutenticadoRetornaDatosCorrectos() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        // Register user first
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
-        // Arrange login request
-        LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
-
-        // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
-                .andExpect(jsonPath("$.nombre").value("Test User"))
-                .andExpect(jsonPath("$.rol").value("USER"));
-    }
-
-    @Test
-    void login_ContraseñaIncorrecta_RetornaBadRequest() throws Exception {
-        // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
-        
-        // Register user first
-        mockMvc.perform(post(BASE_URL + "/registro")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
-                .andExpect(status().isOk());
-
-        // Arrange login request with wrong password
-        LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, "wrongpassword");
-
-        // Act & Assert
-        mockMvc.perform(post(BASE_URL + "/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Contraseña incorrecta."));
-    }
-
-    @Test
-    void obtenerPerfil_UsuarioAutenticado_RetornaDatosCorrectos() throws Exception {
-        // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
-        
-        mockMvc.perform(post(BASE_URL + "/registro")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
-                .andExpect(status().isOk());
-
-        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(BASE_URL + "/perfil")
+        mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Test User"))
-                .andExpect(jsonPath("$.email").value(TEST_EMAIL))
-                .andExpect(jsonPath("$.rol").value("USER"));
+                .andExpect(userName(TEST_USER_NAME))
+                .andExpect(userEmail(TEST_EMAIL))
+                .andExpect(userRol(USER_ROLE));
     }
 
     @Test
-    void obtenerPerfil_SinAutenticacion_RetornaUnauthorized() throws Exception {
+    void obtenerPerfilSinAutenticacionRetornaUnauthorized() throws Exception {
         // Act & Assert
-        mockMvc.perform(get(BASE_URL + "/perfil"))
+        mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void listarUsuarios_UsuarioAdmin_RetornaListaCompleta() throws Exception {
+    void listarUsuariosUsuarioAdminRetornaListaCompleta() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
         // Create admin user
         crearUsuarioAdmin();
-        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(BASE_URL + "/admin/listar")
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[*].email", hasItems(TEST_EMAIL, TEST_ADMIN_EMAIL)))
-                .andExpect(jsonPath("$.content[*].rol", hasItems("USER", "ADMIN")))
+                .andExpect(jsonPath("$.content[*].rol", hasItems(USER_ROLE, ADMIN_ROLE)))
                 .andExpect(jsonPath("$.totalElements").value(2))
                 .andExpect(jsonPath("$.totalPages").value(1))
                 .andExpect(jsonPath("$.pageSize").value(10))
                 .andExpect(jsonPath("$.pageNumber").value(0))
-                .andExpect(jsonPath("$.lastPage").value(true));
+                .andExpect(jsonPath("$.isLastPage").value(true));
     }
 
     @Test
-    void listarUsuarios_UsuarioRegular_RetornaForbidden() throws Exception {
+    void listarUsuariosUsuarioRegularRetornaForbidden() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
 
-        String authHeader = obtenerBasicAuthHeader(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(BASE_URL + "/admin/listar")
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void cambiarRol_UsuarioAdmin_CambiaRolCorrectamente() throws Exception {
+    void cambiarRolUsuarioAdminCambiaRolCorrectamente() throws Exception {
         // Arrange - Create regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
@@ -323,13 +306,13 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
 
         // Create admin user
         crearUsuarioAdmin();
-        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert - Change role to ADMIN
-        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param("userId", String.valueOf(userId))
-                .param("newRole", "ADMIN"))
+                .param(USER_ID_PARAM, String.valueOf(userId))
+                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
                 .andExpect(status().isOk());
                 
         // Verify role change in database
@@ -339,11 +322,11 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
     }
 
     @Test
-    void cambiarRol_UsuarioRegular_RetornaForbidden() throws Exception {
+    void cambiarRolUsuarioRegularRetornaForbidden() throws Exception {
         // Arrange - Create first regular user
-        UsuarioDTO usuarioDTO = new UsuarioDTO("Test User", TEST_EMAIL, TEST_PASSWORD);
+        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(BASE_URL + "/registro")
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
@@ -357,32 +340,32 @@ class UsuarioIntegrationTest extends BaseIntegrationTest {
         // Create second regular user
         UsuarioDTO usuario2DTO = new UsuarioDTO("Test User 2", "test2@example.com", TEST_PASSWORD);
         
-        mockMvc.perform(post(BASE_URL + "/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuario2DTO)))
                 .andExpect(status().isOk());
 
-        String authHeader = obtenerBasicAuthHeader("test2@example.com", TEST_PASSWORD);
+        String authHeader = obtenerJwtToken("test2@example.com", TEST_PASSWORD);
         
         // Act & Assert - Try to change role
-        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param("userId", String.valueOf(userId))
-                .param("newRole", "ADMIN"))
+                .param(USER_ID_PARAM, String.valueOf(userId))
+                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void cambiarRol_UsuarioInexistente_RetornaNotFound() throws Exception {
+    void cambiarRolUsuarioInexistenteRetornaNotFound() throws Exception {
         // Arrange - Create admin user
         crearUsuarioAdmin();
-        String authHeader = obtenerBasicAuthHeader(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(BASE_URL + "/admin/change-role")
+        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param("userId", "999999")
-                .param("newRole", "ADMIN"))
+                .param(USER_ID_PARAM, "999999")
+                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
                 .andExpect(status().isNotFound());
     }
 }

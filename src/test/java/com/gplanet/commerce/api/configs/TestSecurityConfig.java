@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.controllers;
+package com.gplanet.commerce.api.configs;
 
 import java.util.Arrays;
 
@@ -20,6 +20,9 @@ import com.gplanet.commerce.api.configs.app.props.CorsProperties;
 /**
  * Test security configuration that provides in-memory users for testing
  * and mocks the CORS properties.
+ * 
+ * @author Gustavo
+ * @version 1.0
  */
 @TestConfiguration
 @EnableWebSecurity

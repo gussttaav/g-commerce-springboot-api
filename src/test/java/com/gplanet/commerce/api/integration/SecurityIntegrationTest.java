@@ -1,5 +1,8 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -17,36 +20,34 @@ import com.gplanet.commerce.api.entities.Usuario;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class SecurityIntegrationTest extends BaseIntegrationTest {
+class SecurityIntegrationTest extends AbstractIntegrationTest {
     
     @Test
-    void accederEndpointPublico_SinAutenticacion_Permitido() throws Exception {
+    void accederEndpointPublicoSinAutenticacionPermitido() throws Exception {
         UsuarioDTO usuarioDTO = new UsuarioDTO("New User", "new@example.com", "password123");
         
-        mockMvc.perform(post("/api/usuarios/registro")
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
     }
     
     @Test
-    void accederEndpointProtegido_SinAutenticacion_Denegado() throws Exception {
-        mockMvc.perform(get("/api/compras/listar"))
+    void accederEndpointProtegidoSinAutenticacionDenegado() throws Exception {
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
                 .andExpect(status().isUnauthorized());
     }
     
     @Test
-    void accederEndpointAdmin_UsuarioNormal_Forbidden() throws Exception {
-        // Create regular user
-        Usuario usuario = new Usuario();
-        usuario.setEmail("user@example.com");
-        usuario.setPassword(passwordEncoder.encode("password123"));
-        usuario.setRol(Usuario.Role.USER);
-        usuarioRepository.save(usuario);
+    void accederEndpointAdminUsuarioNormalForbidden() throws Exception {
+        // Create regular user using the helper method which properly handles password encoding
+        crearUsuario("Regular User", "user@example.com", "Password123!", Usuario.Role.USER);
         
-        mockMvc.perform(post("/api/productos/crear")
-                .header(HttpHeaders.AUTHORIZATION, 
-                        obtenerBasicAuthHeader("user@example.com", "password123"))
+        // Use the JWT token obtained through proper authentication flow
+        String jwtToken = obtenerJwtToken("user@example.com", "Password123!");
+        
+        mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
+                .header(HttpHeaders.AUTHORIZATION, jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isForbidden());

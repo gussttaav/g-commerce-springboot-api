@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_NUEVA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -37,10 +39,11 @@ import jakarta.transaction.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class CompraIntegrationTest extends BaseIntegrationTest {
-    private static final String BASE_URL = "/api/compras";
+class CompraIntegrationTest extends AbstractIntegrationTest {
     private static final String USER_EMAIL = "buyer@example.com";
     private static final String USER_PASSWORD = "buyer123";
+    private static final String PRODUCT_PRICE = "10.0";
+    private static final String COMPRA_TOTAL_PRICE = "20.0";
     private Long productoId;
     
     @BeforeEach
@@ -53,7 +56,7 @@ class CompraIntegrationTest extends BaseIntegrationTest {
         Producto producto = new Producto();
         producto.setNombre("Producto Test");
         producto.setDescripcion("Producto para pruebas");
-        producto.setPrecio(new BigDecimal("10.0"));
+        producto.setPrecio(new BigDecimal(PRODUCT_PRICE));
         producto.setActivo(true);
         producto.setFechaCreacion(LocalDateTime.now());
         producto = productoRepository.save(producto);
@@ -61,7 +64,7 @@ class CompraIntegrationTest extends BaseIntegrationTest {
     }
     
     @Test
-    void realizarCompra_ProductoDisponible_CompraExitosa() throws Exception {
+    void realizarCompraProductoDisponibleCompraExitosa() throws Exception {
         // Arrange
         List<CompraProductoDTO> productos = new ArrayList<>();
         CompraProductoDTO productoDTO = new CompraProductoDTO(productoId, 2);
@@ -69,14 +72,14 @@ class CompraIntegrationTest extends BaseIntegrationTest {
         CompraDTO compraDTO = new CompraDTO(productos);
         
         // Act & Assert
-        MvcResult result = mockMvc.perform(post(BASE_URL + "/nueva")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD))
+        MvcResult result = mockMvc.perform(post(ENDPOINT_COMPRAS_NUEVA)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(compraDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.total").value("20.0"))
+                .andExpect(jsonPath("$.total").value(COMPRA_TOTAL_PRICE))
                 .andExpect(jsonPath("$.productos[0].cantidad").value(2))
-                .andExpect(jsonPath("$.productos[0].subtotal").value("20.0"))
+                .andExpect(jsonPath("$.productos[0].subtotal").value(COMPRA_TOTAL_PRICE))
                 .andReturn();
         
         // Verify purchase in database
@@ -99,20 +102,20 @@ class CompraIntegrationTest extends BaseIntegrationTest {
     }
     
     @Test
-    void listarCompras_UsuarioAutenticado_RetornaCompras() throws Exception {
+    void listarComprasUsuarioAutenticadoRetornaCompras() throws Exception {
         // First create a purchase
-        realizarCompra_ProductoDisponible_CompraExitosa();
+        realizarCompraProductoDisponibleCompraExitosa();
         
         // Act & Assert - List purchases
-        mockMvc.perform(get(BASE_URL + "/listar")
-                .header(HttpHeaders.AUTHORIZATION, obtenerBasicAuthHeader(USER_EMAIL, USER_PASSWORD))
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", "fecha")
                 .param("direction", "DESC"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].total").value("20.0"))
+                .andExpect(jsonPath("$.content[0].total").value(COMPRA_TOTAL_PRICE))
                 .andExpect(jsonPath("$.content[0].productos").isArray())
                 .andExpect(jsonPath("$.content[0].productos[0].cantidad").value(2))
                 .andExpect(jsonPath("$.totalElements").isNumber())

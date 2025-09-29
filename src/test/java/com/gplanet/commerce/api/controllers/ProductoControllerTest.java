@@ -48,6 +48,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.producto.ProductStatus;
 import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;

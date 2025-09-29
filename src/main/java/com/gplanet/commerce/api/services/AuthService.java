@@ -77,6 +77,9 @@ public class AuthService {
             String token = oauth2TokenService.generateAccessToken(userDetails);
             String refresh = oauth2TokenService.generateRefreshToken(userDetails);
 
+            // Store new refresh token
+            storeRefreshToken(refresh, loginDTO.email());
+
             log.info("Successful login for user: {}", loginDTO.email());
             return new LoginResponseDTO(
                 usuarioMapper.toUsuarioResponseDTO(usuario),

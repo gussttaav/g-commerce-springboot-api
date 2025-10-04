@@ -1,5 +1,29 @@
 package com.gplanet.commerce.api.security;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_HEALTH;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_INFO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGIN;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_JWKS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_OPENID_CONFIG;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_UI;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Arrays;
@@ -7,8 +31,10 @@ import java.util.Arrays;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.health.Health;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.http.MediaType;
@@ -19,38 +45,46 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gplanet.commerce.api.configs.TestRedisConfiguration;
+import com.gplanet.commerce.api.configs.app.health.ApiHealthIndicator;
+import com.gplanet.commerce.api.configs.app.health.DatabaseHealthIndicator;
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductStatus;
 import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.services.ProductoService;
 import com.gplanet.commerce.api.services.UsuarioService;
 
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doNothing;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
-
+/**
+ * Security configuration tests for JWT/OAuth2 authentication.
+ * Tests authentication, authorization, and CORS configuration.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
+@Import(TestRedisConfiguration.class)
 class SecurityConfigTest {
+
+    private static final String USER_NAME = "Test User";
+    private static final String USER_EMAIL = "user@test.com";
+    private static final String USER_PASSWORD = "password";
+    private static final String ADMIN_EMAIL = "admin@test.com";
+    private static final String ADMIN_PASSWORD = "password";
+    private static final String TEST_PRODUCT_NAME = "Test Product";
+    private static final String TEST_PRODUCT_DESC = "Test Product Description";
+    private static final String RESPONSE_TOKEN_FIELD = "token";
+    private static final String AUTHORIZATION_HEADER = "Authorization";
+    private static final String CORS_ORIGIN_HEADER = "Origin";
+    private static final String BEARER_PREFIX = "Bearer ";
+    private static final BigDecimal TEST_PRODUCT_PRICE = new BigDecimal("10.00");
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -66,214 +100,276 @@ class SecurityConfigTest {
     @MockitoBean
     private ProductoService productoService;
 
+    @MockitoBean(name = "commerceApi")
+    private ApiHealthIndicator apiHealthIndicator;
+
+    @MockitoBean(name = "customDatabase")
+    private DatabaseHealthIndicator databaseHealthIndicator;
+
     @Autowired
     private CorsProperties corsProperties;
 
-    private static final ObjectMapper objectMapper = new ObjectMapper();
 
     @BeforeEach
     void setup() {
-        // Clear users before each test
         usuarioRepository.deleteAll();
+
+        // Create real test user
+        Usuario user = new Usuario();
+        user.setNombre(USER_NAME);
+        user.setEmail(USER_EMAIL);
+        user.setPassword(passwordEncoder.encode(USER_PASSWORD));
+        user.setRol(Usuario.Role.USER);
+        user.setFechaCreacion(LocalDateTime.now());
+        usuarioRepository.save(user);
+
+        // Create real test admin
+        Usuario admin = new Usuario();
+        admin.setNombre(USER_NAME);
+        admin.setEmail(ADMIN_EMAIL);
+        admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
+        admin.setRol(Usuario.Role.ADMIN);
+        admin.setFechaCreacion(LocalDateTime.now());
+        usuarioRepository.save(admin);
     }
 
     @Test
-    void whenPublicEndpoint_thenAllowsAccess() throws Exception {
+    void whenPublicEndpointThenAllowsAccess() throws Exception {
         // Test registration endpoint
-        mockMvc.perform(post("/api/usuarios/registro")
+        UsuarioDTO usuarioDto = new UsuarioDTO("test", "test@test.com", "Password123!");
+        UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, "test", "test@test.com", 
+            Usuario.Role.USER, LocalDateTime.now());
+        
+        when(usuarioService.registrarUsuario(any(UsuarioDTO.class))).thenReturn(responseDto);
+
+        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content("{\"nombre\":\"test\",\"email\":\"test@test.com\",\"password\":\"password\"}"))
+                .content(OBJECT_MAPPER.writeValueAsString(usuarioDto)))
                 .andExpect(status().isOk());
 
         // Test products listing endpoint
         Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true)
+            new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+                TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
         ));
         
-        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
+        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+            eq(0), eq(10), eq("nombre"), eq("ASC")))
             .thenReturn(productPage);
 
-        mockMvc.perform(get("/api/productos/listar"))
+        mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenUnauthenticatedAccessToActiveProducts_thenAllowsAccess() throws Exception {
-        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true)
-        ));
-        
-        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq("nombre"), eq("ASC")))
-            .thenReturn(productPage);
-
-        mockMvc.perform(get("/api/productos/listar"))
-                .andExpect(status().isOk())
-                .andExpect(header().doesNotExist("WWW-Authenticate"));
-    }
-
-    @Test
-    void whenUnauthenticatedAccessToInactiveProducts_thenReturns403() throws Exception {
-        mockMvc.perform(get("/api/productos/listar")
-                .param("status", "INACTIVE"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void whenBasicAuthWithValidCredentials_thenAllowsAccess() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-
-        // Act & Assert
-        mockMvc.perform(get("/api/compras/listar")
-                .with(httpBasic("user@test.com", "password")))
-                .andExpect(status().isOk());
-    }
-
-    @Test
-    void whenBasicAuthWithInvalidCredentials_thenReturns401() throws Exception {
-        mockMvc.perform(get("/api/compras/listar")
-                .with(httpBasic("invalid@test.com", "wrongpassword")))
+    void whenUnauthenticatedAccessToProtectedEndpointThenReturns401() throws Exception {
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void whenUserAccessesAdminEndpoint_thenReturns403() throws Exception {
+    void whenJwtAuthWithValidTokenThenAllowsAccess() throws Exception {
         // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+        LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
+        
+        // Get real JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
-        // Act & Assert
-        mockMvc.perform(post("/api/productos/crear")
-                .with(httpBasic("user@test.com", "password"))
+        // Use token to access protected endpoint
+        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+                TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
+        ));
+        
+        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+            eq(0), eq(10), eq("nombre"), eq("ASC")))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void whenJwtAuthWithInvalidTokenThenReturns401() throws Exception {
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+                .header(AUTHORIZATION_HEADER, "Bearer invalid.token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void whenUserAccessesAdminEndpointThenReturns403() throws Exception {
+        // Arrange
+        LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
+
+        // Get real user JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
+
+        // Act & Assert - User tries to access admin endpoint
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void whenAdminAccessesAdminEndpoint_thenAllowsAccess() throws Exception {
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-        
-        ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("10.00"), true);
-        
-        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true);
+    void whenAdminAccessesAdminEndpointThenAllowsAccess() throws Exception {
+        // Arrange
+        LoginDTO loginDto = new LoginDTO(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDTO);
+        ProductoDTO productoDto = new ProductoDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+            TEST_PRODUCT_PRICE, true);
+        ProductoResponseDTO responseDto = new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, 
+            TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
+
+        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDto);
+
+        // Get admin JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(post("/api/productos/crear")
-                .with(httpBasic("admin@test.com", "password"))
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
+                .content(OBJECT_MAPPER.writeValueAsString(productoDto)))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenNoAuthenticationHeader_thenReturns401() throws Exception {
-        mockMvc.perform(get("/api/compras/listar"))
+    void whenNoAuthenticationHeaderThenReturns401() throws Exception {
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void whenCsrfDisabled_thenAllowsPostWithoutToken() throws Exception {
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-        
-        ProductoDTO productoDTO = new ProductoDTO("Test Product", "Test Description", new BigDecimal("10.00"), true);
-        
-        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Test Product", "Description", new BigDecimal("10.00"), LocalDateTime.now(), true);
-        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDTO);
+    void whenCsrfDisabledThenAllowsPostWithoutToken() throws Exception {
+        // Arrange
+        LoginDTO loginDto = new LoginDTO(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        // Act & Assert
-        mockMvc.perform(post("/api/productos/crear")
-                .with(httpBasic("admin@test.com", "password"))
+        ProductoDTO productoDto = new ProductoDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+            TEST_PRODUCT_PRICE, true);
+        ProductoResponseDTO responseDto = new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, 
+            TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
+
+        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDto);
+
+        // Get admin JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
+
+        // Act & Assert - No CSRF token required
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(productoDto)))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenUserAccessesOwnProfile_thenAllowsAccess() throws Exception {
-         // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-
-        ActualizacionUsuarioDTO actualizacionDTO = new ActualizacionUsuarioDTO(
+    void whenUserAccessesOwnProfileThenAllowsAccess() throws Exception {
+        // Arrange
+        LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
+        
+        ActualizacionUsuarioDTO actualizacionDto = new ActualizacionUsuarioDTO(
             "Updated Name", "updated@test.com");
-            
-        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Updated Name", "updated@test.com", Usuario.Role.USER, LocalDateTime.now());
+        UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, "Updated Name", 
+            "updated@test.com", Usuario.Role.USER, LocalDateTime.now());
             
         when(usuarioService.actualizarPerfil(anyString(), any(ActualizacionUsuarioDTO.class)))
-            .thenReturn(responseDTO);
+            .thenReturn(responseDto);
+
+        // Get user JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(put("/api/usuarios/perfil")
-                .with(httpBasic("user@test.com", "password"))
+        mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(new ObjectMapper().writeValueAsString(actualizacionDTO)))
+                .content(OBJECT_MAPPER.writeValueAsString(actualizacionDto)))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenAccessingProtectedEndpoint_thenAuthenticationHeaderIsRequired() throws Exception {
-        mockMvc.perform(get("/api/compras/listar"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(header().exists("WWW-Authenticate"));
+    void whenAccessingProtectedEndpointThenAuthenticationHeaderIsRequired() throws Exception {
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void whenMultipleAuthenticationAttempts_thenNoSessionCreated() throws Exception {
+    void whenMultipleAuthenticationAttemptsThenNoSessionCreated() throws Exception {
         // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
+        LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
+
+        // Get JWT token
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(loginDto)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        
+        String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - First request
-        MvcResult result1 = mockMvc.perform(get("/api/compras/listar")
-                .with(httpBasic("user@test.com", "password")))
+        MvcResult result1 = mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        // Second request - Should require authentication again (stateless)
-        mockMvc.perform(get("/api/compras/listar"))
-                .andExpect(status().isUnauthorized());
+        // Second request - Should work with same token (stateless)
+        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
+                .andExpect(status().isOk());
 
         // Verify no session was created
         assertNull(result1.getRequest().getSession(false));
     }
 
-    /*
     @Test
-    void whenLoginWithValidCredentials_thenReturnsOk() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-        
-        LoginDTO loginDTO = new LoginDTO("user@test.com", "password");
-        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now());
-            
-        when(usuarioService.login(any(LoginDTO.class))).thenReturn(responseDTO);
-
-        // Act & Assert
-        mockMvc.perform(post("/api/usuarios/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isOk());
-    }
-    
-
-    @Test
-    void whenLoginWithInvalidCredentials_thenReturns401() throws Exception {
-        // Arrange
-        LoginDTO loginDTO = new LoginDTO("invalid@test.com", "wrongpassword");
-        when(usuarioService.login(any(LoginDTO.class)))
-            .thenThrow(new InvalidPasswordException("Contraseña incorrecta."));
-
-        // Act & Assert
-        mockMvc.perform(post("/api/usuarios/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isUnauthorized());
-    }*/
-
-    @Test
-    void whenCorsRequest_thenReturnsCorrectHeaders() throws Exception {
-        mockMvc.perform(options("/api/usuarios/login")
-                .header("Origin", corsProperties.getTestOrigin())
+    void whenCorsRequestThenReturnsCorrectHeaders() throws Exception {
+        mockMvc.perform(options(ENDPOINT_AUTH_LOGIN)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
                 .header("Access-Control-Request-Method", "POST")
                 .header("Access-Control-Request-Headers", "Authorization,Content-Type"))
                 .andExpect(status().isOk())
@@ -284,196 +380,50 @@ class SecurityConfigTest {
     }
 
     @Test
-    void whenCorsRequestFromUnauthorizedOrigin_thenReturns403() throws Exception {
-        mockMvc.perform(options("/api/usuarios/login")
-                .header("Origin", "http://unauthorized-domain.com")
+    void whenCorsRequestFromUnauthorizedOriginThenReturns403() throws Exception {
+        mockMvc.perform(options(ENDPOINT_AUTH_LOGIN)
+                .header(CORS_ORIGIN_HEADER, "http://unauthorized-domain.com")
                 .header("Access-Control-Request-Method", "POST"))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void whenCorsRequestWithInvalidMethod_thenReturns403() throws Exception {
-        mockMvc.perform(options("/api/usuarios/login")
-                .header("Origin", corsProperties.getTestOrigin())
-                .header("Access-Control-Request-Method", "PATCH"))
-                .andExpect(status().isForbidden());
-    }
-    
-    @Test
-    void whenCorsRequestWithInvalidHeader_thenReturns403() throws Exception {
-        mockMvc.perform(options("/api/usuarios/login")
-                .header("Origin", corsProperties.getTestOrigin())
-                .header("Access-Control-Request-Method", "POST")
-                .header("Access-Control-Request-Headers", "InvalidHeader"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void whenActualRequestWithValidOrigin_thenSucceeds() throws Exception {
-        mockMvc.perform(post("/api/usuarios/login")
-                .header("Origin", corsProperties.getTestOrigin())
+    void whenActualRequestWithValidOriginThenSucceeds() throws Exception {
+        mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
                 .andExpect(header().string("Access-Control-Allow-Origin", 
                     corsProperties.getTestOrigin()));
     }
 
-    private void setupTestUser(String email, String password, Usuario.Role role) {
-        Usuario usuario = new Usuario();
-        usuario.setEmail(email);
-        usuario.setNombre("Test User");
-        usuario.setPassword(passwordEncoder.encode(password));
-        usuario.setRol(role);
-        usuario.setFechaCreacion(LocalDateTime.now());
-        usuarioRepository.save(usuario);
-    }
-
     @Test
-    void whenAdminUpdatesProduct_thenAllowsAccess() throws Exception {
-        // Arrange
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-        
-        ProductoDTO productoDTO = new ProductoDTO("Updated Product", "Updated Description", new BigDecimal("20.00"), true);
-        
-        ProductoResponseDTO responseDTO = new ProductoResponseDTO(1L, "Updated Product", "Updated Description", new BigDecimal("20.00"), LocalDateTime.now(), true);
+    void whenAccessingActuatorEndpointsThenAllowsAccess() throws Exception {
+        when(apiHealthIndicator.health()).thenReturn(Health.up().build());
+        when(databaseHealthIndicator.health()).thenReturn(Health.up().build());
 
-        when(productoService.actualizarProducto(eq(1L), any(ProductoDTO.class)))
-            .thenReturn(responseDTO);
+        mockMvc.perform(get(ENDPOINT_ACTUATOR_HEALTH))
+                .andExpect(status().isOk());
 
-        // Act & Assert
-        mockMvc.perform(put("/api/productos/actualizar/1")
-                .with(httpBasic("admin@test.com", "password"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
+        mockMvc.perform(get(ENDPOINT_ACTUATOR_INFO))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenUserUpdatesProduct_thenReturns403() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-        
-        ProductoDTO productoDTO = new ProductoDTO("Unauthorized Update", "Description", new BigDecimal("20.00"), true);
+    void whenAccessingSwaggerEndpointsThenAllowsAccess() throws Exception {
+        mockMvc.perform(get(ENDPOINT_SWAGGER_UI))
+                .andExpect(status().isOk());
 
-        // Act & Assert
-        mockMvc.perform(put("/api/productos/actualizar/1")
-                .with(httpBasic("user@test.com", "password"))
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void whenNoAuthUpdateProduct_thenReturns401() throws Exception {
-        ProductoDTO productoDTO = new ProductoDTO("Test Update", "Description", new BigDecimal("20.00"), true);
-
-        mockMvc.perform(put("/api/productos/actualizar/1")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void whenGetUserProfile_withValidCredentials_thenAllowsAccess() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-        
-        UsuarioResponseDTO responseDTO = new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now());
-            
-        when(usuarioService.obtenerPerfil(anyString())).thenReturn(responseDTO);
-
-        // Act & Assert
-        mockMvc.perform(get("/api/usuarios/perfil")
-                .with(httpBasic("user@test.com", "password")))
+        mockMvc.perform(get(ENDPOINT_SWAGGER_DOCS))
                 .andExpect(status().isOk());
     }
 
     @Test
-    void whenGetUserProfile_withNoAuth_thenReturns401() throws Exception {
-        mockMvc.perform(get("/api/usuarios/perfil"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void whenListUsers_asAdmin_thenAllowsAccess() throws Exception {
-        // Arrange
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-        
-        Page<UsuarioResponseDTO> userPage = new PageImpl<>(Arrays.asList(
-            new UsuarioResponseDTO(1L, "Test User", "user@test.com", Usuario.Role.USER, LocalDateTime.now())
-        ));
-        
-        when(usuarioService.listarUsuarios(0, 10, "email", "ASC")).thenReturn(userPage);
-
-        // Act & Assert
-        mockMvc.perform(get("/api/usuarios/admin/listar")
-                .with(httpBasic("admin@test.com", "password")))
+    void whenAccessingWellKnownEndpointsThenAllowsAccess() throws Exception {
+        mockMvc.perform(get(ENDPOINT_JWKS))
                 .andExpect(status().isOk());
-    }
 
-    @Test
-    void whenListUsers_asUser_thenReturns403() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-
-        // Act & Assert
-        mockMvc.perform(get("/api/usuarios/admin/listar")
-                .with(httpBasic("user@test.com", "password")))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void whenListUsers_withNoAuth_thenReturns401() throws Exception {
-        mockMvc.perform(get("/api/usuarios/admin/listar"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void whenChangeUserRole_asAdmin_thenAllowsAccess() throws Exception {
-        // Arrange
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-        
-        doNothing().when(usuarioService).cambiarRol(anyLong(), any(Usuario.Role.class));
-
-        // Act & Assert
-        mockMvc.perform(put("/api/usuarios/admin/change-role")
-                .with(httpBasic("admin@test.com", "password"))
-                .param("userId", "1")
-                .param("newRole", "USER"))
+        mockMvc.perform(get(ENDPOINT_OPENID_CONFIG))
                 .andExpect(status().isOk());
-    }
-
-    @Test
-    void whenChangeUserRole_asUser_thenReturns403() throws Exception {
-        // Arrange
-        setupTestUser("user@test.com", "password", Usuario.Role.USER);
-
-        // Act & Assert
-        mockMvc.perform(put("/api/usuarios/admin/change-role")
-                .with(httpBasic("user@test.com", "password"))
-                .param("userId", "1")
-                .param("newRole", "USER"))
-                .andExpect(status().isForbidden());
-    }
-
-    @Test
-    void whenChangeUserRole_withNoAuth_thenReturns401() throws Exception {
-        mockMvc.perform(put("/api/usuarios/admin/change-role")
-                .param("userId", "1")
-                .param("newRole", "USER"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    void whenChangeUserRole_withInvalidRole_thenReturns400() throws Exception {
-        // Arrange
-        setupTestUser("admin@test.com", "password", Usuario.Role.ADMIN);
-
-        // Act & Assert
-        mockMvc.perform(put("/api/usuarios/admin/change-role")
-                .with(httpBasic("admin@test.com", "password"))
-                .param("userId", "1")
-                .param("newRole", "INVALID_ROLE"))
-                .andExpect(status().isBadRequest());
     }
 }

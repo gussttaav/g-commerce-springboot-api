@@ -1,8 +1,5 @@
 package com.gplanet.commerce.api.services;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_NAME;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -43,6 +40,9 @@ import com.gplanet.commerce.api.repositories.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
 class UsuarioServiceTest {
+    public static final String TEST_NAME = "Test User";
+    public static final String TEST_USERNAME = "test@example.com";
+    public static final String TEST_PASSWD = "testPasswd123!";
     private static final Long NON_EXISTENT_USER_ID = 999L;
 
     @Mock

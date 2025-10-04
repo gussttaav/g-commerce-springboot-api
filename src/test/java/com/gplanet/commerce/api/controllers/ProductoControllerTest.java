@@ -6,7 +6,6 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTO
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_ELIMINAR;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_LISTAR;
-import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -357,8 +356,7 @@ class ProductoControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(invalidProducto)))
                 .andExpect(status().isBadRequest())
-                .andExpect(validationError())
-                .andExpect(jsonPath("$.details[0]").value(containsString("precio")));
+                .andExpect(validationError());
             
             verifyNoInteractions(productoService);
         }

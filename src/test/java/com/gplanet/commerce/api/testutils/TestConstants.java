@@ -1,8 +1,28 @@
 package com.gplanet.commerce.api.testutils;
 
+/**
+ * <p>Utility class that defines constants used across test classes in the G-Commerce API.
+ * This class contains various endpoint URLs, role definitions, and test user credentials
+ * used for testing purposes.
+ * </p>
+ * The constants are organized into several categories:
+ * <ul>
+ *   <li>User Management Endpoints</li>
+ *   <li>Product Management Endpoints</li>
+ *   <li>Purchase Management Endpoints</li>
+ *   <li>Authentication Endpoints</li>
+ *   <li>JWKS and OpenID Connect configuration</li>
+ *   <li>Actuator Endpoints</li>
+ *   <li>Swagger Documentation</li>
+ * </ul>
+ * 
+ * @author Gustavo
+ * @version 1.0
+ */
 public final class TestConstants {
 
     public static final String BASE_URL = "/api";
+    public static final String LIST_OPERATION = "/listar";
 
     // ========================
     // User Management Endpoints
@@ -16,7 +36,7 @@ public final class TestConstants {
     // Admin-only (User Management)
     public static final String ENDPOINT_USUARIOS_ADMIN = ENDPOINT_USUARIOS + "/admin";
     public static final String ENDPOINT_USUARIOS_ADMIN_REGISTRO = ENDPOINT_USUARIOS_ADMIN + "/registro";
-    public static final String ENDPOINT_USUARIOS_ADMIN_LISTAR = ENDPOINT_USUARIOS_ADMIN + "/listar";
+    public static final String ENDPOINT_USUARIOS_ADMIN_LISTAR = ENDPOINT_USUARIOS_ADMIN + LIST_OPERATION;
     public static final String ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE = ENDPOINT_USUARIOS_ADMIN + "/change-role";
 
     // ========================
@@ -24,7 +44,7 @@ public final class TestConstants {
     // ========================
     public static final String ENDPOINT_PRODUCTOS = BASE_URL + "/productos";
 
-    public static final String ENDPOINT_PRODUCTOS_LISTAR = ENDPOINT_PRODUCTOS + "/listar";
+    public static final String ENDPOINT_PRODUCTOS_LISTAR = ENDPOINT_PRODUCTOS + LIST_OPERATION;
     public static final String ENDPOINT_PRODUCTOS_CREAR = ENDPOINT_PRODUCTOS + "/crear";
     public static final String ENDPOINT_PRODUCTOS_ELIMINAR = ENDPOINT_PRODUCTOS + "/eliminar";
     public static final String ENDPOINT_PRODUCTOS_ACTUALIZAR = ENDPOINT_PRODUCTOS + "/actualizar";
@@ -35,7 +55,7 @@ public final class TestConstants {
     public static final String ENDPOINT_COMPRAS = BASE_URL + "/compras";
 
     public static final String ENDPOINT_COMPRAS_NUEVA = ENDPOINT_COMPRAS + "/nueva";
-    public static final String ENDPOINT_COMPRAS_LISTAR = ENDPOINT_COMPRAS + "/listar";
+    public static final String ENDPOINT_COMPRAS_LISTAR = ENDPOINT_COMPRAS + LIST_OPERATION;
 
 
     // ========================
@@ -57,20 +77,18 @@ public final class TestConstants {
     public static final String ENDPOINT_OPENID_CONFIG = "/.well-known/openid-configuration";
 
     // ========================
-    // Roles
-    // ========================
-    public static final String ROLE_USER = "USER";
-    public static final String ROLE_ADMIN = "ADMIN";
-
-    // ========================
-    // Tests users
+    // ACTUATORS
     // ========================
 
-    public static final String TEST_NAME = "Test User";
-    public static final String TEST_USERNAME = "test@example.com";
-    public static final String TEST_PASSWD = "testPasswd123!";
-    public static final String TEST_ADMIN_USERNAME = "admin@example.com";
-    public static final String TEST_ADMIN_PASSWD = "adminPasswd123!";
+    public static final String ENDPOINT_ACTUATOR_HEALTH = "/actuator/health";
+    public static final String ENDPOINT_ACTUATOR_INFO = "/actuator/info";
+
+    // ========================
+    // SWAGGER DOCUMENTATION
+    // ========================
+
+    public static final String ENDPOINT_SWAGGER_UI = "/swagger-ui/index.html";
+    public static final String ENDPOINT_SWAGGER_DOCS = "/v3/api-docs";
 
     private TestConstants() {
     }

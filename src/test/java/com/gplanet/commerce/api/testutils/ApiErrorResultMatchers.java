@@ -8,7 +8,35 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import org.springframework.test.web.servlet.ResultMatcher;
 
 /**
- * Utility class for asserting API error responses in tests.
+ * Utility class that provides custom ResultMatchers for testing API error responses.
+ * This class works in conjunction with {@link com.gplanet.commerce.api.dtos.api.ApiErrorDTO}
+ * and {@link com.gplanet.commerce.api.exceptions.GlobalExceptionHandler} to verify error
+ * responses in integration tests.
+ * 
+ * <p>The matchers correspond to the standard error response structure:
+ * <pre>
+ * {
+ *   "timestamp": "2023-10-01T10:00:00",
+ *   "status": 400,
+ *   "error": "Validation Error",
+ *   "message": "Error description",
+ *   "path": "/api/endpoint",
+ *   "details": ["Error detail 1", "Error detail 2"]
+ * }
+ * </pre>
+ * </p>
+ * 
+ * <p>Usage example:
+ * <pre>
+ * mockMvc.perform(post("/api/usuarios/registro"))
+ *        .andExpect(status().isBadRequest())
+ *        .andExpect(ApiErrorResultMatchers.validationError())
+ *        .andExpect(ApiErrorResultMatchers.errorDetailsIsNotEmpty());
+ * </pre>
+ * </p>
+ * 
+ * @author Gustavo
+ * @version 1.0
  */
 public final class ApiErrorResultMatchers {
 

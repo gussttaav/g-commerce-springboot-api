@@ -1,10 +1,5 @@
 package com.gplanet.commerce.api.repositories;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_USERNAME;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_ADMIN_PASSWD;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_NAME;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_PASSWD;
-import static com.gplanet.commerce.api.testutils.TestConstants.TEST_USERNAME;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -25,6 +20,12 @@ import com.gplanet.commerce.api.entities.Usuario;
 @DataJpaTest
 @ActiveProfiles("test")
 class UsuarioRepositoryTest {
+    public static final String TEST_NAME = "Test User";
+    public static final String TEST_USERNAME = "test@example.com";
+    public static final String TEST_PASSWD = "testPasswd123!";
+    public static final String TEST_ADMIN_USERNAME = "admin@example.com";
+    public static final String TEST_ADMIN_PASSWD = "adminPasswd123!";
+    
     @Autowired
     private UsuarioRepository usuarioRepository;
     

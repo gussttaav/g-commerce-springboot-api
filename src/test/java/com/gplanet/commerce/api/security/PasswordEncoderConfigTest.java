@@ -9,8 +9,11 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+
+import com.gplanet.commerce.api.configs.TestRedisConfiguration;
 
 /**
  * Tests for password encoding functionality.
@@ -18,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
  */
 @SpringBootTest
 @ActiveProfiles("test")
+@Import(TestRedisConfiguration.class)
 class PasswordEncoderConfigTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -28,7 +32,7 @@ class PasswordEncoderConfigTest {
     @Test
     void shouldGenerateUniqueHashesForSamePassword() {
         // Arrange
-        String rawPassword = "testPassword";
+        String rawPassword = "Password123!";
 
         // Act
         String encodedPassword1 = passwordEncoder.encode(rawPassword);

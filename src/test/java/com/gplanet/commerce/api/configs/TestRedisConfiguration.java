@@ -29,30 +29,44 @@ public class TestRedisConfiguration {
 
     private static final int REDIS_PORT = 6379;
 
-    private RedisServer redisServer;
+    // Static server shared across all test contexts
+    private static RedisServer redisServer;
+    private static boolean started;
 
     /**
      * Starts the embedded Redis server on port 6379.
+     * Uses synchronized block to prevent multiple contexts from starting the server.
      *
      * @throws IOException if the Redis server cannot be started
      */
     @PostConstruct
     public void startRedis() throws IOException {
-        redisServer = new RedisServer(REDIS_PORT);
-        redisServer.start();
+        synchronized (TestRedisConfiguration.class) {
+            if (!started) {
+                redisServer = new RedisServer(REDIS_PORT);
+                redisServer.start();
+                started = true;
+                
+                // Ensure server is stopped when JVM exits
+                Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                    if (redisServer != null && redisServer.isActive()) {
+                        redisServer.stop();
+                    }
+                }));
+            }
+        }
     }
 
     /**
      * Stops the embedded Redis server if it is running.
      * <p>
-     * This method is called automatically when the Spring context is shut down.
+     * Note: With shared server approach, we don't stop the server here
+     * as other test contexts might still need it. The shutdown hook will handle cleanup.
      * </p>
      */
     @PreDestroy
     public void stopRedis() {
-        if (redisServer != null) {
-            redisServer.stop();
-        }
+        // Server is stopped by shutdown hook to ensure all tests complete
     }
 
     /**
@@ -63,7 +77,9 @@ public class TestRedisConfiguration {
     @Bean
     @Primary
     public RedisConnectionFactory redisConnectionFactory() {
-        return new LettuceConnectionFactory("localhost", REDIS_PORT);
+        LettuceConnectionFactory factory = new LettuceConnectionFactory("localhost", REDIS_PORT);
+        factory.afterPropertiesSet();
+        return factory;
     }
 
     /**

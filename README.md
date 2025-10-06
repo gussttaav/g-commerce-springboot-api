@@ -1,6 +1,7 @@
 # Spring Boot G-commerce API
 
 [![Build Status](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/docker-build.yml?branch=main&logo=github&logoColor=white)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/docker-build.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/docker-build.yml?branch=main&logo=checkmarx&logoColor=white&label=tests)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/docker-build.yml)
 [![Deploy Status](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/aws-deploy.yml?branch=main&logo=amazonaws&logoColor=white&label=deploy)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/aws-deploy.yml)
 [![Health Check](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/health-check.yml?branch=main&logo=heart&logoColor=white&label=health)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/health-check.yml)
 [![API Documentation](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?logo=swagger&logoColor=white)](https://g-commerce.duckdns.org/swagger-ui/index.html)
@@ -468,11 +469,13 @@ src/
 ├── test/
 │   ├── java/
 │   │   └── com/gplanet/commerce/api/
+│   │       ├── configs/
+│   │       ├── integration/
 │   │       ├── controllers/
 │   │       ├── repositories/
-│   │       ├── services/
 │   │       ├── security/
-│   │       └── integration/
+│   │       ├── services/
+│   │       └── testutils/
 │   └── resources/
 │       └── application-test.yml
 ├── docker-compose.yml

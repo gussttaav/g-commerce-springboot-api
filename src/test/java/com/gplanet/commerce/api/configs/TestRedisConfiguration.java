@@ -50,7 +50,11 @@ public class TestRedisConfiguration {
                 // Ensure server is stopped when JVM exits
                 Runtime.getRuntime().addShutdownHook(new Thread(() -> {
                     if (redisServer != null && redisServer.isActive()) {
-                        redisServer.stop();
+                        try {
+                            redisServer.stop();
+                        } catch (IOException e) {
+                            e.printStackTrace();
+                        }
                     }
                 }));
             }

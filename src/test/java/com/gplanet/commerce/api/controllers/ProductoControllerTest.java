@@ -2,10 +2,7 @@ package com.gplanet.commerce.api.controllers;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_ACTUALIZAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_ELIMINAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -117,7 +114,7 @@ class ProductoControllerTest {
     }
 
     @Nested
-    @DisplayName("GET " + ENDPOINT_PRODUCTOS_LISTAR)
+    @DisplayName("GET " + ENDPOINT_PRODUCTOS)
     class ListarProductos {
         
         @Test
@@ -134,7 +131,7 @@ class ProductoControllerTest {
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR))
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(2))
@@ -160,7 +157,7 @@ class ProductoControllerTest {
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR))
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(2))
@@ -177,7 +174,7 @@ class ProductoControllerTest {
         @DisplayName("Should return 403 when USER role tries to access inactive products")
         void listarProductosUserRoleAccessInactiveProductsReturns403() throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR)
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
                     .param(PARAM_STATUS, "INACTIVE"))
                 .andExpect(status().isForbidden());
 
@@ -197,7 +194,7 @@ class ProductoControllerTest {
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR)
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
                     .param(PARAM_STATUS, "INACTIVE"))
                 .andExpect(status().isOk())
                 .andExpect(productsCount(1))
@@ -222,7 +219,7 @@ class ProductoControllerTest {
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR)
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
                     .param(PARAM_STATUS, "ALL"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -249,7 +246,7 @@ class ProductoControllerTest {
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR)
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
                     .param("searchText", searchTest))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -273,7 +270,7 @@ class ProductoControllerTest {
                 .thenReturn(emptyPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR))
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(0))
@@ -285,7 +282,7 @@ class ProductoControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/productos/crear")
+    @DisplayName("POST /api/productos")
     class CrearProducto {
 
         @Test
@@ -296,7 +293,7 @@ class ProductoControllerTest {
             ProductoDTO productoDTO = createValidProductoDTO();
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isUnauthorized());
@@ -312,7 +309,7 @@ class ProductoControllerTest {
             ProductoDTO productoDTO = createValidProductoDTO();
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isForbidden());
@@ -332,7 +329,7 @@ class ProductoControllerTest {
                 .thenReturn(responseDTO);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isOk())
@@ -352,7 +349,7 @@ class ProductoControllerTest {
             ProductoDTO invalidProducto = new ProductoDTO("", "", new BigDecimal("-10.00"), false);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(invalidProducto)))
                 .andExpect(status().isBadRequest())
@@ -363,7 +360,7 @@ class ProductoControllerTest {
     }
 
     @Nested
-    @DisplayName("PUT /api/productos/actualizar/{id}")
+    @DisplayName("PUT /api/productos/{id}")
     class ActualizarProducto {
 
         @Test
@@ -374,7 +371,7 @@ class ProductoControllerTest {
             ProductoDTO productoDTO = createValidProductoDTO();
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS_ACTUALIZAR + PATH_PRODUCT_ID_1)
+            mockMvc.perform(put(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isUnauthorized());
@@ -390,7 +387,7 @@ class ProductoControllerTest {
             ProductoDTO productoDTO = createValidProductoDTO();
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS_ACTUALIZAR + PATH_PRODUCT_ID_1)
+            mockMvc.perform(put(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isForbidden());
@@ -411,7 +408,7 @@ class ProductoControllerTest {
                 .thenReturn(responseDTO);
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS_ACTUALIZAR + "/" + productId)
+            mockMvc.perform(put(ENDPOINT_PRODUCTOS + "/" + productId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isOk())
@@ -434,7 +431,7 @@ class ProductoControllerTest {
                 .thenThrow(new ResourceNotFoundException("El producto no existe"));
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS_ACTUALIZAR + "/999")
+            mockMvc.perform(put(ENDPOINT_PRODUCTOS + "/999")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productoDTO)))
                 .andExpect(status().isNotFound())
@@ -445,7 +442,7 @@ class ProductoControllerTest {
     }
 
     @Nested
-    @DisplayName("DELETE /api/productos/eliminar/{id}")
+    @DisplayName("DELETE /api/productos/{id}")
     class EliminarProducto {
 
         @Test
@@ -453,7 +450,7 @@ class ProductoControllerTest {
         @DisplayName("Should return 401 when user is not authenticated")
         void eliminarProductoUnauthenticatedUserReturns401() throws Exception {
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS_ELIMINAR + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(productoService);
@@ -464,7 +461,7 @@ class ProductoControllerTest {
         @DisplayName("Should return 403 when user is not admin")
         void eliminarProductoNonAdminUserReturns403() throws Exception {
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS_ELIMINAR + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isForbidden());
             
             verifyNoInteractions(productoService);
@@ -478,7 +475,7 @@ class ProductoControllerTest {
             doNothing().when(productoService).eliminarProducto(anyLong());
 
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS_ELIMINAR + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isOk());
 
             verify(productoService).eliminarProducto(1L);
@@ -493,7 +490,7 @@ class ProductoControllerTest {
                 .when(productoService).eliminarProducto(anyLong());
 
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS_ELIMINAR + "/999"))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + "/999"))
                 .andExpect(status().isNotFound())
                 .andExpect(errorMessage("Producto no encontrado"));
 

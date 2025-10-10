@@ -99,7 +99,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
-    @GetMapping("/listar")
+    @GetMapping
     public PaginatedResponse<ProductoResponseDTO> listarProductos(
             @RequestParam(required = false, defaultValue = "ACTIVE") 
             @Schema(description = "Filter products by status (ADMIN only for non-ACTIVE)")
@@ -163,7 +163,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
-    @PostMapping("/crear")
+    @PostMapping
     public ProductoResponseDTO crearProducto(
             @Valid @RequestBody @Parameter(description = "New product parameters", required = true) 
             ProductoDTO productoDTO) {
@@ -197,7 +197,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
-    @PutMapping("/actualizar/{id}")
+    @PutMapping("/{id}")
     public ProductoResponseDTO actualizarProducto(
             @Parameter(name = "id", description = "Unique identifier of the product to update",
                       required = true,
@@ -228,7 +228,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
-    @DeleteMapping("/eliminar/{id}")
+    @DeleteMapping("/{id}")
     public void eliminarProducto(
         @Parameter(name = "id", description = "Unique identifier of the product to delete",
                    required = true,

@@ -44,11 +44,6 @@ public final class TestConstants {
     // ========================
     public static final String ENDPOINT_PRODUCTOS = BASE_URL + "/productos";
 
-    public static final String ENDPOINT_PRODUCTOS_LISTAR = ENDPOINT_PRODUCTOS + LIST_OPERATION;
-    public static final String ENDPOINT_PRODUCTOS_CREAR = ENDPOINT_PRODUCTOS + "/crear";
-    public static final String ENDPOINT_PRODUCTOS_ELIMINAR = ENDPOINT_PRODUCTOS + "/eliminar";
-    public static final String ENDPOINT_PRODUCTOS_ACTUALIZAR = ENDPOINT_PRODUCTOS + "/actualizar";
-
     // ========================
     // Purchase Management Endpoints
     // ========================

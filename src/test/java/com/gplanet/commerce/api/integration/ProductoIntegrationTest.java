@@ -1,7 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_ACTUALIZAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,7 +29,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
     private static final String ADMIN_PASSWORD = "admin123";
     private static final String USER_EMAIL = "user@example.com";
     private static final String USER_PASSWORD = "user123";
-    private static final String ENDPOINT_ACTUALIZAR = ENDPOINT_PRODUCTOS_ACTUALIZAR + "/";
+    private static final String ENDPOINT_ACTUALIZAR = ENDPOINT_PRODUCTOS + "/";
     
     @Test
     void crearProductoAdminCreaCorrectamente() throws Exception {
@@ -42,7 +41,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
             new BigDecimal("99.99"), true);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productoDTO)))
@@ -69,7 +68,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
             new BigDecimal("50.00"), true);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productoDTO)))
@@ -87,7 +86,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
             "Descripción original", 
             new BigDecimal("49.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(originalProducto)))
@@ -127,7 +126,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
             "Descripción original", 
             new BigDecimal("17.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(originalProducto)))

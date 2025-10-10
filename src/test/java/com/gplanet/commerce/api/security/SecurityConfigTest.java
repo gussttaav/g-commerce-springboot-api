@@ -6,8 +6,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOG
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_JWKS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_OPENID_CONFIG;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_CREAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_UI;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
@@ -157,7 +156,7 @@ class SecurityConfigTest {
             eq(0), eq(10), eq("nombre"), eq("ASC")))
             .thenReturn(productPage);
 
-        mockMvc.perform(get(ENDPOINT_PRODUCTOS_LISTAR))
+        mockMvc.perform(get(ENDPOINT_PRODUCTOS))
                 .andExpect(status().isOk());
     }
 
@@ -222,7 +221,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - User tries to access admin endpoint
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
@@ -253,7 +252,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(productoDto)))
@@ -290,7 +289,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - No CSRF token required
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS_CREAR)
+        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(productoDto)))

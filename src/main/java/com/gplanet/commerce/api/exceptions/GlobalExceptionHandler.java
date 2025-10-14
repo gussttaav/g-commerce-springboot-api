@@ -10,6 +10,7 @@ import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingRequestHeaderException;
@@ -150,6 +151,30 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(ex.getStatus()).body(error);
+    }
+
+    /**
+     * Handles access denied exceptions from Spring Security.
+     * Triggered when an authenticated user lacks required permissions.
+     *
+     * @param ex The access denied exception
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with access denied details
+     */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ApiErrorDTO> handleAccessDeniedException(AccessDeniedException ex,
+                                                                 HttpServletRequest request) {
+        log.warn("Access denied for request to {}: {}", request.getRequestURI(), ex.getMessage());
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.FORBIDDEN.value(),
+                "Access Denied",
+                ex.getMessage(),
+                request.getRequestURI(),
+                new ArrayList<>()
+        );
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
     }
 
     /**

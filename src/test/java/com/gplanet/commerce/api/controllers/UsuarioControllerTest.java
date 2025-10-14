@@ -5,12 +5,10 @@ import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDet
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailsIsNotEmpty;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_LISTAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_REGISTRO;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PASSWORD;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -52,7 +50,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
@@ -91,8 +88,8 @@ class UsuarioControllerTest {
         return new UsuarioDTO(TEST_USER_NAME, TEST_USER_EMAIL, "Password123!");
     }
 
-    private UsuarioAdminDTO buildValidUsuarioAdminDTO() {
-        return new UsuarioAdminDTO("Admin User", TEST_ADMIN_EMAIL, "AdminPass123!", Usuario.Role.ADMIN);
+    private UsuarioDTO buildValidUsuarioAdminDTO() {
+        return new UsuarioDTO("Admin User", TEST_ADMIN_EMAIL, "AdminPass123!", Usuario.Role.ADMIN);
     }
 
     public static ResultMatcher userId(int id) throws Exception {
@@ -118,9 +115,8 @@ class UsuarioControllerTest {
         objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
     }
 
-    // /api/usuarios/registro endpoint tests
     @Nested
-    @DisplayName("POST /registro")
+    @DisplayName("POST /api/usuarios/")
     class RegistroUsuarioTests {
         
         @Test
@@ -139,7 +135,7 @@ class UsuarioControllerTest {
                 .thenReturn(responseDto);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+            mockMvc.perform(post(ENDPOINT_USUARIOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -160,7 +156,7 @@ class UsuarioControllerTest {
             UsuarioDTO requestDto = new UsuarioDTO(TEST_USER_NAME, "invalid-email", "Password123!");
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+            mockMvc.perform(post(ENDPOINT_USUARIOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -178,7 +174,7 @@ class UsuarioControllerTest {
             UsuarioDTO requestDto = new UsuarioDTO("", "", "");
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+            mockMvc.perform(post(ENDPOINT_USUARIOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -188,30 +184,24 @@ class UsuarioControllerTest {
             
             verifyNoInteractions(usuarioService);
         }
-    }
 
-    // /api/usuarios/admin/registro endpoint tests
-    @Nested
-    @DisplayName("POST /admin/registro")
-    class RegistroAdminTests {
-        
         @Test
         @DisplayName("Should register admin successfully with valid data when authenticated as ADMIN")
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
         void registrarAdminValidDataAuthenticatedAsAdminSuccess() throws Exception {
             // Arrange
-            UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
+            UsuarioDTO requestDto = buildValidUsuarioAdminDTO();
             UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
                 requestDto.nombre(), 
                 requestDto.email(), 
                 requestDto.rol(),
                 LocalDateTime.now());
             
-            when(usuarioService.registrarAdmin(any(UsuarioAdminDTO.class)))
+            when(usuarioService.registrarUsuario(any(UsuarioDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_REGISTRO)
+            mockMvc.perform(post(ENDPOINT_USUARIOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -220,7 +210,7 @@ class UsuarioControllerTest {
                 .andExpect(userEmail(requestDto.email()))
                 .andExpect(userRol("ADMIN"));
 
-            verify(usuarioService).registrarAdmin(any(UsuarioAdminDTO.class));
+            verify(usuarioService).registrarUsuario(any(UsuarioDTO.class));
         }
 
         @Test
@@ -228,29 +218,13 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL, roles = USER_ROLE)
         void registrarAdminValidDataNotAdminForbidden() throws Exception {
             // Arrange
-            UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
+            UsuarioDTO requestDto = buildValidUsuarioAdminDTO();
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_REGISTRO)
+            mockMvc.perform(post(ENDPOINT_USUARIOS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isForbidden());
-            
-            verifyNoInteractions(usuarioService);
-        }
-
-        @Test
-        @WithAnonymousUser
-        @DisplayName("Should return 401 when not authenticated")
-        void registrarAdminNotAuthenticatedUnauthorized() throws Exception {
-            // Arrange
-            UsuarioAdminDTO requestDto = buildValidUsuarioAdminDTO();
-
-            // Act & Assert
-            mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_REGISTRO)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(requestDto)))
-                .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(usuarioService);
         }
@@ -452,7 +426,7 @@ class UsuarioControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /admin/listar")
+    @DisplayName("GET /api/usuarios/")
     class ListarUsuariosTests {
         
         @Test
@@ -469,7 +443,7 @@ class UsuarioControllerTest {
             when(usuarioService.listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(page);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
+            mockMvc.perform(get(ENDPOINT_USUARIOS)
                     .param("page", "0")
                     .param("size", "10")
                     .param("sort", SORT_FIELD_EMAIL)
@@ -498,7 +472,7 @@ class UsuarioControllerTest {
             when(usuarioService.listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(emptyPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
+            mockMvc.perform(get(ENDPOINT_USUARIOS)
                     .param("page", "0")
                     .param("size", "10")
                     .param("sort", SORT_FIELD_EMAIL)
@@ -515,7 +489,7 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL, roles = USER_ROLE)
         void listarUsuariosAuthenticatedAsUserForbidden() throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR))
+            mockMvc.perform(get(ENDPOINT_USUARIOS))
                 .andExpect(status().isForbidden());
             
             verifyNoInteractions(usuarioService);
@@ -526,7 +500,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void listarUsuariosNotAuthenticatedUnauthorized() throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR))
+            mockMvc.perform(get(ENDPOINT_USUARIOS))
                 .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(usuarioService);

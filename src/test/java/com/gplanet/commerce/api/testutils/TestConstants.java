@@ -28,14 +28,11 @@ public final class TestConstants {
     // ========================
     public static final String ENDPOINT_USUARIOS = BASE_URL + "/usuarios";
 
-    public static final String ENDPOINT_USUARIOS_REGISTRO = ENDPOINT_USUARIOS + "/registro";
     public static final String ENDPOINT_USUARIOS_PERFIL = ENDPOINT_USUARIOS + "/perfil";
     public static final String ENDPOINT_USUARIOS_PASSWORD = ENDPOINT_USUARIOS + "/password";
 
     // Admin-only (User Management)
     public static final String ENDPOINT_USUARIOS_ADMIN = ENDPOINT_USUARIOS + "/admin";
-    public static final String ENDPOINT_USUARIOS_ADMIN_REGISTRO = ENDPOINT_USUARIOS_ADMIN + "/registro";
-    public static final String ENDPOINT_USUARIOS_ADMIN_LISTAR = ENDPOINT_USUARIOS_ADMIN + "/listar";
     public static final String ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE = ENDPOINT_USUARIOS_ADMIN + "/change-role";
 
     // ========================

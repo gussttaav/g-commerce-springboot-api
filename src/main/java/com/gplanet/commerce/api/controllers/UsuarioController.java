@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
+import org.springframework.security.access.AccessDeniedException;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
@@ -67,54 +67,44 @@ public class UsuarioController {
 
     /**
      * Registers a new user in the system.
-     * 
+     *
+     * If the requested role in the payload is {@code ADMIN}, the caller must be authenticated 
+     * with ADMIN role; otherwise an {@link AccessDeniedException} will be thrown.
+     *
+     * @param authentication the current authentication object; may be null for unauthenticated requests
      * @param usuarioDTO the user registration data containing email, password, and personal information
      * @return UsuarioResponseDTO containing the created user's information
      * @throws ApiException if the user could not be registered due to a constraint violation
+     * @throws AccessDeniedException if a non-admin user attempts to create an ADMIN user
      */
     @SecurityRequirements(value = {})
-    @Operation(summary = "Register a new user", 
-        description = "Creates a new user account with the provided information")
+    @Operation(summary = "Register a new user",
+        description = "Creates a new user account. If the requested role is ADMIN, the caller must have ADMIN role.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User successfully registered",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UsuarioResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
-    })
-    @PostMapping("/registro")
-    public UsuarioResponseDTO registrarUsuario(
-            @Valid @RequestBody @Parameter(description = "User registration details", required = true) 
-            UsuarioDTO usuarioDTO) {
-        return usuarioService.registrarUsuario(usuarioDTO);
-    }
-
-
-    /**
-     * Creates a new administrator user account.
-     * Only existing administrators can create new admin accounts.
-     * 
-     * @param usuarioDTO the admin user data containing email, password, and role information
-     * @return UsuarioResponseDTO containing the created admin user's information
-     * @throws ApiException if the user could not be registered due to a constraint violation
-     */
-    @Operation(summary = "Register admin user", description = "Creates a new admin user account (requires ADMIN role)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Admin user successfully registered",
             content = @Content(mediaType = "application/json",
                 schema = @Schema(implementation = UsuarioResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
         @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+        @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
-    @PostMapping("/admin/registro")
-    public UsuarioResponseDTO registrarAdmin(
-            @Valid @RequestBody @Parameter(description = "Admin user credentials", required = true) 
-            UsuarioAdminDTO usuarioDTO) {
-        return usuarioService.registrarAdmin(usuarioDTO);
+    @PostMapping
+    public UsuarioResponseDTO crearUsuario(
+            Authentication authentication,
+            @Valid @RequestBody @Parameter(description = "User registration details", required = true)
+            UsuarioDTO usuarioDTO) {
+
+        // If the request explicitly asks for ADMIN role, require caller to be ADMIN
+        if (usuarioDTO.rol() == Usuario.Role.ADMIN) {
+            if (authentication == null || authentication.getAuthorities().stream()
+                    .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
+                throw new AccessDeniedException("Only administrators can create admin users");
+            }
+        }
+
+        return usuarioService.registrarUsuario(usuarioDTO);
     }
 
 
@@ -212,7 +202,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
-    @GetMapping("/admin/listar")
+    @GetMapping
     public PaginatedResponse<UsuarioResponseDTO> listarUsuarios(
             @RequestParam(defaultValue = "0") 
             @Schema(description = "Page number (zero-based)", example = "0") int page,

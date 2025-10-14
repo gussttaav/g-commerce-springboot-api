@@ -13,7 +13,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
@@ -57,37 +56,13 @@ public class UsuarioService {
         usuario.setNombre(usuarioDTO.nombre());
         usuario.setEmail(usuarioDTO.email());
         usuario.setPassword(passwordEncoder.encode(usuarioDTO.password()));
-        usuario.setRol(Usuario.Role.USER);
+        usuario.setRol(usuarioDTO.rol());
         usuario.setFechaCreacion(LocalDateTime.now());
 
         Usuario savedUsuario = DatabaseOperationHandler.executeOperation(() -> 
             usuarioRepository.save(usuario)
         );
         log.info("User successfully registered with ID: {}", savedUsuario.getId());
-        return usuarioMapper.toUsuarioResponseDTO(savedUsuario);
-    }
-
-    /**
-     * Registers a new user in the system but specifying the role.
-     * This method should be called by users with ADMIN role only.
-     * 
-     * @param usuarioAdminDTO Data transfer object containing admin user registration information
-     * @return UsuarioResponseDTO containing the created admin user's information
-     */
-    @Transactional
-    public UsuarioResponseDTO registrarAdmin(UsuarioAdminDTO usuarioAdminDTO) {
-        log.info("Registering new admin user with email: {}", usuarioAdminDTO.email());
-        Usuario usuario = new Usuario();
-        usuario.setNombre(usuarioAdminDTO.nombre());
-        usuario.setEmail(usuarioAdminDTO.email());
-        usuario.setPassword(passwordEncoder.encode(usuarioAdminDTO.password()));
-        usuario.setRol(usuarioAdminDTO.rol());
-        usuario.setFechaCreacion(LocalDateTime.now());
-
-        Usuario savedUsuario = DatabaseOperationHandler.executeOperation(() -> 
-            usuarioRepository.save(usuario)
-        );
-        log.info("Admin user successfully registered with ID: {}", savedUsuario.getId());
         return usuarioMapper.toUsuarioResponseDTO(savedUsuario);
     }
 

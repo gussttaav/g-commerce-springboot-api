@@ -2,11 +2,9 @@ package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_LISTAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_REGISTRO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PASSWORD;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,7 +26,6 @@ import org.springframework.test.web.servlet.ResultMatcher;
 
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioAdminDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.jayway.jsonpath.JsonPath;
@@ -65,7 +62,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
@@ -84,7 +81,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
     void registroAdminDatosValidosRetornaAdminCreado() throws Exception {
         // Arrange
         final String newEmail = "new.admin@example.com";
-        UsuarioAdminDTO adminDTO = new UsuarioAdminDTO(
+        UsuarioDTO adminDTO = new UsuarioDTO(
                 "New Admin", 
                 newEmail, 
                 "admin123", Usuario.Role.ADMIN);
@@ -93,7 +90,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(adminDTO)))
@@ -112,7 +109,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create first user
         UsuarioDTO primerUsuario = new UsuarioDTO("First User", TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(primerUsuario)))
                 .andExpect(status().isOk());
@@ -121,7 +118,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         UsuarioDTO usuarioDuplicado = new UsuarioDTO("Duplicate User", TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDuplicado)))
                 .andExpect(status().isConflict());
@@ -133,7 +130,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         final String updatedEmail = "updated@example.com";
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -166,7 +163,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         final String newPassword = "newPassword123";
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -195,7 +192,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create user first
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -219,7 +216,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create user first
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -247,7 +244,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create regular user
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -257,7 +254,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
+        mockMvc.perform(get(ENDPOINT_USUARIOS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
@@ -275,7 +272,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create regular user
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -283,7 +280,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ADMIN_LISTAR)
+        mockMvc.perform(get(ENDPOINT_USUARIOS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isForbidden());
     }
@@ -293,7 +290,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create regular user
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
@@ -326,7 +323,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create first regular user
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk())
@@ -340,7 +337,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Create second regular user
         UsuarioDTO usuario2DTO = new UsuarioDTO("Test User 2", "test2@example.com", TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuario2DTO)))
                 .andExpect(status().isOk());

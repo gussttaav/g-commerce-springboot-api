@@ -2,7 +2,7 @@ package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -26,7 +26,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     void accederEndpointPublicoSinAutenticacionPermitido() throws Exception {
         UsuarioDTO usuarioDTO = new UsuarioDTO("New User", "new@example.com", "password123");
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());

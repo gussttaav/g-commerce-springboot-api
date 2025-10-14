@@ -119,6 +119,7 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/api/productos").permitAll()
 
                 // Admin-only endpoints
+                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/usuarios/admin/**").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/productos/**").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)

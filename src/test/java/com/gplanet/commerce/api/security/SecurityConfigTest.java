@@ -10,7 +10,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTO
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_UI;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -141,7 +141,7 @@ class SecurityConfigTest {
         
         when(usuarioService.registrarUsuario(any(UsuarioDTO.class))).thenReturn(responseDto);
 
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(usuarioDto)))
                 .andExpect(status().isOk());

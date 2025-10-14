@@ -4,7 +4,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOG
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -35,7 +35,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create user first
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -71,7 +71,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Login first to get token
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
 
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -101,7 +101,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Login first to get token
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());
@@ -130,7 +130,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Login first to get tokens
         UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_REGISTRO)
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(usuarioDTO)))
                 .andExpect(status().isOk());

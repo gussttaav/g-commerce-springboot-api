@@ -22,7 +22,6 @@ package com.gplanet.commerce.api.testutils;
 public final class TestConstants {
 
     public static final String BASE_URL = "/api";
-    public static final String LIST_OPERATION = "/listar";
 
     // ========================
     // User Management Endpoints
@@ -36,7 +35,7 @@ public final class TestConstants {
     // Admin-only (User Management)
     public static final String ENDPOINT_USUARIOS_ADMIN = ENDPOINT_USUARIOS + "/admin";
     public static final String ENDPOINT_USUARIOS_ADMIN_REGISTRO = ENDPOINT_USUARIOS_ADMIN + "/registro";
-    public static final String ENDPOINT_USUARIOS_ADMIN_LISTAR = ENDPOINT_USUARIOS_ADMIN + LIST_OPERATION;
+    public static final String ENDPOINT_USUARIOS_ADMIN_LISTAR = ENDPOINT_USUARIOS_ADMIN + "/listar";
     public static final String ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE = ENDPOINT_USUARIOS_ADMIN + "/change-role";
 
     // ========================
@@ -48,9 +47,6 @@ public final class TestConstants {
     // Purchase Management Endpoints
     // ========================
     public static final String ENDPOINT_COMPRAS = BASE_URL + "/compras";
-
-    public static final String ENDPOINT_COMPRAS_NUEVA = ENDPOINT_COMPRAS + "/nueva";
-    public static final String ENDPOINT_COMPRAS_LISTAR = ENDPOINT_COMPRAS + LIST_OPERATION;
 
 
     // ========================

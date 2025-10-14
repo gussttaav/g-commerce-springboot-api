@@ -63,6 +63,7 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
     private static final String ROLE_ADMIN = "ADMIN";
+    private static final String ROLE_USER = "USER";
 
     private final CorsProperties corsProperties;
     private final KeyStoreService keyStoreService;
@@ -124,8 +125,7 @@ public class SecurityConfig {
 
                 // User-specific endpoints
                 .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
-                .requestMatchers("/api/compras/nueva").hasRole("USER")
-                .requestMatchers("/api/compras/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/compras").hasRole(ROLE_USER)
 
                 // Mixed access endpoints
                 .requestMatchers("/api/usuarios/**").permitAll()

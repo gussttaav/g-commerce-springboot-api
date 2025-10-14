@@ -1,7 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_NUEVA;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -72,7 +71,7 @@ class CompraIntegrationTest extends AbstractIntegrationTest {
         CompraDTO compraDTO = new CompraDTO(productos);
         
         // Act & Assert
-        MvcResult result = mockMvc.perform(post(ENDPOINT_COMPRAS_NUEVA)
+        MvcResult result = mockMvc.perform(post(ENDPOINT_COMPRAS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(compraDTO)))
@@ -107,7 +106,7 @@ class CompraIntegrationTest extends AbstractIntegrationTest {
         realizarCompraProductoDisponibleCompraExitosa();
         
         // Act & Assert - List purchases
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .param("page", "0")
                 .param("size", "10")

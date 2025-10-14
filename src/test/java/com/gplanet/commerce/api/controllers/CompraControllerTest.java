@@ -1,7 +1,6 @@
 package com.gplanet.commerce.api.controllers;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_NUEVA;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -92,7 +91,7 @@ class CompraControllerTest {
             .thenReturn(responseDTO);
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_COMPRAS_NUEVA)
+        mockMvc.perform(post(ENDPOINT_COMPRAS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
             .andExpect(status().isOk())
@@ -111,7 +110,7 @@ class CompraControllerTest {
         CompraDTO validCompraDTO = createValidCompraDTO();
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_COMPRAS_NUEVA)
+        mockMvc.perform(post(ENDPOINT_COMPRAS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validCompraDTO)))
             .andExpect(status().isUnauthorized());
@@ -139,7 +138,7 @@ class CompraControllerTest {
             .thenReturn(page);
 
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", SORT_FIELD_FECHA)
@@ -176,7 +175,7 @@ class CompraControllerTest {
             .thenReturn(page);
 
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", SORT_FIELD_FECHA)

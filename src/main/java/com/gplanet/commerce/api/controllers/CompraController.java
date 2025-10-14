@@ -75,7 +75,7 @@ public class CompraController {
         @ApiResponse(responseCode = "409", ref = "#/components/responses/ConstraintError"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
-    @PostMapping("/nueva")
+    @PostMapping
     public CompraResponseDTO realizarCompra(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "New purchase details", required = true)
@@ -107,7 +107,7 @@ public class CompraController {
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
-    @GetMapping("/listar")
+    @GetMapping
     public PaginatedResponse<CompraResponseDTO> listarCompras(
            @RequestParam(defaultValue = "0")
            @Schema(description = "Page number (zero-based)", example = "0") int page,

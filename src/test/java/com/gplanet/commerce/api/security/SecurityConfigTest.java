@@ -3,7 +3,7 @@ package com.gplanet.commerce.api.security;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_HEALTH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_INFO;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGIN;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_JWKS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_OPENID_CONFIG;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
@@ -162,7 +162,7 @@ class SecurityConfigTest {
 
     @Test
     void whenUnauthenticatedAccessToProtectedEndpointThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
+        mockMvc.perform(get(ENDPOINT_COMPRAS))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -192,14 +192,14 @@ class SecurityConfigTest {
             eq(0), eq(10), eq("nombre"), eq("ASC")))
             .thenReturn(productPage);
 
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk());
     }
 
     @Test
     void whenJwtAuthWithInvalidTokenThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .header(AUTHORIZATION_HEADER, "Bearer invalid.token"))
                 .andExpect(status().isUnauthorized());
     }
@@ -261,7 +261,7 @@ class SecurityConfigTest {
 
     @Test
     void whenNoAuthenticationHeaderThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
+        mockMvc.perform(get(ENDPOINT_COMPRAS))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -330,7 +330,7 @@ class SecurityConfigTest {
 
     @Test
     void whenAccessingProtectedEndpointThenAuthenticationHeaderIsRequired() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
+        mockMvc.perform(get(ENDPOINT_COMPRAS))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -351,13 +351,13 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - First request
-        MvcResult result1 = mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        MvcResult result1 = mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk())
                 .andReturn();
 
         // Second request - Should work with same token (stateless)
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR)
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk());
 

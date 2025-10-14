@@ -73,8 +73,7 @@ public class TestSecurityConfig {
 
                 // User-specific endpoints
                 .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
-                .requestMatchers("/api/compras/nueva").hasRole(ROLE_USER)
-                .requestMatchers("/api/compras/**").authenticated()
+                .requestMatchers(HttpMethod.POST, "/api/compras").hasRole(ROLE_USER)
 
                 // Mixed access endpoints
                 .requestMatchers("/api/usuarios/**").permitAll()

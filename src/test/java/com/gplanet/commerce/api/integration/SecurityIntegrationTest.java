@@ -1,6 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS_LISTAR;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_REGISTRO;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,7 +34,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     
     @Test
     void accederEndpointProtegidoSinAutenticacionDenegado() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS_LISTAR))
+        mockMvc.perform(get(ENDPOINT_COMPRAS))
                 .andExpect(status().isUnauthorized());
     }
     

@@ -1,9 +1,11 @@
 package com.gplanet.commerce.api.controllers;
 
 import org.springframework.data.domain.Page;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -13,8 +15,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
-import org.springframework.security.access.AccessDeniedException;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
@@ -36,12 +36,12 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 /**
- * REST Controller for managing user operations and authentication.
+ * REST Controller for managing user operations.
  * 
  * <p>
  * This controller handles all user-related operations including:
  * <ul>
- *   <li>User registration and authentication</li>
+ *   <li>User registration</li>
  *   <li>Profile retrieve and update</li>
  *   <li>Password management</li>
  *   <li>Admin user registration (admin only)</li>
@@ -50,7 +50,7 @@ import lombok.RequiredArgsConstructor;
  * </ul>
  * </p>
  * 
- * <p> Most operations require authentication except for registration and login.
+ * <p> Most operations require authentication except for registration.
  * Admin operations are restricted to users with administrative privileges.</p>
  *
  * @author Gustavo
@@ -66,8 +66,7 @@ public class UsuarioController {
     private final UsuarioService usuarioService;
 
     /**
-     * Registers a new user in the system.
-     *
+     * Registers a new user in the system. 
      * If the requested role in the payload is {@code ADMIN}, the caller must be authenticated 
      * with ADMIN role; otherwise an {@link AccessDeniedException} will be thrown.
      *
@@ -123,7 +122,7 @@ public class UsuarioController {
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
-    @GetMapping("/perfil")
+    @GetMapping("/me")
     public UsuarioResponseDTO obtenerPerfil(Authentication authentication) {
         return usuarioService.obtenerPerfil(authentication.getName());
     }
@@ -136,6 +135,8 @@ public class UsuarioController {
      * @param perfilDTO the profile information to be updated
      * @return UsuarioResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if the user is not found
+     * @throws InvalidPasswordException if the old password is incorrect or the new password is equal to the new one
+     * @throws PasswordMismatchException if the new password is not confirmed correctly
      * @throws ApiException if the user could not be updated due to a constraint violation
      */
     @Operation(summary = "Update user profile", description = "Updates the authenticated user's profile information")
@@ -147,38 +148,13 @@ public class UsuarioController {
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
-    @PutMapping("/perfil")
+    @PatchMapping("/me")
     public UsuarioResponseDTO actualizarPerfil(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "Updated profile information", required = true) 
             ActualizacionUsuarioDTO perfilDTO) {
         return usuarioService.actualizarPerfil(
                 authentication.getName(), perfilDTO);
-    }
-
-
-    /**
-     * Changes the password of the authenticated user.
-     *
-     * @param authentication the current user's authentication object
-     * @param cambioPasswordDTO the password change details containing old and new passwords
-     * @throws UsernameNotFoundException if the user is not found
-     * @throws InvalidPasswordException if the old password is incorrect or the new password is equal to the new one
-     * @throws PasswordMismatchException if the new password is not confirmed correctly
-     */
-    @Operation(summary = "Change password", description = "Changes the authenticated user's password")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Password successfully changed"),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
-    })
-    @PutMapping("/password")
-    public void changePassword(
-            Authentication authentication,
-            @Valid @RequestBody @Parameter(description = "Password change details", required = true)
-            CambioPasswdDTO cambioPasswordDTO) {
-        usuarioService.changePassword(authentication.getName(), cambioPasswordDTO);
     }
 
 

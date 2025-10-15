@@ -3,13 +3,13 @@ package com.gplanet.commerce.api.integration;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PASSWORD;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -25,7 +25,6 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.jayway.jsonpath.JsonPath;
@@ -142,7 +141,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(actualizacionDTO)))
@@ -169,12 +168,12 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO(TEST_PASSWORD, newPassword, newPassword);
+        ActualizacionUsuarioDTO cambioDTO = new ActualizacionUsuarioDTO(TEST_PASSWORD, newPassword, newPassword);
         
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(cambioDTO)))
@@ -198,16 +197,16 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare invalid password change data
-        CambioPasswdDTO cambioDTO = new CambioPasswdDTO("wrongPassword", "newPassword", "newPassword");
+        ActualizacionUsuarioDTO cambioDTO = new ActualizacionUsuarioDTO("wrongPassword", "newPassword", "newPassword");
         
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(cambioDTO)))
-                .andExpect(status().isUnauthorized())
+                .andExpect(status().isBadRequest())
                 .andExpect(errorMessage("La contraseña actual es incorrecta"));
     }
 
@@ -224,7 +223,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL)
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(userName(TEST_USER_NAME))
@@ -235,7 +234,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
     @Test
     void obtenerPerfilSinAutenticacionRetornaUnauthorized() throws Exception {
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL))
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME))
                 .andExpect(status().isUnauthorized());
     }
 

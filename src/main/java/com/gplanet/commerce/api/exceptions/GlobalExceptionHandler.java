@@ -99,6 +99,33 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Handles illegal argument exceptions thrown by services or controllers when
+     * a method receives an inappropriate or invalid argument (for example,
+     * when a required value is empty or malformed but not covered by bean
+     * validation). Returns HTTP 400 Bad Request with the exception message.
+     *
+     * @param ex The IllegalArgumentException thrown by the application
+     * @param request The current HTTP request
+     * @return ResponseEntity containing ApiErrorDTO with the exception message
+     */
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<ApiErrorDTO> handleIllegalArgument(IllegalArgumentException ex,
+                                                            HttpServletRequest request) {
+        log.warn("Invalid argument for request to {}: {}", request.getRequestURI(), ex.getMessage());
+
+        ApiErrorDTO error = new ApiErrorDTO(
+                LocalDateTime.now(),
+                HttpStatus.BAD_REQUEST.value(),
+                "Validation Error",
+                ex.getMessage(),
+                request.getRequestURI(),
+                List.of(ex.getMessage())
+        );
+
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+    }
+
+    /**
      * Handles errors that occur during HTTP message conversion, specifically when the request body
      * cannot be properly read or parsed into JSON.
      * 

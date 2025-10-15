@@ -12,12 +12,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
@@ -79,9 +77,28 @@ public class UsuarioService {
         log.info("Updating profile for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
+        // Update basic profile fields only when provided (partial update semantics)
+        if (perfilDTO.nuevoEmail() != null) {
+            String nuevoEmail = perfilDTO.nuevoEmail().trim();
+            if (nuevoEmail.isEmpty()) {
+                throw new IllegalArgumentException("nuevoEmail no puede ser vacío");
+            }
+            usuario.setEmail(nuevoEmail);
+        }
 
-        usuario.setEmail(perfilDTO.nuevoEmail());
-        usuario.setNombre(perfilDTO.nombre());
+        if (perfilDTO.nombre() != null) {
+            String nombre = perfilDTO.nombre().trim();
+            if (nombre.isEmpty()) {
+                throw new IllegalArgumentException("nombre no puede ser vacío");
+            }
+            usuario.setNombre(nombre);
+        }
+
+        // If any password field is present, attempt password change flow
+        if (perfilDTO.currentPassword() != null || perfilDTO.newPassword() != null
+                || perfilDTO.confirmPassword() != null) {
+            changePassword(usuario, perfilDTO);
+        }
 
         Usuario updatedUsuario = DatabaseOperationHandler.executeOperation(() -> 
             usuarioRepository.save(usuario)
@@ -91,39 +108,42 @@ public class UsuarioService {
     }
 
     /**
-     * Changes the password of the user identified by email.
+     * Helper method to change the password of the user when updating the profile.
      *
-     * @param email the user's email
-     * @param cambioPasswdDTO the password change details
+     * @param usuario the existing user whose password is going to change 
+     * @param perfilDTO user profile with password change details
+     * @throws IllegalArgumentException if any of the password change parameters is null
      * @throws UsernameNotFoundException if the user is not found
-     * @throws InvalidPasswordException if the old password is incorrect or the new password is equal to the new one
-     * @throws PasswordMismatchException if the new password is not confirmed correctly
+     * @throws PasswordMismatchException if the current password is not correct or 
+     *          new password is not confirmed correctly
      */
-    @Transactional
-    public void changePassword(String email, CambioPasswdDTO cambioPasswdDTO) {
-        log.info("Password change attempt for user: {}", email);
-        Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
+    private void changePassword(Usuario usuario, ActualizacionUsuarioDTO perfilDTO) {
+        log.info("Password change attempt for user: {}", usuario.getEmail());
+
+        // Require all three fields for a password change
+        if (perfilDTO.currentPassword() == null || perfilDTO.newPassword() == null
+                || perfilDTO.confirmPassword() == null) {
+            throw new IllegalArgumentException(
+                    "Se requieren currentPassword, newPassword y confirmPassword");
+        }
 
         // Verify current password
-        if (!passwordEncoder.matches(cambioPasswdDTO.currentPassword(), usuario.getPassword())) {
-            throw new InvalidPasswordException("La contraseña actual es incorrecta");
+        if (!passwordEncoder.matches(perfilDTO.currentPassword(), usuario.getPassword())) {
+            throw new PasswordMismatchException("La contraseña actual es incorrecta");
         }
 
         // Verify new password is not the same as current
-        if (passwordEncoder.matches(cambioPasswdDTO.newPassword(), usuario.getPassword())) {
-            throw new InvalidPasswordException("La nueva contraseña debe ser diferente a la actual");
+        if (passwordEncoder.matches(perfilDTO.newPassword(), usuario.getPassword())) {
+            throw new IllegalArgumentException("La nueva contraseña debe ser diferente a la actual");
         }
 
         // Verify password confirmation
-        if (!cambioPasswdDTO.newPassword().equals(cambioPasswdDTO.confirmPassword())) {
+        if (!perfilDTO.newPassword().equals(perfilDTO.confirmPassword())) {
             throw new PasswordMismatchException("La nueva contraseña y su confirmación no coinciden");
         }
 
-        // Update password
-        usuario.setPassword(passwordEncoder.encode(cambioPasswdDTO.newPassword()));
-        usuarioRepository.save(usuario);
-        log.info("Password successfully changed for user: {}", email);
+        usuario.setPassword(passwordEncoder.encode(perfilDTO.newPassword()));
+        log.info("Password updated for user: {}", usuario.getEmail());
     }
     
     /**

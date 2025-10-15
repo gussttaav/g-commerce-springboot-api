@@ -9,7 +9,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_OPENID_C
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_UI;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
@@ -18,8 +18,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.options;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 
@@ -321,7 +321,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(actualizacionDto)))

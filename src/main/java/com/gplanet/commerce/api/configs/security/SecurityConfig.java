@@ -116,6 +116,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/validate").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/productos").permitAll()
 
                 // Admin-only endpoints
@@ -125,11 +126,8 @@ public class SecurityConfig {
                 .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints
-                .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
+                .requestMatchers("/api/usuarios/password").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/compras").hasRole(ROLE_USER)
-
-                // Mixed access endpoints
-                .requestMatchers("/api/usuarios/**").permitAll()
                 
                 // All other requests require authentication                
                 .anyRequest().authenticated()

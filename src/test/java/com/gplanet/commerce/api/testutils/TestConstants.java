@@ -27,9 +27,7 @@ public final class TestConstants {
     // User Management Endpoints
     // ========================
     public static final String ENDPOINT_USUARIOS = BASE_URL + "/usuarios";
-
-    public static final String ENDPOINT_USUARIOS_PERFIL = ENDPOINT_USUARIOS + "/perfil";
-    public static final String ENDPOINT_USUARIOS_PASSWORD = ENDPOINT_USUARIOS + "/password";
+    public static final String ENDPOINT_USUARIOS_ME = ENDPOINT_USUARIOS + "/me";
 
     // Admin-only (User Management)
     public static final String ENDPOINT_USUARIOS_ADMIN = ENDPOINT_USUARIOS + "/admin";

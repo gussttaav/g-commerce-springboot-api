@@ -7,8 +7,7 @@ import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMes
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PASSWORD;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_PERFIL;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -18,6 +17,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -49,7 +49,6 @@ import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
@@ -230,9 +229,9 @@ class UsuarioControllerTest {
         }
     }
 
-    // /api/usuarios/perfil endpoint tests
+    // /api/usuarios/me endpoint tests
     @Nested
-    @DisplayName("PUT /perfil")
+    @DisplayName("PATCH /me")
     class ActualizarPerfilTests {
         
         @Test
@@ -253,7 +252,7 @@ class UsuarioControllerTest {
                 .thenReturn(responseDto);
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
@@ -272,7 +271,7 @@ class UsuarioControllerTest {
                 "", "invalid-email");
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
@@ -291,37 +290,38 @@ class UsuarioControllerTest {
                 "New Name", "new@example.com");
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PERFIL)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(usuarioService);
         }
-    }
 
-    // /api/usuarios/password endpoint tests
-    @Nested
-    @DisplayName("PUT /password")
-    class CambiarContrasenaTests {
-        
         @Test
         @DisplayName("Should change password successfully when authenticated")
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaValidDataAuthenticatedSuccess() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO(TEST_USER_NAME, "NewPass123!", "NewPass123!");
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                TEST_USER_NAME, "NewPass123!", "NewPass123!");
+
+            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
+                TEST_USER_NAME, 
+                TEST_USER_EMAIL, 
+                Usuario.Role.USER,
+                LocalDateTime.now());
             
-            doNothing().when(usuarioService)
-                .changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+            when(usuarioService.actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class)))
+                .thenReturn(responseDto);
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk());
 
-            verify(usuarioService).changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class));
         }
 
         @Test
@@ -329,20 +329,21 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaPasswordMismatchBadRequest() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO(TEST_USER_NAME, "Pass123!", "DifferentPass123!");
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                TEST_USER_NAME, "Pass123!", "DifferentPass123!");
             
             doThrow(new PasswordMismatchException("Las contraseñas no coinciden"))
                 .when(usuarioService)
-                .changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+                .actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class));
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isBadRequest())
                 .andExpect(errorMessage("Las contraseñas no coinciden"));
 
-            verify(usuarioService).changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class));
         }
 
         @Test
@@ -350,20 +351,21 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaIncorrectCurrentPasswordUnauthorized() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO("WrongPass123!", "NewPass234!", "NewPass23!4");
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                "WrongPass123!", "NewPass234!", "NewPass23!4");
             
             doThrow(new InvalidPasswordException("La contraseña actual es incorrecta"))
                 .when(usuarioService)
-                .changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+                .actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class));
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isUnauthorized())
                 .andExpect(errorMessage("La contraseña actual es incorrecta"));
 
-            verify(usuarioService).changePassword(eq(TEST_USER_EMAIL), any(CambioPasswdDTO.class));
+            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(ActualizacionUsuarioDTO.class));
         }
 
         @Test
@@ -371,10 +373,11 @@ class UsuarioControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void cambiarContrasenaNotAuthenticatedUnauthorized() throws Exception {
             // Arrange
-            CambioPasswdDTO requestDto = new CambioPasswdDTO("CurrentPass123!", "Psswd123!", "Psswd123!");
+            ActualizacionUsuarioDTO requestDto = new ActualizacionUsuarioDTO(
+                "CurrentPass123!", "Psswd123!", "Psswd123!");
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_USUARIOS_PASSWORD)
+            mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isUnauthorized());
@@ -382,6 +385,7 @@ class UsuarioControllerTest {
             verifyNoInteractions(usuarioService);
         }
     }
+
 
     @Nested
     @DisplayName("GET /perfil")
@@ -402,7 +406,7 @@ class UsuarioControllerTest {
                 .thenReturn(responseDto);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL))
+            mockMvc.perform(get(ENDPOINT_USUARIOS_ME))
                 .andExpect(status().isOk())
                 .andExpect(userId(1))
                 .andExpect(userName(TEST_USER_NAME))
@@ -418,7 +422,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void obtenerPerfilNotAuthenticatedUnauthorized() throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_USUARIOS_PERFIL))
+            mockMvc.perform(get(ENDPOINT_USUARIOS_ME))
                 .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(usuarioService);

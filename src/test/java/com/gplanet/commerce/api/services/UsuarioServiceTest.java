@@ -29,7 +29,6 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.CambioPasswdDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
@@ -146,18 +145,20 @@ class UsuarioServiceTest {
     void cambiarContrasenaValidDataSuccess() {
         // Arrange
         String userEmail = TEST_USERNAME;
-        CambioPasswdDTO contrasenaDTO = new CambioPasswdDTO("oldPassword", "newPassword", "newPassword");
+        ActualizacionUsuarioDTO profileDTO = new ActualizacionUsuarioDTO(
+            "oldPassword", "newPassword", "newPassword");
         
         Usuario usuario = new Usuario();
         usuario.setPassword("encodedOldPassword");
         
         when(usuarioRepository.findByEmail(userEmail)).thenReturn(Optional.of(usuario));
-        when(passwordEncoder.matches(contrasenaDTO.currentPassword(), usuario.getPassword())).thenReturn(true);
-        when(passwordEncoder.encode(contrasenaDTO.newPassword())).thenReturn("encodedNewPassword");
+        when(passwordEncoder.matches(profileDTO.currentPassword(), usuario.getPassword())).thenReturn(true);
+        when(passwordEncoder.encode(profileDTO.newPassword())).thenReturn("encodedNewPassword");
+        when(usuarioRepository.save(usuario)).thenReturn(usuario);
         
         // Act & Assert
         assertDoesNotThrow(() -> 
-            usuarioService.changePassword(userEmail, contrasenaDTO));
+            usuarioService.actualizarPerfil(userEmail, profileDTO));
         
         verify(usuarioRepository).save(usuario);
         assertEquals("encodedNewPassword", usuario.getPassword());

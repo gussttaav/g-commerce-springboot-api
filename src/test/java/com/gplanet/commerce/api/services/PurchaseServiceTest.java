@@ -29,25 +29,25 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 
-import com.gplanet.commerce.api.dtos.compra.CompraDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraMapper;
-import com.gplanet.commerce.api.dtos.compra.CompraProductoDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
-import com.gplanet.commerce.api.entities.Compra;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseMapper;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.CompraRepository;
 import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.PurchaseRepository;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 
 @ExtendWith(MockitoExtension.class)
-class CompraServiceTest {
+class PurchaseServiceTest {
     @Mock
-    private CompraMapper compraMapper;
+    private PurchaseMapper purchaseMapper;
     
     @Mock
-    private CompraRepository compraRepository;
+    private PurchaseRepository purchaseRepository;
     
     @Mock
     private ProductoRepository productoRepository;
@@ -56,15 +56,15 @@ class CompraServiceTest {
     private UsuarioRepository usuarioRepository;
     
     @InjectMocks
-    private CompraService compraService;
+    private PurchaseService purchaseService;
     
     private Usuario usuarioNormal;
     private Usuario usuarioAdmin;
     private Producto producto1;
     private Producto producto2;
-    private Compra compra;
-    private CompraDTO compraDTO;
-    private CompraResponseDTO compraResponseDTO;
+    private Purchase purchase;
+    private PurchaseDTO purchaseDTO;
+    private PurchaseResponseDTO purchaseResponseDTO;
     
     @BeforeEach
     void setUp() {
@@ -92,78 +92,78 @@ class CompraServiceTest {
         producto2.setNombre("Producto 2");
         producto2.setPrecio(new BigDecimal("200.00"));
         
-        // Setup CompraDTO
-        CompraProductoDTO compraProductoDto1 = new CompraProductoDTO(1L, 2);
-        CompraProductoDTO compraProductoDto2 = new CompraProductoDTO(2L, 1);
-        compraDTO = new CompraDTO(Arrays.asList(compraProductoDto1, compraProductoDto2));
+        // Setup PurchaseDTO
+        PurchaseProductDTO purchaseProductDto1 = new PurchaseProductDTO(1L, 2);
+        PurchaseProductDTO purchaseProductDto2 = new PurchaseProductDTO(2L, 1);
+        purchaseDTO = new PurchaseDTO(Arrays.asList(purchaseProductDto1, purchaseProductDto2));
         
-        // Setup Compra
-        compra = new Compra();
-        compra.setId(1L);
-        compra.setUsuario(usuarioNormal);
-        compra.setFecha(LocalDateTime.now());
-        compra.setTotal(new BigDecimal("400.00"));
+        // Setup Purchase
+        purchase = new Purchase();
+        purchase.setId(1L);
+        purchase.setUsuario(usuarioNormal);
+        purchase.setFecha(LocalDateTime.now());
+        purchase.setTotal(new BigDecimal("400.00"));
         
-        // Setup CompraResponseDTO
-        compraResponseDTO = new CompraResponseDTO(
+        // Setup PurchaseResponseDTO
+        purchaseResponseDTO = new PurchaseResponseDTO(
             1L,
             usuarioNormal.getNombre(),
-            compra.getFecha(),
-            compra.getTotal(),
+            purchase.getFecha(),
+            purchase.getTotal(),
             null // productos, no se usan en los asserts
         );
     }
 
-    private Page<CompraResponseDTO> listOnePagePurchasesSortDescByDate(String username) {
-        return compraService.listarCompras(username, 0, 10, "fecha", "DESC");
+    private Page<PurchaseResponseDTO> listOnePagePurchasesSortDescByDate(String username) {
+        return purchaseService.listPurchases(username, 0, 10, "fecha", "DESC");
     }
     
     @Test
-    void listarComprasUserRoleReturnsUserCompras() {
+    void listPurchasesUserRoleReturnsUserPurchases() {
         // Arrange
-        Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
+        Page<Purchase> purchasesPage = new PageImpl<>(Collections.singletonList(purchase));
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
-        when(compraRepository.findByUsuario(eq(usuarioNormal), any(Pageable.class)))
-            .thenReturn(comprasPage);
-        when(compraMapper.toCompraResponseDTO(compra))
-            .thenReturn(compraResponseDTO);
+        when(purchaseRepository.findByUsuario(eq(usuarioNormal), any(Pageable.class)))
+            .thenReturn(purchasesPage);
+        when(purchaseMapper.toPurchaseResponseDTO(purchase))
+            .thenReturn(purchaseResponseDTO);
             
         // Act
-        Page<CompraResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioNormal.getEmail());
+        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioNormal.getEmail());
         
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        assertEquals(compraResponseDTO, result.getContent().get(0));
-        verify(compraRepository).findByUsuario(eq(usuarioNormal), any(Pageable.class));
-        verify(compraRepository, never()).findAll(any(Pageable.class));
+        assertEquals(purchaseResponseDTO, result.getContent().get(0));
+        verify(purchaseRepository).findByUsuario(eq(usuarioNormal), any(Pageable.class));
+        verify(purchaseRepository, never()).findAll(any(Pageable.class));
     }
 
     @Test
-    void listarComprasAdminRoleReturnsAllCompras() {
+    void listPurchasesAdminRoleReturnsAllPurchases() {
         // Arrange
-        Page<Compra> comprasPage = new PageImpl<>(Collections.singletonList(compra));
+        Page<Purchase> purchasesPage = new PageImpl<>(Collections.singletonList(purchase));
         when(usuarioRepository.findByEmail(usuarioAdmin.getEmail()))
             .thenReturn(Optional.of(usuarioAdmin));
-        when(compraRepository.findAll(any(Pageable.class)))
-            .thenReturn(comprasPage);
-        when(compraMapper.toCompraResponseDTO(compra))
-            .thenReturn(compraResponseDTO);
+        when(purchaseRepository.findAll(any(Pageable.class)))
+            .thenReturn(purchasesPage);
+        when(purchaseMapper.toPurchaseResponseDTO(purchase))
+            .thenReturn(purchaseResponseDTO);
             
         // Act
-        Page<CompraResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioAdmin.getEmail());
+        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioAdmin.getEmail());
         
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
-        assertEquals(compraResponseDTO, result.getContent().get(0));
-        verify(compraRepository).findAll(any(Pageable.class));
-        verify(compraRepository, never()).findByUsuario(any(), any(Pageable.class));
+        assertEquals(purchaseResponseDTO, result.getContent().get(0));
+        verify(purchaseRepository).findAll(any(Pageable.class));
+        verify(purchaseRepository, never()).findByUsuario(any(), any(Pageable.class));
     }
 
     @Test
-    void listarComprasUserNotFoundThrowsException() {
+    void listPurchasesUserNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
@@ -174,7 +174,7 @@ class CompraServiceTest {
     }
     
     @Test
-    void realizarCompraSuccess() {
+    void createPurchaseSuccess() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
@@ -182,34 +182,34 @@ class CompraServiceTest {
             .thenReturn(Optional.of(producto1));
         when(productoRepository.findById(2L))
             .thenReturn(Optional.of(producto2));
-        when(compraRepository.save(any(Compra.class)))
-            .thenReturn(compra);
-        when(compraMapper.toCompraResponseDTO(any(Compra.class)))
-            .thenReturn(compraResponseDTO);
+        when(purchaseRepository.save(any(Purchase.class)))
+            .thenReturn(purchase);
+        when(purchaseMapper.toPurchaseResponseDTO(any(Purchase.class)))
+            .thenReturn(purchaseResponseDTO);
             
         // Act
-        CompraResponseDTO result = compraService.realizarCompra(usuarioNormal.getEmail(), compraDTO);
+        PurchaseResponseDTO result = purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO);
         
         // Assert
         assertNotNull(result);
-        assertEquals(compraResponseDTO.id(), result.id());
-        assertEquals(compraResponseDTO.total(), result.total());
-        verify(compraRepository).save(any(Compra.class));
+        assertEquals(purchaseResponseDTO.id(), result.id());
+        assertEquals(purchaseResponseDTO.total(), result.total());
+        verify(purchaseRepository).save(any(Purchase.class));
     }
     
     @Test
-    void realizarCompraUserNotFoundThrowsException() {
+    void createPurchaseUserNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
         assertThrows(RuntimeException.class,
-            () -> compraService.realizarCompra("nonexistent@example.com", compraDTO));
+            () -> purchaseService.createPurchase("nonexistent@example.com", purchaseDTO));
     }
     
     @Test
-    void realizarCompraProductNotFoundThrowsException() {
+    void createPurchaseProductNotFoundThrowsException() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
@@ -218,11 +218,11 @@ class CompraServiceTest {
             
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
-            () -> compraService.realizarCompra(usuarioNormal.getEmail(), compraDTO));
+            () -> purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO));
     }
     
     @Test
-    void realizarCompraCalculatesCorrectTotal() {
+    void createPurchaseCalculatesCorrectTotal() {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
@@ -230,22 +230,22 @@ class CompraServiceTest {
             .thenReturn(Optional.of(producto1));
         when(productoRepository.findById(2L))
             .thenReturn(Optional.of(producto2));
-        when(compraRepository.save(any(Compra.class)))
+        when(purchaseRepository.save(any(Purchase.class)))
             .thenAnswer(invocation -> {
-                Compra savedCompra = invocation.getArgument(0);
-                savedCompra.setId(1L);
-                return savedCompra;
+                Purchase savedPurchase = invocation.getArgument(0);
+                savedPurchase.setId(1L);
+                return savedPurchase;
             });
             
         // Act
-        compraService.realizarCompra(usuarioNormal.getEmail(), compraDTO);
+        purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO);
         
         // Assert
-        ArgumentCaptor<Compra> compraCaptor = ArgumentCaptor.forClass(Compra.class);
-        verify(compraRepository).save(compraCaptor.capture());
+        ArgumentCaptor<Purchase> purchaseCaptor = ArgumentCaptor.forClass(Purchase.class);
+        verify(purchaseRepository).save(purchaseCaptor.capture());
         
-        Compra savedCompra = compraCaptor.getValue();
+        Purchase savedPurchase = purchaseCaptor.getValue();
         BigDecimal expectedTotal = new BigDecimal("400.00"); // (100 * 2) + (200 * 1)
-        assertEquals(expectedTotal, savedCompra.getTotal());
+        assertEquals(expectedTotal, savedPurchase.getTotal());
     }
 }

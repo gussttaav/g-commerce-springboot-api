@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.dtos.compra;
+package com.gplanet.commerce.api.dtos.purchase;
 
 import java.util.List;
 
@@ -13,13 +13,13 @@ import jakarta.validation.constraints.NotEmpty;
  *
  * @author Gustavo
  * @version 1.0
- * @param productos The list of products to be purchased.
+ * @param products The list of products to be purchased.
  */
 @Schema(name = "PurchaseRequest", 
         description = "Purchase request information")
-public record CompraDTO(
+public record PurchaseDTO(
     @Schema(description = "List of products to purchase")
-    @NotEmpty(message = "Debe incluir al menos un producto")
+    @NotEmpty(message = "The purchase must have at least one producto")
     @Valid
-    List<CompraProductoDTO> productos
+    List<PurchaseProductDTO> products
 ) {}

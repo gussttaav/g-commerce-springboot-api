@@ -73,7 +73,7 @@ public class TestSecurityConfig {
                 .requestMatchers("/api/productos/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints
-                .requestMatchers(HttpMethod.POST, "/api/compras").hasRole(ROLE_USER)
+                .requestMatchers(HttpMethod.POST, "/api/purchases").hasRole(ROLE_USER)
                 
                 // All other requests require authentication                
                 .anyRequest().authenticated()

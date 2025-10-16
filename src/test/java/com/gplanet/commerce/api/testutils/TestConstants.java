@@ -37,7 +37,7 @@ public final class TestConstants {
     // ========================
     // Purchase Management Endpoints
     // ========================
-    public static final String ENDPOINT_COMPRAS = BASE_URL + "/compras";
+    public static final String ENDPOINT_COMPRAS = BASE_URL + "/purchases";
 
 
     // ========================

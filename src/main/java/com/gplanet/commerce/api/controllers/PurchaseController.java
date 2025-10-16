@@ -11,11 +11,11 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
-import com.gplanet.commerce.api.dtos.compra.CompraDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.exceptions.ApiException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.services.CompraService;
+import com.gplanet.commerce.api.services.PurchaseService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -43,20 +43,20 @@ import lombok.RequiredArgsConstructor;
  * @author Gustavo
  * @version 1.0
  */
-@Tag(name = "Compras", description = "API endpoints to manage user purchases")
+@Tag(name = "Purchases", description = "API endpoints to manage user purchases")
 @RestController
-@RequestMapping("/api/compras")
+@RequestMapping("/api/purchases")
 @RequiredArgsConstructor
-public class CompraController {
+public class PurchaseController {
 
-    private final CompraService compraService;
+    private final PurchaseService purchaseService;
 
     /**
      * Creates a new purchase for the authenticated user.
      * Validates product availability and user's privileges before processing the purchase.
      *
      * @param authentication the current user's authentication object
-     * @param compraDTO the purchase details including products and quantities
+     * @param purchaseDTO the purchase details including products and quantities
      * @return CompraResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if the user is not found
      * @throws ResourceNotFoundException if any of the products don't exist
@@ -67,7 +67,7 @@ public class CompraController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Purchase created successfully",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = CompraResponseDTO.class))),
+                schema = @Schema(implementation = PurchaseResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedAdmin"),
@@ -76,11 +76,11 @@ public class CompraController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @PostMapping
-    public CompraResponseDTO realizarCompra(
+    public PurchaseResponseDTO createPurchase(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "New purchase details", required = true)
-            CompraDTO compraDTO) {
-        return compraService.realizarCompra(authentication.getName(), compraDTO);
+            PurchaseDTO purchaseDTO) {
+        return purchaseService.createPurchase(authentication.getName(), purchaseDTO);
     }
 
 
@@ -108,7 +108,7 @@ public class CompraController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping
-    public PaginatedResponse<CompraResponseDTO> listarCompras(
+    public PaginatedResponse<PurchaseResponseDTO> listPurchases(
            @RequestParam(defaultValue = "0")
            @Schema(description = "Page number (zero-based)", example = "0") int page,
            @RequestParam(defaultValue = "10")
@@ -119,7 +119,7 @@ public class CompraController {
            @Schema(description = "Sort direction", example = "DESC", allowableValues = {"ASC", "DESC"}) 
            String direction,
            Authentication authentication) {
-        Page<CompraResponseDTO> pageResult = compraService.listarCompras(
+        Page<PurchaseResponseDTO> pageResult = purchaseService.listPurchases(
             authentication.getName(), page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }

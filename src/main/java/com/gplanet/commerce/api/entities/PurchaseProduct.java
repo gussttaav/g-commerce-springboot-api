@@ -26,7 +26,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "compra_productos")
-public class CompraProducto {
+public class PurchaseProduct {
     /** 
      * Unique identifier for the purchase item. 
      */
@@ -40,7 +40,7 @@ public class CompraProducto {
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "compra_id")
-    private Compra compra;
+    private Purchase purchase;
     
     /** 
      * The product that was purchased. 

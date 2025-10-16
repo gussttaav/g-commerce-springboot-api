@@ -31,7 +31,7 @@ import lombok.Setter;
 @Setter
 @Entity
 @Table(name = "compras")
-public class Compra {
+public class Purchase {
     /** 
      * Unique identifier for the purchase. 
      */
@@ -60,16 +60,16 @@ public class Compra {
      * List of products included in this purchase. 
      */
     @JsonManagedReference
-    @OneToMany(mappedBy = "compra", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<CompraProducto> productos = new ArrayList<>();
+    @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<PurchaseProduct> productos = new ArrayList<>();
 
     /**
      * Adds a product to the purchase and maintains the bidirectional relationship.
      * 
-     * @param compraProducto The product entry to add to the purchase
+     * @param purchaseProduct The product entry to add to the purchase
      */
-    public void addCompraProducto(CompraProducto compraProducto) {
-        productos.add(compraProducto);
-        compraProducto.setCompra(this);
+    public void addPurchaseProduct(PurchaseProduct purchaseProduct) {
+        productos.add(purchaseProduct);
+        purchaseProduct.setPurchase(this);
     }
 }

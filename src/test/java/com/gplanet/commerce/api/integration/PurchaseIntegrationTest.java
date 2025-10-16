@@ -25,11 +25,11 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.gplanet.commerce.api.dtos.compra.CompraDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraProductoDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
-import com.gplanet.commerce.api.entities.Compra;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.Usuario;
 
 import jakarta.transaction.Transactional;
@@ -38,7 +38,7 @@ import jakarta.transaction.Transactional;
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
 @Transactional
-class CompraIntegrationTest extends AbstractIntegrationTest {
+class PurchaseIntegrationTest extends AbstractIntegrationTest {
     private static final String USER_EMAIL = "buyer@example.com";
     private static final String USER_PASSWORD = "buyer123";
     private static final String PRODUCT_PRICE = "10.0";
@@ -63,47 +63,47 @@ class CompraIntegrationTest extends AbstractIntegrationTest {
     }
     
     @Test
-    void realizarCompraProductoDisponibleCompraExitosa() throws Exception {
+    void createPurchaseProductoDisponibleCompraExitosa() throws Exception {
         // Arrange
-        List<CompraProductoDTO> productos = new ArrayList<>();
-        CompraProductoDTO productoDTO = new CompraProductoDTO(productoId, 2);
+        List<PurchaseProductDTO> productos = new ArrayList<>();
+        PurchaseProductDTO productoDTO = new PurchaseProductDTO(productoId, 2);
         productos.add(productoDTO);
-        CompraDTO compraDTO = new CompraDTO(productos);
+        PurchaseDTO purchaseDTO = new PurchaseDTO(productos);
         
         // Act & Assert
         MvcResult result = mockMvc.perform(post(ENDPOINT_COMPRAS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(compraDTO)))
+                .content(objectMapper.writeValueAsString(purchaseDTO)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.total").value(COMPRA_TOTAL_PRICE))
-                .andExpect(jsonPath("$.productos[0].cantidad").value(2))
-                .andExpect(jsonPath("$.productos[0].subtotal").value(COMPRA_TOTAL_PRICE))
+                .andExpect(jsonPath("$.products[0].quantity").value(2))
+                .andExpect(jsonPath("$.products[0].subtotal").value(COMPRA_TOTAL_PRICE))
                 .andReturn();
         
         // Verify purchase in database
-        CompraResponseDTO response = objectMapper.readValue(
+        PurchaseResponseDTO response = objectMapper.readValue(
             result.getResponse().getContentAsString(), 
-            CompraResponseDTO.class
+            PurchaseResponseDTO.class
         );
         
         // Use findAllByUsuarioIdWithProductos instead
         Usuario usuario = usuarioRepository.findByEmail(USER_EMAIL).orElseThrow();
-        Page<Compra> comprasPage = compraRepository.findAllByUsuarioIdWithProductos(
+        Page<Purchase> purchasesPage = purchaseRepository.findAllByUsuarioIdWithProductos(
             usuario.getId(),
             PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
         );
         
-        assertTrue(!comprasPage.isEmpty());
-        Compra compraGuardada = comprasPage.getContent().get(0);
-        assertEquals(response.id(), compraGuardada.getId());
-        assertEquals(1, compraGuardada.getProductos().size());
+        assertTrue(!purchasesPage.isEmpty());
+        Purchase purchaseSaved = purchasesPage.getContent().get(0);
+        assertEquals(response.id(), purchaseSaved.getId());
+        assertEquals(1, purchaseSaved.getProductos().size());
     }
     
     @Test
-    void listarComprasUsuarioAutenticadoRetornaCompras() throws Exception {
+    void listPurchasesUsuarioAutenticadoRetornaCompras() throws Exception {
         // First create a purchase
-        realizarCompraProductoDisponibleCompraExitosa();
+        createPurchaseProductoDisponibleCompraExitosa();
         
         // Act & Assert - List purchases
         mockMvc.perform(get(ENDPOINT_COMPRAS)
@@ -115,8 +115,8 @@ class CompraIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
                 .andExpect(jsonPath("$.content[0].total").value(COMPRA_TOTAL_PRICE))
-                .andExpect(jsonPath("$.content[0].productos").isArray())
-                .andExpect(jsonPath("$.content[0].productos[0].cantidad").value(2))
+                .andExpect(jsonPath("$.content[0].products").isArray())
+                .andExpect(jsonPath("$.content[0].products[0].quantity").value(2))
                 .andExpect(jsonPath("$.totalElements").isNumber())
                 .andExpect(jsonPath("$.totalPages").isNumber())
                 .andExpect(jsonPath("$.pageSize").value(10))

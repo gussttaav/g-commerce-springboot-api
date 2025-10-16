@@ -36,16 +36,16 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
-import com.gplanet.commerce.api.dtos.compra.CompraDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraProductoDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraProductoResponseDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
-import com.gplanet.commerce.api.services.CompraService;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseProductResponseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
+import com.gplanet.commerce.api.services.PurchaseService;
 import com.gplanet.commerce.api.services.UsuarioDetallesService;
 
-@WebMvcTest(CompraController.class)
+@WebMvcTest(PurchaseController.class)
 @Import(TestSecurityConfig.class)
-class CompraControllerTest {
+class PurchaseControllerTest {
 
     public static final PageRequest PAGE_REQUEST_DESC_BY_FECHA = 
         PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"));
@@ -66,7 +66,7 @@ class CompraControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private CompraService compraService;
+    private PurchaseService purchaseService;
 
     @MockitoBean
     private UsuarioDetallesService usuarioDetallesService;
@@ -81,13 +81,13 @@ class CompraControllerTest {
     @Test
     @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
     @DisplayName("Should create purchase successfully when valid data is provided")
-    void realizarCompraValidDataReturnsCreatedPurchase() throws Exception {
+    void createPurchaseValidDataReturnsCreatedPurchase() throws Exception {
         // Arrange
-        CompraDTO requestDTO = createValidCompraDTO();
-        CompraResponseDTO responseDTO = createMockCompraResponseDTO();
+        PurchaseDTO requestDTO = createValidPurchaseDTO();
+        PurchaseResponseDTO responseDTO = createMockPurchaseResponseDTO();
         float expectedTotal = responseDTO.total().floatValue();
 
-        when(compraService.realizarCompra(eq(TEST_USER_EMAIL), any(CompraDTO.class)))
+        when(purchaseService.createPurchase(eq(TEST_USER_EMAIL), any(PurchaseDTO.class)))
             .thenReturn(responseDTO);
 
         // Act & Assert
@@ -96,40 +96,40 @@ class CompraControllerTest {
                 .content(objectMapper.writeValueAsString(requestDTO)))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.id").value(responseDTO.id()))
-            .andExpect(jsonPath("$.usuarioNombre").value(responseDTO.usuarioNombre()))
+            .andExpect(jsonPath("$.userName").value(responseDTO.userName()))
             .andExpect(jsonPath("$.total").value(expectedTotal))
-            .andExpect(jsonPath("$.productos", Matchers.hasSize(2)));
+            .andExpect(jsonPath("$.products", Matchers.hasSize(2)));
 
-        verify(compraService).realizarCompra(eq(TEST_USER_EMAIL), any(CompraDTO.class));
+        verify(purchaseService).createPurchase(eq(TEST_USER_EMAIL), any(PurchaseDTO.class));
     }
 
     @Test
     @DisplayName("Should return 401 when user is not authenticated")
-    void realizarCompraUnauthenticatedUserReturnsUnauthorized() throws Exception {
+    void createPurchaseUnauthenticatedUserReturnsUnauthorized() throws Exception {
         // Arrange
-        CompraDTO validCompraDTO = createValidCompraDTO();
+        PurchaseDTO validPurchaseDTO = createValidPurchaseDTO();
 
         // Act & Assert
         mockMvc.perform(post(ENDPOINT_COMPRAS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(validCompraDTO)))
+                .content(objectMapper.writeValueAsString(validPurchaseDTO)))
             .andExpect(status().isUnauthorized());
             
-        verifyNoInteractions(compraService);
+        verifyNoInteractions(purchaseService);
     }
 
     @Test
     @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
     @DisplayName("Should return all purchases for authenticated user")
-    void listarComprasAuthenticatedUserReturnsUserPurchases() throws Exception {
+    void listPurchasesAuthenticatedUserReturnsUserPurchases() throws Exception {
         // Arrange
-        Page<CompraResponseDTO> page = new PageImpl<>(
-            createMockComprasList(),
+        Page<PurchaseResponseDTO> page = new PageImpl<>(
+            createMockPurchasesList(),
             PAGE_REQUEST_DESC_BY_FECHA,
             2
         );
         
-        when(compraService.listarCompras(
+        when(purchaseService.listPurchases(
                 eq(TEST_USER_EMAIL), 
                 eq(0), 
                 eq(10), 
@@ -147,7 +147,7 @@ class CompraControllerTest {
             .andExpect(jsonPath("$.content", Matchers.hasSize(2)))
             .andExpect(jsonPath("$.totalElements").value(2));
 
-        verify(compraService).listarCompras(
+        verify(purchaseService).listPurchases(
             eq(TEST_USER_EMAIL), 
             eq(0), 
             eq(10), 
@@ -158,15 +158,15 @@ class CompraControllerTest {
     @Test
     @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
     @DisplayName("Should return all purchases for admin user")
-    void listarComprasAdminUserReturnsAllPurchases() throws Exception {
+    void listPurchasesAdminUserReturnsAllPurchases() throws Exception {
         // Arrange
-        Page<CompraResponseDTO> page = new PageImpl<>(
-            createMockComprasList(),
+        Page<PurchaseResponseDTO> page = new PageImpl<>(
+            createMockPurchasesList(),
             PAGE_REQUEST_DESC_BY_FECHA,
             2
         );
         
-        when(compraService.listarCompras(
+        when(purchaseService.listPurchases(
                 eq(TEST_ADMIN_EMAIL), 
                 eq(0), 
                 eq(10), 
@@ -183,7 +183,7 @@ class CompraControllerTest {
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", Matchers.hasSize(2)));
 
-        verify(compraService).listarCompras(
+        verify(purchaseService).listPurchases(
             eq(TEST_ADMIN_EMAIL), 
             eq(0), 
             eq(10), 
@@ -192,57 +192,57 @@ class CompraControllerTest {
     }
 
     // Helper methods
-    private CompraDTO createValidCompraDTO() {
-        List<CompraProductoDTO> productos = new ArrayList<>();
+    private PurchaseDTO createValidPurchaseDTO() {
+        List<PurchaseProductDTO> productos = new ArrayList<>();
         
-        CompraProductoDTO producto1 = new CompraProductoDTO(1L, 2);
-        CompraProductoDTO producto2 = new CompraProductoDTO(2L, 1);
+        PurchaseProductDTO producto1 = new PurchaseProductDTO(1L, 2);
+        PurchaseProductDTO producto2 = new PurchaseProductDTO(2L, 1);
         
         productos.add(producto1);
         productos.add(producto2);
         
-        return new CompraDTO(productos);
+        return new PurchaseDTO(productos);
     }
 
-    private CompraResponseDTO createMockCompraResponseDTO() {
-        List<CompraProductoResponseDTO> productos = new ArrayList<>();
+    private PurchaseResponseDTO createMockPurchaseResponseDTO() {
+        List<PurchaseProductResponseDTO> productos = new ArrayList<>();
         
-        CompraProductoResponseDTO producto1 = new CompraProductoResponseDTO(
+        PurchaseProductResponseDTO producto1 = new PurchaseProductResponseDTO(
             1L, "Producto 1", PRODUCT_PRICE_50, 2, COMPRA_TOTAL_100
         );
         
-        CompraProductoResponseDTO producto2 = new CompraProductoResponseDTO(
+        PurchaseProductResponseDTO producto2 = new PurchaseProductResponseDTO(
             2L, "Producto 2", PRODUCT_PRICE_50, 1, PRODUCT_PRICE_50
         );
         
         productos.add(producto1);
         productos.add(producto2);
         
-        return new CompraResponseDTO(
+        return new PurchaseResponseDTO(
             1L, "Test User", LocalDateTime.now(), COMPRA_TOTAL_150, productos
         );
     }
 
-    private List<CompraResponseDTO> createMockComprasList() {
-        List<CompraResponseDTO> compras = new ArrayList<>();
+    private List<PurchaseResponseDTO> createMockPurchasesList() {
+        List<PurchaseResponseDTO> purchases = new ArrayList<>();
         
         // First purchase
-        CompraResponseDTO compra1 = createMockCompraResponseDTO();
+        PurchaseResponseDTO purchase1 = createMockPurchaseResponseDTO();
         
         // Second purchase with different data
-        List<CompraProductoResponseDTO> productos2 = new ArrayList<>();
-        CompraProductoResponseDTO producto = new CompraProductoResponseDTO(
+        List<PurchaseProductResponseDTO> productos2 = new ArrayList<>();
+        PurchaseProductResponseDTO producto = new PurchaseProductResponseDTO(
             3L, "Producto 3", PRODUCT_PRICE_75, 1, PRODUCT_PRICE_75
         );
         productos2.add(producto);
         
-        CompraResponseDTO compra2 = new CompraResponseDTO(
+        PurchaseResponseDTO purchase2 = new PurchaseResponseDTO(
             2L, "Test User", LocalDateTime.now().minusDays(1), PRODUCT_PRICE_75, productos2
         );
         
-        compras.add(compra1);
-        compras.add(compra2);
+        purchases.add(purchase1);
+        purchases.add(purchase2);
         
-        return compras;
+        return purchases;
     }
 }

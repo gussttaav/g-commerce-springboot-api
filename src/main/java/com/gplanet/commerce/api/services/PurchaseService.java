@@ -11,17 +11,17 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.gplanet.commerce.api.dtos.compra.CompraDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraMapper;
-import com.gplanet.commerce.api.dtos.compra.CompraProductoDTO;
-import com.gplanet.commerce.api.dtos.compra.CompraResponseDTO;
-import com.gplanet.commerce.api.entities.Compra;
-import com.gplanet.commerce.api.entities.CompraProducto;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseMapper;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
+import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Purchase;
+import com.gplanet.commerce.api.entities.PurchaseProduct;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.CompraRepository;
 import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.PurchaseRepository;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
 
@@ -38,9 +38,9 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class CompraService {
-    private final CompraMapper compraMapper;
-    private final CompraRepository compraRepository;
+public class PurchaseService {
+    private final PurchaseMapper purchaseMapper;
+    private final PurchaseRepository purchaseRepository;
     private final ProductoRepository productoRepository;
     private final UsuarioRepository usuarioRepository;
 
@@ -53,11 +53,11 @@ public class CompraService {
      * @param size The page size
      * @param sort The field to sort by
      * @param direction The sort direction (ASC or DESC)
-     * @return Page of CompraResponseDTO containing paginated purchase information
+     * @return Page of PurchaseResponseDTO containing paginated purchase information
      * @throws UsernameNotFoundException if user is not found
      */
     @Transactional(readOnly = true)
-    public Page<CompraResponseDTO> listarCompras(String email, int page, int size, String sort, String direction) {
+    public Page<PurchaseResponseDTO> listPurchases(String email, int page, int size, String sort, String direction) {
         log.debug("Listing purchases for user: {} with pagination - page: {}, size: {}, sort: {}, direction: {}", 
                 email, page, size, sort, direction);
         
@@ -69,15 +69,15 @@ public class CompraService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
         
         // Get paginated result based on user role
-        Page<Compra> comprasPage;
+        Page<Purchase> purchasesPage;
         if (usuario.getRol() == Usuario.Role.ADMIN) {
-            comprasPage = compraRepository.findAll(pageable);
+            purchasesPage = purchaseRepository.findAll(pageable);
         } else {
-            comprasPage = compraRepository.findByUsuario(usuario, pageable);
+            purchasesPage = purchaseRepository.findByUsuario(usuario, pageable);
         }
         
         // Map to DTOs
-        Page<CompraResponseDTO> result = comprasPage.map(compraMapper::toCompraResponseDTO);
+        Page<PurchaseResponseDTO> result = purchasesPage.map(purchaseMapper::toPurchaseResponseDTO);
         
         log.debug("Found {} purchases on page {} of {}", 
                 result.getNumberOfElements(), 
@@ -92,44 +92,44 @@ public class CompraService {
      * creating all necessary purchase records.
      * 
      * @param email Email of the user making the purchase
-     * @param compraDTO Data transfer object containing purchase information
-     * @return CompraResponseDTO containing the created purchase information
+     * @param purchaseDTO Data transfer object containing purchase information
+     * @return PurchaseResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if user is not found
      * @throws ResourceNotFoundException if any product in the purchase is not found
      */
     @Transactional
-    public CompraResponseDTO realizarCompra(String email, CompraDTO compraDTO) {
+    public PurchaseResponseDTO createPurchase(String email, PurchaseDTO purchaseDTO) {
         log.info("Starting new purchase for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
-        Compra compra = new Compra();
-        compra.setUsuario(usuario);
-        compra.setFecha(LocalDateTime.now());
-        compra.setTotal(BigDecimal.ZERO);
+        Purchase purchase = new Purchase();
+        purchase.setUsuario(usuario);
+        purchase.setFecha(LocalDateTime.now());
+        purchase.setTotal(BigDecimal.ZERO);
 
         BigDecimal total = BigDecimal.ZERO;
 
-        for (CompraProductoDTO item : compraDTO.productos()) {
-            Producto producto = productoRepository.findById(item.productoId())
+        for (PurchaseProductDTO item : purchaseDTO.products()) {
+            Producto producto = productoRepository.findById(item.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
-            CompraProducto compraProducto = new CompraProducto();
-            compraProducto.setProducto(producto);
-            compraProducto.setCantidad(item.cantidad());
-            compraProducto.setSubtotal(
-                producto.getPrecio().multiply(BigDecimal.valueOf(item.cantidad()))
+            PurchaseProduct purchaseProduct = new PurchaseProduct();
+            purchaseProduct.setProducto(producto);
+            purchaseProduct.setCantidad(item.quantity());
+            purchaseProduct.setSubtotal(
+                producto.getPrecio().multiply(BigDecimal.valueOf(item.quantity()))
             );
             
-            compra.addCompraProducto(compraProducto);
-            total = total.add(compraProducto.getSubtotal());
+            purchase.addPurchaseProduct(purchaseProduct);
+            total = total.add(purchaseProduct.getSubtotal());
         }
 
-        compra.setTotal(total);        
-        Compra savedCompra = DatabaseOperationHandler.executeOperation(() -> 
-            compraRepository.save(compra)
+        purchase.setTotal(total);        
+        Purchase savedCompra = DatabaseOperationHandler.executeOperation(() -> 
+            purchaseRepository.save(purchase)
         );
         log.info("Purchase completed - ID: {}, Total: {}", savedCompra.getId(), savedCompra.getTotal());
-        return compraMapper.toCompraResponseDTO(savedCompra);
+        return purchaseMapper.toPurchaseResponseDTO(savedCompra);
     }
 }

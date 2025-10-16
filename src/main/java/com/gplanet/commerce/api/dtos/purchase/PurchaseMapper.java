@@ -1,14 +1,14 @@
-package com.gplanet.commerce.api.dtos.compra;
+package com.gplanet.commerce.api.dtos.purchase;
 
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
 
-import com.gplanet.commerce.api.entities.Compra;
-import com.gplanet.commerce.api.entities.CompraProducto;
+import com.gplanet.commerce.api.entities.Purchase;
+import com.gplanet.commerce.api.entities.PurchaseProduct;
 
 /**
- * Mapper class responsible for converting between Compra entities and DTOs.
+ * Mapper class responsible for converting between Purchase entities and DTOs.
  * This class provides methods to transform purchase-related entities into
  * their corresponding DTO representations for API responses.
  *
@@ -16,38 +16,38 @@ import com.gplanet.commerce.api.entities.CompraProducto;
  * @version 1.0
  */
 @Component
-public class CompraMapper {
+public class PurchaseMapper {
     
     /**
-     * Converts a Compra entity to its response DTO representation.
+     * Converts a Purchase entity to its response DTO representation.
      * This method maps all the purchase information including the list
      * of purchased products to their DTO representations.
      *
      * @param entity the purchase entity to convert
-     * @return the corresponding CompraResponseDTO with all purchase information
+     * @return the corresponding PurchaseResponseDTO with all purchase information
      */
-    public CompraResponseDTO toCompraResponseDTO(Compra entity) {
-        return new CompraResponseDTO(
+    public PurchaseResponseDTO toPurchaseResponseDTO(Purchase entity) {
+        return new PurchaseResponseDTO(
             entity.getId(),
             entity.getUsuario().getNombre(),
             entity.getFecha(),
             entity.getTotal(),
             entity.getProductos().stream()
-                .map(this::toCompraProductoResponseDTO)
+                .map(this::toPurchaseProductResponseDTO)
                 .collect(Collectors.toList())
         );
     }
 
     /**
-     * Converts a CompraProducto entity to its response DTO representation.
+     * Converts a PurchasProduct entity to its response DTO representation.
      * This method maps the product details, quantity, and pricing information
      * to the corresponding DTO fields.
      *
      * @param entity the purchase product entity to convert
-     * @return the corresponding CompraProductoResponseDTO
+     * @return the corresponding PurchaseProductResponseDTO
      */
-    private CompraProductoResponseDTO toCompraProductoResponseDTO(CompraProducto entity) {
-        return new CompraProductoResponseDTO(
+    private PurchaseProductResponseDTO toPurchaseProductResponseDTO(PurchaseProduct entity) {
+        return new PurchaseProductResponseDTO(
             entity.getProducto().getId(),
             entity.getProducto().getNombre(),
             entity.getProducto().getPrecio(),

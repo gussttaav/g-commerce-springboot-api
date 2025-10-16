@@ -8,17 +8,17 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import com.gplanet.commerce.api.entities.Compra;
+import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.Usuario;
 
 /**
- * Repository interface for managing Purchase (Compra) entities in the database.
+ * Repository interface for managing Purchase entities in the database.
  * Provides CRUD operations and custom queries for purchase-related operations.
  * 
  * @author Gustavo
  * @version 1.0
  */
-public interface CompraRepository extends JpaRepository<Compra, Long> {
+public interface PurchaseRepository extends JpaRepository<Purchase, Long> {
     
     /**
      * Finds all purchases made by a specific user with pagination support.
@@ -26,7 +26,7 @@ public interface CompraRepository extends JpaRepository<Compra, Long> {
      * @param pageable pagination information
      * @return a page of purchases made by the user
      */
-    Page<Compra> findByUsuario(Usuario usuario, Pageable pageable);
+    Page<Purchase> findByUsuario(Usuario usuario, Pageable pageable);
 
     /**
      * Finds all purchases made between two dates with pagination support.
@@ -35,7 +35,7 @@ public interface CompraRepository extends JpaRepository<Compra, Long> {
      * @param pageable pagination information
      * @return a page of purchases within the specified date range
      */
-    Page<Compra> findByFechaBetween(LocalDateTime yesterday, LocalDateTime tomorrow, Pageable pageable);
+    Page<Purchase> findByFechaBetween(LocalDateTime yesterday, LocalDateTime tomorrow, Pageable pageable);
 
     /**
      * Finds all purchases made by a user, including their associated products, with pagination support.
@@ -44,7 +44,7 @@ public interface CompraRepository extends JpaRepository<Compra, Long> {
      * @param pageable pagination information
      * @return a page of purchases with their products
      */
-    @Query(value = "SELECT c FROM Compra c LEFT JOIN FETCH c.productos WHERE c.usuario.id = :usuarioId",
-           countQuery = "SELECT COUNT(c) FROM Compra c WHERE c.usuario.id = :usuarioId")
-    Page<Compra> findAllByUsuarioIdWithProductos(@Param("usuarioId") Long usuarioId, Pageable pageable);
+    @Query(value = "SELECT p FROM Purchase p LEFT JOIN FETCH p.productos WHERE p.usuario.id = :usuarioId",
+           countQuery = "SELECT COUNT(p) FROM Purchase p WHERE p.usuario.id = :usuarioId")
+    Page<Purchase> findAllByUsuarioIdWithProductos(@Param("usuarioId") Long usuarioId, Pageable pageable);
 }

@@ -69,12 +69,10 @@ public class TestSecurityConfig {
 
                 // Admin-only endpoints
                 .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole(ROLE_ADMIN)
-                .requestMatchers("/api/usuarios/admin/**").hasRole(ROLE_ADMIN)
+                .requestMatchers(HttpMethod.PATCH, "/api/usuarios/{id}/role").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/productos/**").hasRole(ROLE_ADMIN)
-                .requestMatchers("/api/admin/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints
-                .requestMatchers("/api/usuarios/perfil", "/api/usuarios/password").authenticated()
                 .requestMatchers(HttpMethod.POST, "/api/compras").hasRole(ROLE_USER)
                 
                 // All other requests require authentication                

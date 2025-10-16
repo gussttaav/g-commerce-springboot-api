@@ -1,7 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.hamcrest.Matchers.hasItems;
@@ -11,7 +10,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -24,8 +22,9 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultMatcher;
 
-import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioRoleUpdateDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.jayway.jsonpath.JsonPath;
 
@@ -40,8 +39,10 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
     private static final String TEST_ADMIN_PASSWORD = "admin123";
     private static final String USER_ROLE = "USER";
     private static final String ADMIN_ROLE = "ADMIN";
-    private static final String USER_ID_PARAM = "userId";
-    private static final String NEW_ROLE_PARAM = "newRole";
+
+    private String createChangeRoleRequest(Long userId) {
+        return String.format("%s/%d/role", ENDPOINT_USUARIOS, userId);
+    }
 
     public static ResultMatcher userName(String name) throws Exception {
         return jsonPath("$.nombre").value(name);
@@ -135,7 +136,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare update data
-        ActualizacionUsuarioDTO actualizacionDTO = new ActualizacionUsuarioDTO(
+        UsuarioUpdateDTO actualizacionDTO = new UsuarioUpdateDTO(
             "Updated Name", updatedEmail);
         
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
@@ -168,7 +169,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare password change data
-        ActualizacionUsuarioDTO cambioDTO = new ActualizacionUsuarioDTO(TEST_PASSWORD, newPassword, newPassword);
+        UsuarioUpdateDTO cambioDTO = new UsuarioUpdateDTO(TEST_PASSWORD, newPassword, newPassword);
         
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
@@ -197,7 +198,7 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         // Arrange - Prepare invalid password change data
-        ActualizacionUsuarioDTO cambioDTO = new ActualizacionUsuarioDTO("wrongPassword", "newPassword", "newPassword");
+        UsuarioUpdateDTO cambioDTO = new UsuarioUpdateDTO("wrongPassword", "newPassword", "newPassword");
         
         String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
@@ -303,12 +304,13 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Create admin user
         crearUsuarioAdmin();
         String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(Usuario.Role.ADMIN);
         
         // Act & Assert - Change role to ADMIN
-        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
+        mockMvc.perform(patch(createChangeRoleRequest(userId))
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param(USER_ID_PARAM, String.valueOf(userId))
-                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isOk());
                 
         // Verify role change in database
@@ -342,12 +344,13 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
 
         String authHeader = obtenerJwtToken("test2@example.com", TEST_PASSWORD);
+        UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(Usuario.Role.ADMIN);
         
         // Act & Assert - Try to change role
-        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
+        mockMvc.perform(patch(createChangeRoleRequest(userId))
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param(USER_ID_PARAM, String.valueOf(userId))
-                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isForbidden());
     }
 
@@ -356,12 +359,14 @@ class UsuarioIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create admin user
         crearUsuarioAdmin();
         String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(Usuario.Role.ADMIN);
+        final Long userId = 999999L;
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
+        mockMvc.perform(patch(createChangeRoleRequest(userId))
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
-                .param(USER_ID_PARAM, "999999")
-                .param(NEW_ROLE_PARAM, ADMIN_ROLE))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isNotFound());
     }
 }

@@ -11,10 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
@@ -73,7 +73,7 @@ public class UsuarioService {
      * @throws UsernameNotFoundException if user is not found
      */
     @Transactional
-    public UsuarioResponseDTO actualizarPerfil(String email, ActualizacionUsuarioDTO perfilDTO) {
+    public UsuarioResponseDTO actualizarPerfil(String email, UsuarioUpdateDTO perfilDTO) {
         log.info("Updating profile for user: {}", email);
         Usuario usuario = usuarioRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
@@ -117,7 +117,7 @@ public class UsuarioService {
      * @throws PasswordMismatchException if the current password is not correct or 
      *          new password is not confirmed correctly
      */
-    private void changePassword(Usuario usuario, ActualizacionUsuarioDTO perfilDTO) {
+    private void changePassword(Usuario usuario, UsuarioUpdateDTO perfilDTO) {
         log.info("Password change attempt for user: {}", usuario.getEmail());
 
         // Require all three fields for a password change

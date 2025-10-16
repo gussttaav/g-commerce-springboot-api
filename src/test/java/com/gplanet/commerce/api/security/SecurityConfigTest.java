@@ -52,9 +52,9 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductStatus;
 import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
 import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.services.ProductoService;
@@ -301,12 +301,12 @@ class SecurityConfigTest {
         // Arrange
         LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
         
-        ActualizacionUsuarioDTO actualizacionDto = new ActualizacionUsuarioDTO(
+        UsuarioUpdateDTO actualizacionDto = new UsuarioUpdateDTO(
             "Updated Name", "updated@test.com");
         UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, "Updated Name", 
             "updated@test.com", Usuario.Role.USER, LocalDateTime.now());
             
-        when(usuarioService.actualizarPerfil(anyString(), any(ActualizacionUsuarioDTO.class)))
+        when(usuarioService.actualizarPerfil(anyString(), any(UsuarioUpdateDTO.class)))
             .thenReturn(responseDto);
 
         // Get user JWT token

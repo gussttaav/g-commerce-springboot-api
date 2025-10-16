@@ -6,20 +6,20 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
-import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioRoleUpdateDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ApiException;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.services.UsuarioService;
@@ -33,6 +33,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -135,7 +136,6 @@ public class UsuarioController {
      * @param perfilDTO the profile information to be updated
      * @return UsuarioResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if the user is not found
-     * @throws InvalidPasswordException if the old password is incorrect or the new password is equal to the new one
      * @throws PasswordMismatchException if the new password is not confirmed correctly
      * @throws ApiException if the user could not be updated due to a constraint violation
      */
@@ -152,7 +152,7 @@ public class UsuarioController {
     public UsuarioResponseDTO actualizarPerfil(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "Updated profile information", required = true) 
-            ActualizacionUsuarioDTO perfilDTO) {
+            UsuarioUpdateDTO perfilDTO) {
         return usuarioService.actualizarPerfil(
                 authentication.getName(), perfilDTO);
     }
@@ -199,7 +199,7 @@ public class UsuarioController {
      * Updates a user's role. Only accessible by administrators.
      * 
      * @param userId the ID of the user whose role should be updated
-     * @param newRole the new role to assign to the user
+     * @param roleDTO the payload containing the new role to assign to the user
      * @throws AccessDeniedException if the current user is not an administrator
      * @throws ResourceNotFoundException if the user is not found
      */
@@ -212,10 +212,13 @@ public class UsuarioController {
         @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
-    @PutMapping("/admin/change-role")
+    @PatchMapping("/{id}/role")
     public void cambiarRol(
-            @RequestParam @Parameter(description = "ID of the user", required = true) Long userId,
-            @RequestParam @Parameter(description = "New role (ADMIN or USER)", required = true) Usuario.Role newRole) {
-        usuarioService.cambiarRol(userId, newRole);
+            @Parameter(description = "ID of the user", required = true)
+            @NotNull @PathVariable("id") Long userId,
+            @Valid @RequestBody
+            @Parameter(description = "New role payload", required = true)
+            UsuarioRoleUpdateDTO roleDTO) {
+        usuarioService.cambiarRol(userId, roleDTO.rol());
     }
 }

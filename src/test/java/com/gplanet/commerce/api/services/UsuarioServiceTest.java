@@ -28,10 +28,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import com.gplanet.commerce.api.dtos.usuario.ActualizacionUsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ApiException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
@@ -119,7 +119,7 @@ class UsuarioServiceTest {
         // Arrange
         Usuario existingUser = createTestUsuario();
         String userEmail = existingUser.getEmail();
-        ActualizacionUsuarioDTO perfilDTO = new ActualizacionUsuarioDTO(
+        UsuarioUpdateDTO perfilDTO = new UsuarioUpdateDTO(
             "Updated Name", "new@example.com");
         Usuario updatedUser = createTestUsuario();
         updatedUser.setNombre(perfilDTO.nombre());
@@ -145,7 +145,7 @@ class UsuarioServiceTest {
     void cambiarContrasenaValidDataSuccess() {
         // Arrange
         String userEmail = TEST_USERNAME;
-        ActualizacionUsuarioDTO profileDTO = new ActualizacionUsuarioDTO(
+        UsuarioUpdateDTO profileDTO = new UsuarioUpdateDTO(
             "oldPassword", "newPassword", "newPassword");
         
         Usuario usuario = new Usuario();

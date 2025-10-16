@@ -1,9 +1,9 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -46,7 +46,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
         // Use the JWT token obtained through proper authentication flow
         String jwtToken = obtenerJwtToken("user@example.com", "Password123!");
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS_ADMIN_CHANGE_ROLE)
+        mockMvc.perform(patch(String.format("%s/1/role", ENDPOINT_USUARIOS))
                 .header(HttpHeaders.AUTHORIZATION, jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))

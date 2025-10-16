@@ -23,7 +23,7 @@ import jakarta.validation.constraints.Size;
  * @param confirmPassword Confirmation of the new password (optional).
  */
 @Schema(name = "UpdateUserInfo", description = "Logged in user's information to be updated; optionally change password")
-public record ActualizacionUsuarioDTO(
+public record UsuarioUpdateDTO(
     @Schema(description = "User's name (optional; if present must not be empty)", 
             example = "John Doe", nullable = true)
     @Size(min = 1, max = 100, message = "El nombre no puede estar vacío")
@@ -51,7 +51,7 @@ public record ActualizacionUsuarioDTO(
      * @param nombre updated name
      * @param nuevoEmail updated email
      */
-    public ActualizacionUsuarioDTO(String nombre, String nuevoEmail) {
+    public UsuarioUpdateDTO(String nombre, String nuevoEmail) {
         this(nombre, nuevoEmail, null, null, null);
     }
 
@@ -62,7 +62,7 @@ public record ActualizacionUsuarioDTO(
      * @param newPassword the new password
      * @param confirmPassword confirmation of the new password
      */
-    public ActualizacionUsuarioDTO(String currentPassword, String newPassword, String confirmPassword) {
+    public UsuarioUpdateDTO(String currentPassword, String newPassword, String confirmPassword) {
         this(null, null, currentPassword, newPassword, confirmPassword);
     }
 

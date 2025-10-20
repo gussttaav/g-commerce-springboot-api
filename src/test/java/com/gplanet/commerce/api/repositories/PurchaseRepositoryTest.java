@@ -16,7 +16,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.PurchaseProduct;
 import com.gplanet.commerce.api.entities.Usuario;
@@ -36,10 +36,10 @@ class PurchaseRepositoryTest {
     private UsuarioRepository usuarioRepository;
     
     @Autowired
-    private ProductoRepository productoRepository;
+    private ProductRepository productRepository;
     
     private Usuario usuario;
-    private Producto producto;
+    private Product product;
     
     @BeforeEach
     void setup() {
@@ -52,11 +52,11 @@ class PurchaseRepositoryTest {
         usuarioRepository.save(usuario);
         
         // Setup test product
-        producto = new Producto();
-        producto.setNombre("Test Product");
-        producto.setPrecio(PRICE_10);
-        producto.setActivo(true);
-        productoRepository.save(producto);
+        product = new Product();
+        product.setName("Test Product");
+        product.setPrice(PRICE_10);
+        product.setActive(true);
+        productRepository.save(product);
     }
     
     @Test
@@ -68,7 +68,7 @@ class PurchaseRepositoryTest {
         purchase.setTotal(PRICE_20);
         
         PurchaseProduct purchaseProduct = new PurchaseProduct();
-        purchaseProduct.setProducto(producto);
+        purchaseProduct.setProduct(product);
         purchaseProduct.setCantidad(2);
         purchaseProduct.setSubtotal(PRICE_20);
         
@@ -81,7 +81,7 @@ class PurchaseRepositoryTest {
         assertNotNull(savedPurchase.getId());
         assertEquals(usuario.getId(), savedPurchase.getUsuario().getId());
         assertEquals(1, savedPurchase.getProductos().size());
-        assertEquals(producto.getId(), savedPurchase.getProductos().get(0).getProducto().getId());
+        assertEquals(product.getId(), savedPurchase.getProductos().get(0).getProduct().getId());
     }
     
     @Test

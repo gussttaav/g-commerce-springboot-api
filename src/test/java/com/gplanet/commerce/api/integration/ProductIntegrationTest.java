@@ -17,14 +17,14 @@ import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MvcResult;
 
-import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
-import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductDTO;
+import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
-class ProductoIntegrationTest extends AbstractIntegrationTest {
+class ProductIntegrationTest extends AbstractIntegrationTest {
     private static final String ADMIN_EMAIL = "admin@example.com";
     private static final String ADMIN_PASSWORD = "admin123";
     private static final String USER_EMAIL = "user@example.com";
@@ -35,7 +35,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
     void crearProductoAdminCreaCorrectamente() throws Exception {
         // Arrange
         crearUsuarioAdmin();
-        ProductoDTO productoDTO = new ProductoDTO(
+        ProductDTO productDTO = new ProductDTO(
             "Nuevo Producto", 
             "Descripción del producto", 
             new BigDecimal("99.99"), true);
@@ -44,10 +44,10 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
+                .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Nuevo Producto"))
-                .andExpect(jsonPath("$.precio").value("99.99"));
+                .andExpect(jsonPath("$.name").value("Nuevo Producto"))
+                .andExpect(jsonPath("$.price").value("99.99"));
     }
     
     @Test
@@ -62,7 +62,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
         usuarioRepository.save(user);
 
         // Arrange
-        ProductoDTO productoDTO = new ProductoDTO(
+        ProductDTO productDTO = new ProductDTO(
             "Producto No Autorizado", 
             "Descripción", 
             new BigDecimal("50.00"), true);
@@ -71,7 +71,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
         mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(productoDTO)))
+                .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
     }
 
@@ -81,7 +81,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
         crearUsuarioAdmin();
         
         // First create a product
-        ProductoDTO originalProducto = new ProductoDTO(
+        ProductDTO originalProducto = new ProductDTO(
             "Producto Original", 
             "Descripción original", 
             new BigDecimal("49.99"), true);
@@ -92,13 +92,13 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
                 .content(objectMapper.writeValueAsString(originalProducto)))
                 .andReturn();
         
-        ProductoResponseDTO createdProducto = objectMapper.readValue(
+        ProductResponseDTO createdProducto = objectMapper.readValue(
             createResult.getResponse().getContentAsString(),
-            ProductoResponseDTO.class
+            ProductResponseDTO.class
         );
         
         // Prepare update data
-        ProductoDTO updateProducto = new ProductoDTO(
+        ProductDTO updateProducto = new ProductDTO(
             "Producto Actualizado", 
             "Nueva descripción", 
             new BigDecimal("149.99"), true);
@@ -109,9 +109,9 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updateProducto)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.nombre").value("Producto Actualizado"))
-                .andExpect(jsonPath("$.descripcion").value("Nueva descripción"))
-                .andExpect(jsonPath("$.precio").value("149.99"));
+                .andExpect(jsonPath("$.name").value("Producto Actualizado"))
+                .andExpect(jsonPath("$.description").value("Nueva descripción"))
+                .andExpect(jsonPath("$.price").value("149.99"));
     }
 
     @Test
@@ -121,7 +121,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
         crearUsuario("Regular user", USER_EMAIL, USER_PASSWORD, Usuario.Role.USER);
         
         // First create a product as admin
-        ProductoDTO originalProducto = new ProductoDTO(
+        ProductDTO originalProducto = new ProductDTO(
             "Producto Original", 
             "Descripción original", 
             new BigDecimal("17.99"), true);
@@ -132,13 +132,13 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
                 .content(objectMapper.writeValueAsString(originalProducto)))
                 .andReturn();
         
-        ProductoResponseDTO createdProducto = objectMapper.readValue(
+        ProductResponseDTO createdProducto = objectMapper.readValue(
             createResult.getResponse().getContentAsString(),
-            ProductoResponseDTO.class
+            ProductResponseDTO.class
         );
         
         // Attempt to update as regular user
-        ProductoDTO updateProducto = new ProductoDTO(
+        ProductDTO updateProducto = new ProductDTO(
             "Intento Actualización", 
             "Descripción", 
             new BigDecimal("50.00"), true);
@@ -155,7 +155,7 @@ class ProductoIntegrationTest extends AbstractIntegrationTest {
     void actualizarProductoProductoNoExistenteRetornaNotFound() throws Exception {
         // Arrange
         crearUsuarioAdmin();
-        ProductoDTO updateProducto = new ProductoDTO(
+        ProductDTO updateProducto = new ProductDTO(
             "Producto Inexistente", 
             "Descripción de Producto Inexistente", 
             new BigDecimal("19.99"), true);

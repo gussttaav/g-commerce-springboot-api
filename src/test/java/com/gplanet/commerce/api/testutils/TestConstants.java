@@ -32,7 +32,7 @@ public final class TestConstants {
     // ========================
     // Product Management Endpoints
     // ========================
-    public static final String ENDPOINT_PRODUCTOS = BASE_URL + "/productos";
+    public static final String ENDPOINT_PRODUCTOS = BASE_URL + "/products";
 
     // ========================
     // Purchase Management Endpoints

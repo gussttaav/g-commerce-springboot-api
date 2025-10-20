@@ -117,12 +117,12 @@ public class SecurityConfig {
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
                 .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/productos").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
 
                 // Admin-only endpoints
                 .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole(ROLE_ADMIN)
                 .requestMatchers(HttpMethod.PATCH, "/api/usuarios/{id}/role").hasRole(ROLE_ADMIN)
-                .requestMatchers("/api/productos/**").hasRole(ROLE_ADMIN)
+                .requestMatchers("/api/products/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints
                 .requestMatchers(HttpMethod.POST, "/api/purchases").hasRole(ROLE_USER)

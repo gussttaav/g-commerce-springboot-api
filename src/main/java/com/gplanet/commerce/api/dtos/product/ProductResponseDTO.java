@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.dtos.producto;
+package com.gplanet.commerce.api.dtos.product;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -12,30 +12,31 @@ import io.swagger.v3.oas.annotations.media.Schema;
  *
  * @author Gustavo
  * @version 1.0
+ * 
  * @param id The unique identifier of the product.
- * @param nombre The name of the product.
- * @param descripcion The detailed description of the product.
- * @param precio The price of the product.
- * @param fechaCreacion The timestamp when the product was created.
- * @param activo Indicates whether the product is currently active in the system.
+ * @param name The name of the product.
+ * @param description The detailed description of the product.
+ * @param price The price of the product.
+ * @param creationDate The timestamp when the product was created.
+ * @param active Indicates whether the product is currently active in the system.
  */
 @Schema(name = "Product", description = "Product response data transfer object")
-public record ProductoResponseDTO(
+public record ProductResponseDTO(
     @Schema(description = "Product unique identifier", example = "1")
     Long id,
 
     @Schema(description = "Product name", example = "Laptop")
-    String nombre,
+    String name,
 
     @Schema(description = "Product description", example = "High performance laptop")
-    String descripcion,
+    String description,
 
     @Schema(description = "Product price", example = "999.99")
-    BigDecimal precio,
+    BigDecimal price,
 
     @Schema(description = "Product creation date")
-    LocalDateTime fechaCreacion,
+    LocalDateTime creationDate,
 
     @Schema(description = "Is an active product", example = "true")
-    boolean activo
+    boolean active
 ) {}

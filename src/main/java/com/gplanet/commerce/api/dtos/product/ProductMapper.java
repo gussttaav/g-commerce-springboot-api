@@ -1,11 +1,11 @@
-package com.gplanet.commerce.api.dtos.producto;
+package com.gplanet.commerce.api.dtos.product;
 
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 
 /**
  * Mapper interface for converting between Product entities and DTOs.
@@ -16,35 +16,33 @@ import com.gplanet.commerce.api.entities.Producto;
  * @version 1.0
  */
 @Mapper(componentModel = "spring", unmappedTargetPolicy = ReportingPolicy.IGNORE)
-public interface ProductoMapper {
+public interface ProductMapper {
     
     /**
      * Converts a Product entity to a ProductoResponseDTO.
      *
-     * @param producto the product entity to convert
+     * @param product the product entity to convert
      * @return the corresponding ProductoResponseDTO
      */
-    ProductoResponseDTO toProductoResponseDTO(Producto producto);
+    ProductResponseDTO toProductoResponseDTO(Product product);
 
     /**
      * Converts a ProductoDTO to a Product entity.
      * The id and fechaCreacion fields are ignored during the mapping.
      *
-     * @param productoDTO the product DTO to convert
+     * @param productDTO the product DTO to convert
      * @return the corresponding Product entity
      */
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "fechaCreacion", ignore = true)
-    Producto toProducto(ProductoDTO productoDTO);
+    Product toProducto(ProductDTO productDTO);
 
     /**
      * Updates an existing Product entity with data from a ProductoDTO.
      * Preserves the id and fechaCreacion fields of the existing entity.
      *
-     * @param productoDTO the source DTO containing updated data
-     * @param producto the target Product entity to update
+     * @param productDTO the source DTO containing updated data
+     * @param product the target Product entity to update
      */
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "fechaCreacion", ignore = true)
-    void updateProductoFromDTO(ProductoDTO productoDTO, @MappingTarget Producto producto);
+    void updateProductoFromDTO(ProductDTO productDTO, @MappingTarget Product product);
 }

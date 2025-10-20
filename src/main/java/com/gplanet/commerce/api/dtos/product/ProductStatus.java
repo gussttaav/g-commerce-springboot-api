@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.dtos.producto;
+package com.gplanet.commerce.api.dtos.product;
 
 /**
  * Represents the different status filters available for products in the system.

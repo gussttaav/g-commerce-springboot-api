@@ -19,7 +19,7 @@ import com.gplanet.commerce.api.configs.TestRedisConfiguration;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.services.AuthService;
@@ -52,7 +52,7 @@ public abstract class AbstractIntegrationTest {
     protected UsuarioRepository usuarioRepository;
     
     @Autowired
-    protected ProductoRepository productoRepository;
+    protected ProductRepository productRepository;
     
     @Autowired
     protected PurchaseRepository purchaseRepository;
@@ -69,7 +69,7 @@ public abstract class AbstractIntegrationTest {
     @BeforeEach
     void limpiarBaseDeDatos() {
         purchaseRepository.deleteAll();
-        productoRepository.deleteAll();
+        productRepository.deleteAll();
         usuarioRepository.deleteAll();
     }
     

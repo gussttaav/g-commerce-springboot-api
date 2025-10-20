@@ -21,7 +21,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "productos")
-public class Producto {
+public class Product {
     /** 
      * Unique identifier for the product. 
      */
@@ -32,27 +32,30 @@ public class Producto {
     /** 
      * Product name (unique). 
      */
-    @Column(unique = true)
-    private String nombre;
+    @Column(name = "nombre", unique = true)
+    private String name;
 
     /** 
      * Product description. 
      */
-    private String descripcion;
+    @Column(name = "descripcion")
+    private String description;
     
     /** 
      * Product price. 
      */
-    private BigDecimal precio;
+    @Column(name = "precio")
+    private BigDecimal price;
     
     /** 
      * Date when the product was created. 
      */
     @Column(name = "fecha_creacion")
-    private LocalDateTime fechaCreacion;
+    private LocalDateTime creationDate;
     
     /** 
      * Indicates if the product is currently active. 
      */
-    private boolean activo;
+    @Column(name = "activo")
+    private boolean active;
 }

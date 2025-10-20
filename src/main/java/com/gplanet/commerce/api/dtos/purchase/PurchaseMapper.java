@@ -48,9 +48,9 @@ public class PurchaseMapper {
      */
     private PurchaseProductResponseDTO toPurchaseProductResponseDTO(PurchaseProduct entity) {
         return new PurchaseProductResponseDTO(
-            entity.getProducto().getId(),
-            entity.getProducto().getNombre(),
-            entity.getProducto().getPrecio(),
+            entity.getProduct().getId(),
+            entity.getProduct().getName(),
+            entity.getProduct().getPrice(),
             entity.getCantidad(),
             entity.getSubtotal()
         );

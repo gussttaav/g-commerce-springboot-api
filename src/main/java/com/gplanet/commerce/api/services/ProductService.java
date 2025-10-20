@@ -10,13 +10,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import com.gplanet.commerce.api.dtos.producto.ProductStatus;
-import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
-import com.gplanet.commerce.api.dtos.producto.ProductoMapper;
-import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.dtos.product.ProductDTO;
+import com.gplanet.commerce.api.dtos.product.ProductMapper;
+import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductStatus;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
 
 import lombok.RequiredArgsConstructor;
@@ -32,10 +32,10 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class ProductoService {
+public class ProductService {
 
-    private final ProductoMapper productoMapper;
-    private final ProductoRepository productoRepository;
+    private final ProductMapper productMapper;
+    private final ProductRepository productRepository;
 
     /**
      * Lists and searches products based on the specified status and search text with pagination support.
@@ -49,7 +49,7 @@ public class ProductoService {
      * @param direction The sort direction (ASC or DESC)
      * @return Page of ProductoResponseDTO containing filtered and searched paginated products
      */
-    public Page<ProductoResponseDTO> listarProductos(
+    public Page<ProductResponseDTO> listarProductos(
             ProductStatus status, 
             String searchText, 
             int page, 
@@ -64,7 +64,7 @@ public class ProductoService {
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sort));
         
-        Page<Producto> productosPage;
+        Page<Product> productsPage;
         
         if (StringUtils.hasText(searchText)) {
             String searchTerm = "%" + searchText.toLowerCase() + "%";
@@ -72,70 +72,70 @@ public class ProductoService {
             // Get paginated results based on status and search text
             switch (status) {
                 case ACTIVE:
-                    productosPage = productoRepository.findByActivoTrueAndSearch(searchTerm, pageable);
+                    productsPage = productRepository.findByActiveTrueAndSearch(searchTerm, pageable);
                     break;
                 case INACTIVE:
-                    productosPage = productoRepository.findByActivoFalseAndSearch(searchTerm, pageable);
+                    productsPage = productRepository.findByActiveFalseAndSearch(searchTerm, pageable);
                     break;
                 case ALL:
-                    productosPage = productoRepository.findBySearch(searchTerm, pageable);
+                    productsPage = productRepository.findBySearch(searchTerm, pageable);
                     break;
                 default:
-                    productosPage = Page.empty(pageable);
+                    productsPage = Page.empty(pageable);
             }
         } else {
             // Original code for when no search is performed
-            productosPage = switch (status) {
-                case ACTIVE -> productoRepository.findByActivoTrue(pageable);
-                case INACTIVE -> productoRepository.findByActivoFalse(pageable);
-                case ALL -> productoRepository.findAll(pageable);
+            productsPage = switch (status) {
+                case ACTIVE -> productRepository.findByActiveTrue(pageable);
+                case INACTIVE -> productRepository.findByActiveFalse(pageable);
+                case ALL -> productRepository.findAll(pageable);
             };
         }
         
         // Map to DTOs
-        return productosPage.map(productoMapper::toProductoResponseDTO);
+        return productsPage.map(productMapper::toProductoResponseDTO);
     }
 
     /**
      * Creates a new product in the system.
      * 
-     * @param productoDTO Data transfer object containing product information
+     * @param productDTO Data transfer object containing product information
      * @return ProductoResponseDTO containing the created product's information
      */
     @Transactional
-    public ProductoResponseDTO crearProducto(ProductoDTO productoDTO) {
-        log.info("Creating new product: {}", productoDTO.nombre());
-        Producto producto = productoMapper.toProducto(productoDTO);
-        producto.setFechaCreacion(LocalDateTime.now());
+    public ProductResponseDTO crearProducto(ProductDTO productDTO) {
+        log.info("Creating new product: {}", productDTO.name());
+        Product product = productMapper.toProducto(productDTO);
+        product.setCreationDate(LocalDateTime.now());
         
-        Producto savedProducto = DatabaseOperationHandler.executeOperation(() -> 
-            productoRepository.save(producto)
+        Product savedProducto = DatabaseOperationHandler.executeOperation(() -> 
+            productRepository.save(product)
         );
         log.info("Product created with ID: {}", savedProducto.getId());
-        return productoMapper.toProductoResponseDTO(savedProducto);
+        return productMapper.toProductoResponseDTO(savedProducto);
     }
 
     /**
      * Updates an existing product in the system.
      * 
      * @param id ID of the product to update
-     * @param productoDTO Data transfer object containing updated product information
+     * @param productDTO Data transfer object containing updated product information
      * @return ProductoResponseDTO containing the updated product's information
      * @throws ResourceNotFoundException if product is not found
      */
     @Transactional
-    public ProductoResponseDTO actualizarProducto(Long id, ProductoDTO productoDTO) {
+    public ProductResponseDTO actualizarProducto(Long id, ProductDTO productDTO) {
         log.info("Updating product with ID: {}", id);
-        Producto producto = productoRepository.findById(id)
+        Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
         
-        productoMapper.updateProductoFromDTO(productoDTO, producto);
+        productMapper.updateProductoFromDTO(productDTO, product);
         
-        Producto updatedProducto = DatabaseOperationHandler.executeOperation(() -> 
-            productoRepository.save(producto)
+        Product updatedProducto = DatabaseOperationHandler.executeOperation(() -> 
+            productRepository.save(product)
         );
         log.info("Product successfully updated - ID: {}", updatedProducto.getId());
-        return productoMapper.toProductoResponseDTO(updatedProducto);
+        return productMapper.toProductoResponseDTO(updatedProducto);
     }
 
     /**
@@ -147,10 +147,10 @@ public class ProductoService {
     @Transactional
     public void eliminarProducto(Long id) {
         log.info("Attempting to delete product with ID: {}", id);
-        Producto producto = productoRepository.findById(id)
+        Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
-        producto.setActivo(false);
-        productoRepository.save(producto);
+        product.setActive(false);
+        productRepository.save(product);
         log.info("Product successfully marked as inactive - ID: {}", id);
     }
 }

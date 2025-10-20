@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.Usuario;
 
@@ -43,7 +43,7 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
     private static final String USER_PASSWORD = "buyer123";
     private static final String PRODUCT_PRICE = "10.0";
     private static final String COMPRA_TOTAL_PRICE = "20.0";
-    private Long productoId;
+    private Long productId;
     
     @BeforeEach
     void configurarDatosPrueba() {
@@ -52,23 +52,23 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
         crearUsuario("Buyer", USER_EMAIL, USER_PASSWORD, Usuario.Role.USER);
         
         // Create product
-        Producto producto = new Producto();
-        producto.setNombre("Producto Test");
-        producto.setDescripcion("Producto para pruebas");
-        producto.setPrecio(new BigDecimal(PRODUCT_PRICE));
-        producto.setActivo(true);
-        producto.setFechaCreacion(LocalDateTime.now());
-        producto = productoRepository.save(producto);
-        productoId = producto.getId();
+        Product product = new Product();
+        product.setName("Producto Test");
+        product.setDescription("Producto para pruebas");
+        product.setPrice(new BigDecimal(PRODUCT_PRICE));
+        product.setActive(true);
+        product.setCreationDate(LocalDateTime.now());
+        product = productRepository.save(product);
+        productId = product.getId();
     }
     
     @Test
     void createPurchaseProductoDisponibleCompraExitosa() throws Exception {
         // Arrange
-        List<PurchaseProductDTO> productos = new ArrayList<>();
-        PurchaseProductDTO productoDTO = new PurchaseProductDTO(productoId, 2);
-        productos.add(productoDTO);
-        PurchaseDTO purchaseDTO = new PurchaseDTO(productos);
+        List<PurchaseProductDTO> products = new ArrayList<>();
+        PurchaseProductDTO productDTO = new PurchaseProductDTO(productId, 2);
+        products.add(productDTO);
+        PurchaseDTO purchaseDTO = new PurchaseDTO(products);
         
         // Act & Assert
         MvcResult result = mockMvc.perform(post(ENDPOINT_COMPRAS)

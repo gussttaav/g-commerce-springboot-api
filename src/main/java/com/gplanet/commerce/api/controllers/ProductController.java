@@ -15,13 +15,13 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
-import com.gplanet.commerce.api.dtos.producto.ProductStatus;
-import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
-import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductDTO;
+import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductStatus;
 import com.gplanet.commerce.api.exceptions.ApiException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.exceptions.UnauthorizedOperationException;
-import com.gplanet.commerce.api.services.ProductoService;
+import com.gplanet.commerce.api.services.ProductService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -51,14 +51,14 @@ import lombok.RequiredArgsConstructor;
  * @author Gustavo
  * @version 1.0
  */
-@Tag(name = "Productos", description = "API for product management")
+@Tag(name = "Products", description = "API for product management")
 @RestController
-@RequestMapping("/api/productos")
+@RequestMapping("/api/products")
 @RequiredArgsConstructor
 @Validated
-public class ProductoController {
+public class ProductController {
 
-    private final ProductoService productoService;
+    private final ProductService productService;
 
     /**
      * Retrieves a paginated list of products based on their status, search criteria, and authentication.
@@ -100,7 +100,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping
-    public PaginatedResponse<ProductoResponseDTO> listarProductos(
+    public PaginatedResponse<ProductResponseDTO> listarProductos(
             @RequestParam(required = false, defaultValue = "ACTIVE") 
             @Schema(description = "Filter products by status (ADMIN only for non-ACTIVE)")
             ProductStatus status,
@@ -111,8 +111,8 @@ public class ProductoController {
             @Schema(description = "Page number (zero-based)", example = "0") int page,
             @RequestParam(defaultValue = "10") 
             @Schema(description = "Page size", example = "10") int size,
-            @RequestParam(defaultValue = "nombre") 
-            @Schema(description = "Sort field", example = "nombre") String sort,
+            @RequestParam(defaultValue = "name") 
+            @Schema(description = "Sort field", example = "name") String sort,
             @RequestParam(defaultValue = "ASC") 
             @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"})
             String direction,
@@ -123,7 +123,7 @@ public class ProductoController {
             if (status != ProductStatus.ACTIVE) {
                 throw new AccessDeniedException("Unauthenticated users can only access active products");
             }
-            Page<ProductoResponseDTO> pageResult = productoService.listarProductos(
+            Page<ProductResponseDTO> pageResult = productService.listarProductos(
                 ProductStatus.ACTIVE, searchText, page, size, sort, direction
             );
             return PaginatedResponse.fromPage(pageResult);
@@ -137,8 +137,8 @@ public class ProductoController {
             throw new UnauthorizedOperationException("Only administrators can access non-active products");
         }
     
-        Page<ProductoResponseDTO> pageResult = 
-            productoService.listarProductos(status, searchText, page, size, sort, direction);
+        Page<ProductResponseDTO> pageResult = 
+            productService.listarProductos(status, searchText, page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }
 
@@ -148,7 +148,7 @@ public class ProductoController {
      *
      * <p>This operation is restricted to administrators only.</p>
      *
-     * @param productoDTO the product data containing name, price, and other details
+     * @param productDTO the product data containing name, price, and other details
      * @return ProductoResponseDTO containing the created product's information
      * @throws ApiException if the product could not be saved due to a constraint violation
      */
@@ -156,7 +156,7 @@ public class ProductoController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product created successfully",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = ProductoResponseDTO.class))),
+                schema = @Schema(implementation = ProductResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
@@ -164,10 +164,10 @@ public class ProductoController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PostMapping
-    public ProductoResponseDTO crearProducto(
+    public ProductResponseDTO crearProducto(
             @Valid @RequestBody @Parameter(description = "New product parameters", required = true) 
-            ProductoDTO productoDTO) {
-        return productoService.crearProducto(productoDTO);
+            ProductDTO productDTO) {
+        return productService.crearProducto(productDTO);
     }
 
 
@@ -177,7 +177,7 @@ public class ProductoController {
      * <p>This operation is restricted to administrators only.</p>
      *
      * @param id the unique identifier of the product to update
-     * @param productoDTO the updated product data
+     * @param productDTO the updated product data
      * @return ProductoResponseDTO containing the updated product's information
      * @throws ResourceNotFoundException if the product with the given ID doesn't exist
      * @throws ApiException if the product could not be updated due to a constraint violation
@@ -189,7 +189,7 @@ public class ProductoController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Product updated successfully",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = ProductoResponseDTO.class))),
+                schema = @Schema(implementation = ProductResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
@@ -198,7 +198,7 @@ public class ProductoController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PutMapping("/{id}")
-    public ProductoResponseDTO actualizarProducto(
+    public ProductResponseDTO actualizarProducto(
             @Parameter(name = "id", description = "Unique identifier of the product to update",
                       required = true,
                       example = "1",
@@ -206,8 +206,8 @@ public class ProductoController {
             @PathVariable @Min(1) Long id,
             @Valid @RequestBody
             @Parameter(description = "Updated product parameters", required = true)
-            ProductoDTO productoDTO) {
-        return productoService.actualizarProducto(id, productoDTO);
+            ProductDTO productDTO) {
+        return productService.actualizarProducto(id, productDTO);
     }
 
 
@@ -235,6 +235,6 @@ public class ProductoController {
                    example = "1",
                    schema = @Schema(type = "long", minimum = "1"))
         @PathVariable @Min(1) Long id) {
-        productoService.eliminarProducto(id);
+        productService.eliminarProducto(id);
     }
 }

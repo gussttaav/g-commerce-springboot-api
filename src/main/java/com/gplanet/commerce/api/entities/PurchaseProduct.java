@@ -47,7 +47,7 @@ public class PurchaseProduct {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "producto_id")
-    private Producto producto;
+    private Product product;
     
     /** 
      * Quantity of the product purchased. 

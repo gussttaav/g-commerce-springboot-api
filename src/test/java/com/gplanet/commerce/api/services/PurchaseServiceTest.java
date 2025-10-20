@@ -33,11 +33,11 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseMapper;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 
@@ -50,7 +50,7 @@ class PurchaseServiceTest {
     private PurchaseRepository purchaseRepository;
     
     @Mock
-    private ProductoRepository productoRepository;
+    private ProductRepository productRepository;
     
     @Mock
     private UsuarioRepository usuarioRepository;
@@ -60,8 +60,8 @@ class PurchaseServiceTest {
     
     private Usuario usuarioNormal;
     private Usuario usuarioAdmin;
-    private Producto producto1;
-    private Producto producto2;
+    private Product product1;
+    private Product product2;
     private Purchase purchase;
     private PurchaseDTO purchaseDTO;
     private PurchaseResponseDTO purchaseResponseDTO;
@@ -82,15 +82,15 @@ class PurchaseServiceTest {
         usuarioAdmin.setRol(Usuario.Role.ADMIN);
         
         // Setup Productos
-        producto1 = new Producto();
-        producto1.setId(1L);
-        producto1.setNombre("Producto 1");
-        producto1.setPrecio(new BigDecimal("100.00"));
+        product1 = new Product();
+        product1.setId(1L);
+        product1.setName("Producto 1");
+        product1.setPrice(new BigDecimal("100.00"));
         
-        producto2 = new Producto();
-        producto2.setId(2L);
-        producto2.setNombre("Producto 2");
-        producto2.setPrecio(new BigDecimal("200.00"));
+        product2 = new Product();
+        product2.setId(2L);
+        product2.setName("Producto 2");
+        product2.setPrice(new BigDecimal("200.00"));
         
         // Setup PurchaseDTO
         PurchaseProductDTO purchaseProductDto1 = new PurchaseProductDTO(1L, 2);
@@ -110,7 +110,7 @@ class PurchaseServiceTest {
             usuarioNormal.getNombre(),
             purchase.getFecha(),
             purchase.getTotal(),
-            null // productos, no se usan en los asserts
+            null // products, no se usan en los asserts
         );
     }
 
@@ -178,10 +178,10 @@ class PurchaseServiceTest {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
-        when(productoRepository.findById(1L))
-            .thenReturn(Optional.of(producto1));
-        when(productoRepository.findById(2L))
-            .thenReturn(Optional.of(producto2));
+        when(productRepository.findById(1L))
+            .thenReturn(Optional.of(product1));
+        when(productRepository.findById(2L))
+            .thenReturn(Optional.of(product2));
         when(purchaseRepository.save(any(Purchase.class)))
             .thenReturn(purchase);
         when(purchaseMapper.toPurchaseResponseDTO(any(Purchase.class)))
@@ -213,7 +213,7 @@ class PurchaseServiceTest {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
-        when(productoRepository.findById(anyLong()))
+        when(productRepository.findById(anyLong()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
@@ -226,10 +226,10 @@ class PurchaseServiceTest {
         // Arrange
         when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
             .thenReturn(Optional.of(usuarioNormal));
-        when(productoRepository.findById(1L))
-            .thenReturn(Optional.of(producto1));
-        when(productoRepository.findById(2L))
-            .thenReturn(Optional.of(producto2));
+        when(productRepository.findById(1L))
+            .thenReturn(Optional.of(product1));
+        when(productRepository.findById(2L))
+            .thenReturn(Optional.of(product2));
         when(purchaseRepository.save(any(Purchase.class)))
             .thenAnswer(invocation -> {
                 Purchase savedPurchase = invocation.getArgument(0);

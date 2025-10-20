@@ -49,15 +49,15 @@ import com.gplanet.commerce.api.configs.app.health.ApiHealthIndicator;
 import com.gplanet.commerce.api.configs.app.health.DatabaseHealthIndicator;
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
-import com.gplanet.commerce.api.dtos.producto.ProductStatus;
-import com.gplanet.commerce.api.dtos.producto.ProductoDTO;
-import com.gplanet.commerce.api.dtos.producto.ProductoResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductDTO;
+import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
+import com.gplanet.commerce.api.dtos.product.ProductStatus;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
 import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
-import com.gplanet.commerce.api.services.ProductoService;
+import com.gplanet.commerce.api.services.ProductService;
 import com.gplanet.commerce.api.services.UsuarioService;
 
 /**
@@ -97,7 +97,7 @@ class SecurityConfigTest {
     private UsuarioService usuarioService;
     
     @MockitoBean
-    private ProductoService productoService;
+    private ProductService productService;
 
     @MockitoBean(name = "commerceApi")
     private ApiHealthIndicator apiHealthIndicator;
@@ -147,13 +147,13 @@ class SecurityConfigTest {
                 .andExpect(status().isOk());
 
         // Test products listing endpoint
-        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+        Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            new ProductResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
                 TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
         ));
         
-        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
-            eq(0), eq(10), eq("nombre"), eq("ASC")))
+        when(productService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+            eq(0), eq(10), eq("name"), eq("ASC")))
             .thenReturn(productPage);
 
         mockMvc.perform(get(ENDPOINT_PRODUCTOS))
@@ -183,12 +183,12 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Use token to access protected endpoint
-        Page<ProductoResponseDTO> productPage = new PageImpl<>(Arrays.asList(
-            new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+        Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            new ProductResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
                 TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
         ));
         
-        when(productoService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+        when(productService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
             eq(0), eq(10), eq("nombre"), eq("ASC")))
             .thenReturn(productPage);
 
@@ -233,12 +233,12 @@ class SecurityConfigTest {
         // Arrange
         LoginDTO loginDto = new LoginDTO(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        ProductoDTO productoDto = new ProductoDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+        ProductDTO productDto = new ProductDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
             TEST_PRODUCT_PRICE, true);
-        ProductoResponseDTO responseDto = new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, 
+        ProductResponseDTO responseDto = new ProductResponseDTO(1L, TEST_PRODUCT_NAME, 
             TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
 
-        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDto);
+        when(productService.crearProducto(any(ProductDTO.class))).thenReturn(responseDto);
 
         // Get admin JWT token
         String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
@@ -255,7 +255,7 @@ class SecurityConfigTest {
         mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(productoDto)))
+                .content(OBJECT_MAPPER.writeValueAsString(productDto)))
                 .andExpect(status().isOk());
     }
 
@@ -270,12 +270,12 @@ class SecurityConfigTest {
         // Arrange
         LoginDTO loginDto = new LoginDTO(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        ProductoDTO productoDto = new ProductoDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
+        ProductDTO productDto = new ProductDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
             TEST_PRODUCT_PRICE, true);
-        ProductoResponseDTO responseDto = new ProductoResponseDTO(1L, TEST_PRODUCT_NAME, 
+        ProductResponseDTO responseDto = new ProductResponseDTO(1L, TEST_PRODUCT_NAME, 
             TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
 
-        when(productoService.crearProducto(any(ProductoDTO.class))).thenReturn(responseDto);
+        when(productService.crearProducto(any(ProductDTO.class))).thenReturn(responseDto);
 
         // Get admin JWT token
         String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
@@ -292,7 +292,7 @@ class SecurityConfigTest {
         mockMvc.perform(post(ENDPOINT_PRODUCTOS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(productoDto)))
+                .content(OBJECT_MAPPER.writeValueAsString(productDto)))
                 .andExpect(status().isOk());
     }
 

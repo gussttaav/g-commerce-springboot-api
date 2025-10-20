@@ -5,30 +5,30 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 
 /**
- * Repository interface for managing Product (Producto) entities in the database.
+ * Repository interface for managing Product entities in the database.
  * Provides CRUD operations and custom queries for product-related operations.
  * 
  * @author Gustavo
  * @version 1.0
  */
-public interface ProductoRepository extends JpaRepository<Producto, Long> {
+public interface ProductRepository extends JpaRepository<Product, Long> {
     
     /**
      * Finds all active products in the system with pagination support.
      * @param pageable pagination information
      * @return a page of products where the 'activo' flag is true
      */
-    Page<Producto> findByActivoTrue(Pageable pageable);
+    Page<Product> findByActiveTrue(Pageable pageable);
 
     /**
      * Finds all non-active products in the system with pagination support.
      * @param pageable pagination information
      * @return a page of products where the 'activo' flag is false
      */
-    Page<Producto> findByActivoFalse(Pageable pageable);
+    Page<Product> findByActiveFalse(Pageable pageable);
 
     /**
      * Finds active products containing the search term in either name or description.
@@ -37,9 +37,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
      * @param pageable Pagination information
      * @return Page of Producto entities matching the criteria
      */
-    @Query("SELECT p FROM Producto p"
-        + " WHERE p.activo = true AND (LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm)")
-    Page<Producto> findByActivoTrueAndSearch(String searchTerm, Pageable pageable);
+    @Query("SELECT p FROM Product p"
+        + " WHERE p.active = true AND (LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm)")
+    Page<Product> findByActiveTrueAndSearch(String searchTerm, Pageable pageable);
 
     /**
      * Finds inactive products containing the search term in either name or description.
@@ -48,9 +48,9 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
      * @param pageable Pagination information
      * @return Page of Producto entities matching the criteria
      */
-    @Query("SELECT p FROM Producto p"
-        + " WHERE p.activo = false AND (LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm)")
-    Page<Producto> findByActivoFalseAndSearch(String searchTerm, Pageable pageable);
+    @Query("SELECT p FROM Product p"
+        + " WHERE p.active = false AND (LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm)")
+    Page<Product> findByActiveFalseAndSearch(String searchTerm, Pageable pageable);
 
     /**
      * Finds all products (active and inactive) containing the search term in either name or description.
@@ -59,7 +59,7 @@ public interface ProductoRepository extends JpaRepository<Producto, Long> {
      * @param pageable Pagination information
      * @return Page of Producto entities matching the criteria
      */
-    @Query("SELECT p FROM Producto p"
-        + " WHERE LOWER(p.nombre) LIKE :searchTerm OR LOWER(p.descripcion) LIKE :searchTerm")
-    Page<Producto> findBySearch(String searchTerm, Pageable pageable);
+    @Query("SELECT p FROM Product p"
+        + " WHERE LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm")
+    Page<Product> findBySearch(String searchTerm, Pageable pageable);
 }

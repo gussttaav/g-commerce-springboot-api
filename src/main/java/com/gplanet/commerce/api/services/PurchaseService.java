@@ -15,12 +15,12 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseMapper;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
-import com.gplanet.commerce.api.entities.Producto;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.PurchaseProduct;
 import com.gplanet.commerce.api.entities.Usuario;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.ProductoRepository;
+import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
 import com.gplanet.commerce.api.repositories.UsuarioRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
@@ -41,7 +41,7 @@ import lombok.extern.slf4j.Slf4j;
 public class PurchaseService {
     private final PurchaseMapper purchaseMapper;
     private final PurchaseRepository purchaseRepository;
-    private final ProductoRepository productoRepository;
+    private final ProductRepository productRepository;
     private final UsuarioRepository usuarioRepository;
 
     /**
@@ -111,14 +111,14 @@ public class PurchaseService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (PurchaseProductDTO item : purchaseDTO.products()) {
-            Producto producto = productoRepository.findById(item.productId())
+            Product product = productRepository.findById(item.productId())
                 .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
 
             PurchaseProduct purchaseProduct = new PurchaseProduct();
-            purchaseProduct.setProducto(producto);
+            purchaseProduct.setProduct(product);
             purchaseProduct.setCantidad(item.quantity());
             purchaseProduct.setSubtotal(
-                producto.getPrecio().multiply(BigDecimal.valueOf(item.quantity()))
+                product.getPrice().multiply(BigDecimal.valueOf(item.quantity()))
             );
             
             purchase.addPurchaseProduct(purchaseProduct);
@@ -126,10 +126,10 @@ public class PurchaseService {
         }
 
         purchase.setTotal(total);        
-        Purchase savedCompra = DatabaseOperationHandler.executeOperation(() -> 
+        Purchase savedPurchase = DatabaseOperationHandler.executeOperation(() -> 
             purchaseRepository.save(purchase)
         );
-        log.info("Purchase completed - ID: {}, Total: {}", savedCompra.getId(), savedCompra.getTotal());
-        return purchaseMapper.toPurchaseResponseDTO(savedCompra);
+        log.info("Purchase completed - ID: {}, Total: {}", savedPurchase.getId(), savedPurchase.getTotal());
+        return purchaseMapper.toPurchaseResponseDTO(savedPurchase);
     }
 }

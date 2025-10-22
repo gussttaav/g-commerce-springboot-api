@@ -46,20 +46,20 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonGenerator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestSecurityConfig;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioRoleUpdateDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserDTO;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
+import com.gplanet.commerce.api.dtos.user.UserRoleUpdateDTO;
+import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.services.UsuarioDetallesService;
-import com.gplanet.commerce.api.services.UsuarioService;
+import com.gplanet.commerce.api.services.CustomUserDetailsService;
+import com.gplanet.commerce.api.services.UserService;
 
-@WebMvcTest(UsuarioController.class)
+@WebMvcTest(UserController.class)
 @Import(TestSecurityConfig.class)
-class UsuarioControllerTest {
+class UserControllerTest {
 
     private static final String USER_ROLE = "USER";
     private static final String TEST_USER_NAME = "Test User";
@@ -75,21 +75,21 @@ class UsuarioControllerTest {
     private ObjectMapper objectMapper;
 
     @MockitoBean
-    private UsuarioService usuarioService;
+    private UserService userService;
 
     @MockitoBean
-    private UsuarioDetallesService usuarioDetallesService;
+    private CustomUserDetailsService customUserDetailsService;
 
     private String createChangeRoleRequest(Long userId) {
         return String.format("%s/%d/role", ENDPOINT_USUARIOS, userId);
     }
 
-    private UsuarioDTO buildValidUsuarioDTO() {
-        return new UsuarioDTO(TEST_USER_NAME, TEST_USER_EMAIL, "Password123!");
+    private UserDTO buildValidUsuarioDTO() {
+        return new UserDTO(TEST_USER_NAME, TEST_USER_EMAIL, "Password123!");
     }
 
-    private UsuarioDTO buildValidUsuarioAdminDTO() {
-        return new UsuarioDTO("Admin User", TEST_ADMIN_EMAIL, "AdminPass123!", Usuario.Role.ADMIN);
+    private UserDTO buildValidUsuarioAdminDTO() {
+        return new UserDTO("Admin User", TEST_ADMIN_EMAIL, "AdminPass123!", User.Role.ADMIN);
     }
 
     public static ResultMatcher userId(int id) throws Exception {
@@ -97,15 +97,15 @@ class UsuarioControllerTest {
     }
 
     public static ResultMatcher userName(String name) throws Exception {
-        return jsonPath("$.nombre").value(name);
+        return jsonPath("$.name").value(name);
     }
 
     public static ResultMatcher userEmail(String email) throws Exception {
         return jsonPath("$.email").value(email);
     }
 
-    public static ResultMatcher userRol(String rol) throws Exception {
-        return jsonPath("$.rol").value(rol);
+    public static ResultMatcher userRol(String role) throws Exception {
+        return jsonPath("$.role").value(role);
     }
 
     @BeforeEach
@@ -116,22 +116,22 @@ class UsuarioControllerTest {
     }
 
     @Nested
-    @DisplayName("POST /api/usuarios/")
+    @DisplayName("POST /api/users/")
     class RegistroUsuarioTests {
         
         @Test
         @WithAnonymousUser
         @DisplayName("Should register user successfully with valid data")
-        void registrarUsuarioValidDataSuccess() throws Exception {
+        void registerUserValidDataSuccess() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = buildValidUsuarioDTO();
-            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.nombre(), 
+            UserDTO requestDto = buildValidUsuarioDTO();
+            UserResponseDTO responseDto = new UserResponseDTO(1L, 
+                requestDto.name(), 
                 requestDto.email(), 
-                Usuario.Role.USER,
+                User.Role.USER,
                 LocalDateTime.now());
             
-            when(usuarioService.registrarUsuario(any(UsuarioDTO.class)))
+            when(userService.registerUser(any(UserDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -140,20 +140,20 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
                 .andExpect(userId(1))
-                .andExpect(userName(requestDto.nombre()))
+                .andExpect(userName(requestDto.name()))
                 .andExpect(userEmail(requestDto.email()))
                 .andExpect(userRol(USER_ROLE))
-                .andExpect(jsonPath("$.fechaCreacion").exists());
+                .andExpect(jsonPath("$.creationDate").exists());
 
-            verify(usuarioService).registrarUsuario(any(UsuarioDTO.class));
+            verify(userService).registerUser(any(UserDTO.class));
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 400 when email is invalid")
-        void registrarUsuarioInvalidEmailBadRequest() throws Exception {
+        void registerUserInvalidEmailBadRequest() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = new UsuarioDTO(TEST_USER_NAME, "invalid-email", "Password123!");
+            UserDTO requestDto = new UserDTO(TEST_USER_NAME, "invalid-email", "Password123!");
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_USUARIOS)
@@ -163,15 +163,15 @@ class UsuarioControllerTest {
                 .andExpect(validationError())
                 .andExpect(errorDetailContains("email"));
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 400 when required fields are missing")
-        void registrarUsuarioMissingRequiredFieldsBadRequest() throws Exception {
+        void registerUserMissingRequiredFieldsBadRequest() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = new UsuarioDTO("", "", "");
+            UserDTO requestDto = new UserDTO("", "", "");
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_USUARIOS)
@@ -182,7 +182,7 @@ class UsuarioControllerTest {
                 .andExpect(errorDetailsAsArray())
                 .andExpect(errorDetailsIsNotEmpty());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
@@ -190,14 +190,14 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
         void registrarAdminValidDataAuthenticatedAsAdminSuccess() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = buildValidUsuarioAdminDTO();
-            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.nombre(), 
+            UserDTO requestDto = buildValidUsuarioAdminDTO();
+            UserResponseDTO responseDto = new UserResponseDTO(1L, 
+                requestDto.name(), 
                 requestDto.email(), 
-                requestDto.rol(),
+                requestDto.role(),
                 LocalDateTime.now());
             
-            when(usuarioService.registrarUsuario(any(UsuarioDTO.class)))
+            when(userService.registerUser(any(UserDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -206,11 +206,11 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
                 .andExpect(userId(1))
-                .andExpect(userName(requestDto.nombre()))
+                .andExpect(userName(requestDto.name()))
                 .andExpect(userEmail(requestDto.email()))
                 .andExpect(userRol("ADMIN"));
 
-            verify(usuarioService).registrarUsuario(any(UsuarioDTO.class));
+            verify(userService).registerUser(any(UserDTO.class));
         }
 
         @Test
@@ -218,7 +218,7 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL, roles = USER_ROLE)
         void registrarAdminValidDataNotAdminForbidden() throws Exception {
             // Arrange
-            UsuarioDTO requestDto = buildValidUsuarioAdminDTO();
+            UserDTO requestDto = buildValidUsuarioAdminDTO();
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_USUARIOS)
@@ -226,11 +226,11 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isForbidden());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
     }
 
-    // /api/usuarios/me endpoint tests
+    // /api/users/me endpoint tests
     @Nested
     @DisplayName("PATCH /me")
     class ActualizarPerfilTests {
@@ -238,18 +238,18 @@ class UsuarioControllerTest {
         @Test
         @DisplayName("Should update profile successfully when authenticated")
         @WithMockUser(username = TEST_USER_EMAIL)
-        void actualizarPerfilValidDataAuthenticatedSuccess() throws Exception {
+        void updateProfileValidDataAuthenticatedSuccess() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 "Updated Name", "updated@example.com");
             
-            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
-                requestDto.nombre(), 
-                requestDto.nuevoEmail(), 
-                Usuario.Role.USER,
+            UserResponseDTO responseDto = new UserResponseDTO(1L, 
+                requestDto.name(), 
+                requestDto.newEmail(), 
+                User.Role.USER,
                 LocalDateTime.now());
             
-            when(usuarioService.actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class)))
+            when(userService.updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -257,18 +257,18 @@ class UsuarioControllerTest {
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk())
-                .andExpect(userName(requestDto.nombre()))
-                .andExpect(userEmail(requestDto.nuevoEmail()));
+                .andExpect(userName(requestDto.name()))
+                .andExpect(userEmail(requestDto.newEmail()));
 
-            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
         }
 
         @Test
         @DisplayName("Should return 400 when update data is invalid")
         @WithMockUser(username = TEST_USER_EMAIL)
-        void actualizarPerfilInvalidDataBadRequest() throws Exception {
+        void updateProfileInvalidDataBadRequest() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 "", "invalid-email");
 
             // Act & Assert
@@ -279,15 +279,15 @@ class UsuarioControllerTest {
                 .andExpect(validationError())
                 .andExpect(errorDetailsIsNotEmpty());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 401 when not authenticated")
-        void actualizarPerfilNotAuthenticatedUnauthorized() throws Exception {
+        void updateProfileNotAuthenticatedUnauthorized() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 "New Name", "new@example.com");
 
             // Act & Assert
@@ -296,7 +296,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isUnauthorized());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
@@ -304,16 +304,16 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaValidDataAuthenticatedSuccess() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 TEST_USER_NAME, "NewPass123!", "NewPass123!");
 
-            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, 
+            UserResponseDTO responseDto = new UserResponseDTO(1L, 
                 TEST_USER_NAME, 
                 TEST_USER_EMAIL, 
-                Usuario.Role.USER,
+                User.Role.USER,
                 LocalDateTime.now());
             
-            when(usuarioService.actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class)))
+            when(userService.updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -322,7 +322,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk());
 
-            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
         }
 
         @Test
@@ -330,12 +330,12 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaPasswordMismatchBadRequest() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 TEST_USER_NAME, "Pass123!", "DifferentPass123!");
             
             doThrow(new PasswordMismatchException("Las contraseñas no coinciden"))
-                .when(usuarioService)
-                .actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+                .when(userService)
+                .updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
 
             // Act & Assert
             mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
@@ -344,7 +344,7 @@ class UsuarioControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(errorMessage("Las contraseñas no coinciden"));
 
-            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
         }
 
         @Test
@@ -352,12 +352,12 @@ class UsuarioControllerTest {
         @WithMockUser(username = TEST_USER_EMAIL)
         void cambiarContrasenaIncorrectCurrentPasswordUnauthorized() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 "WrongPass123!", "NewPass234!", "NewPass23!4");
             
             doThrow(new InvalidPasswordException("La contraseña actual es incorrecta"))
-                .when(usuarioService)
-                .actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+                .when(userService)
+                .updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
 
             // Act & Assert
             mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
@@ -366,7 +366,7 @@ class UsuarioControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(errorMessage("La contraseña actual es incorrecta"));
 
-            verify(usuarioService).actualizarPerfil(eq(TEST_USER_EMAIL), any(UsuarioUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
         }
 
         @Test
@@ -374,7 +374,7 @@ class UsuarioControllerTest {
         @DisplayName("Should return 401 when not authenticated")
         void cambiarContrasenaNotAuthenticatedUnauthorized() throws Exception {
             // Arrange
-            UsuarioUpdateDTO requestDto = new UsuarioUpdateDTO(
+            UserUpdateDTO requestDto = new UserUpdateDTO(
                 "CurrentPass123!", "Psswd123!", "Psswd123!");
 
             // Act & Assert
@@ -383,7 +383,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isUnauthorized());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
     }
 
@@ -395,15 +395,15 @@ class UsuarioControllerTest {
         @Test
         @DisplayName("Should get profile successfully when authenticated")
         @WithMockUser(username = TEST_USER_EMAIL)
-        void obtenerPerfilAuthenticatedSuccess() throws Exception {
+        void getProfileAuthenticatedSuccess() throws Exception {
             // Arrange
-            UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L,
+            UserResponseDTO responseDto = new UserResponseDTO(1L,
                 TEST_USER_NAME,
                 TEST_USER_EMAIL,
-                Usuario.Role.USER,
+                User.Role.USER,
                 LocalDateTime.now());
             
-            when(usuarioService.obtenerPerfil(TEST_USER_EMAIL))
+            when(userService.getProfile(TEST_USER_EMAIL))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -413,39 +413,39 @@ class UsuarioControllerTest {
                 .andExpect(userName(TEST_USER_NAME))
                 .andExpect(userEmail(TEST_USER_EMAIL))
                 .andExpect(userRol(USER_ROLE))
-                .andExpect(jsonPath("$.fechaCreacion").exists());
+                .andExpect(jsonPath("$.creationDate").exists());
 
-            verify(usuarioService).obtenerPerfil(TEST_USER_EMAIL);
+            verify(userService).getProfile(TEST_USER_EMAIL);
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 401 when not authenticated")
-        void obtenerPerfilNotAuthenticatedUnauthorized() throws Exception {
+        void getProfileNotAuthenticatedUnauthorized() throws Exception {
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_USUARIOS_ME))
                 .andExpect(status().isUnauthorized());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
     }
 
     @Nested
-    @DisplayName("GET /api/usuarios/")
+    @DisplayName("GET /api/users/")
     class ListarUsuariosTests {
         
         @Test
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
         @DisplayName("Should list users with pagination when authenticated as admin")
-        void listarUsuariosAuthenticatedAsAdminSuccess() throws Exception {
+        void listUsersAuthenticatedAsAdminSuccess() throws Exception {
             // Arrange
-            List<UsuarioResponseDTO> usuarios = Arrays.asList(
-                new UsuarioResponseDTO(1L, "User 1", "user1@example.com", Usuario.Role.USER, LocalDateTime.now()),
-                new UsuarioResponseDTO(2L, "User 2", "user2@example.com", Usuario.Role.ADMIN, LocalDateTime.now())
+            List<UserResponseDTO> users = Arrays.asList(
+                new UserResponseDTO(1L, "User 1", "user1@example.com", User.Role.USER, LocalDateTime.now()),
+                new UserResponseDTO(2L, "User 2", "user2@example.com", User.Role.ADMIN, LocalDateTime.now())
             );
-            Page<UsuarioResponseDTO> page = new PageImpl<>(usuarios);
+            Page<UserResponseDTO> page = new PageImpl<>(users);
 
-            when(usuarioService.listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(page);
+            when(userService.listUsers(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(page);
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_USUARIOS)
@@ -456,25 +456,25 @@ class UsuarioControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].id").value(1))
-                .andExpect(jsonPath("$.content[0].nombre").value("User 1"))
+                .andExpect(jsonPath("$.content[0].name").value("User 1"))
                 .andExpect(jsonPath("$.content[0].email").value("user1@example.com"))
-                .andExpect(jsonPath("$.content[0].rol").value(USER_ROLE))
+                .andExpect(jsonPath("$.content[0].role").value(USER_ROLE))
                 .andExpect(jsonPath("$.content[1].id").value(2))
-                .andExpect(jsonPath("$.content[1].nombre").value("User 2"))
+                .andExpect(jsonPath("$.content[1].name").value("User 2"))
                 .andExpect(jsonPath("$.content[1].email").value("user2@example.com"))
-                .andExpect(jsonPath("$.content[1].rol").value("ADMIN"))
+                .andExpect(jsonPath("$.content[1].role").value("ADMIN"))
                 .andExpect(jsonPath("$.totalElements").value(2));
 
-            verify(usuarioService).listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC);
+            verify(userService).listUsers(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC);
         }
 
         @Test
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
         @DisplayName("Should handle empty result with pagination")
-        void listarUsuariosEmptyResultSuccess() throws Exception {
+        void listUsersEmptyResultSuccess() throws Exception {
             // Arrange
-            Page<UsuarioResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
-            when(usuarioService.listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(emptyPage);
+            Page<UserResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
+            when(userService.listUsers(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC)).thenReturn(emptyPage);
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_USUARIOS)
@@ -486,29 +486,29 @@ class UsuarioControllerTest {
                 .andExpect(jsonPath("$.content", hasSize(0)))
                 .andExpect(jsonPath("$.totalElements").value(0));
 
-            verify(usuarioService).listarUsuarios(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC);
+            verify(userService).listUsers(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC);
         }
 
         @Test
         @DisplayName("Should return 403 when authenticated as regular user")
         @WithMockUser(username = TEST_USER_EMAIL, roles = USER_ROLE)
-        void listarUsuariosAuthenticatedAsUserForbidden() throws Exception {
+        void listUsersAuthenticatedAsUserForbidden() throws Exception {
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_USUARIOS))
                 .andExpect(status().isForbidden());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 401 when not authenticated")
-        void listarUsuariosNotAuthenticatedUnauthorized() throws Exception {
+        void listUsersNotAuthenticatedUnauthorized() throws Exception {
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_USUARIOS))
                 .andExpect(status().isUnauthorized());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
     }
 
@@ -519,13 +519,13 @@ class UsuarioControllerTest {
         @Test
         @DisplayName("Should change user role when authenticated as admin")
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
-        void cambiarRolAuthenticatedAsAdminSuccess() throws Exception {
+        void changeRoleAuthenticatedAsAdminSuccess() throws Exception {
             // Arrange
             Long userId = 1L;
-            Usuario.Role newRole = Usuario.Role.ADMIN;
-            UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(newRole);
+            User.Role newRole = User.Role.ADMIN;
+            UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(newRole);
             
-            doNothing().when(usuarioService).cambiarRol(userId, newRole);
+            doNothing().when(userService).changeRole(userId, newRole);
 
             // Act & Assert
             mockMvc.perform(patch(createChangeRoleRequest(userId))
@@ -533,20 +533,20 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isOk());
             
-            verify(usuarioService).cambiarRol(userId, newRole);
+            verify(userService).changeRole(userId, newRole);
         }
 
         @Test
         @DisplayName("Should return 404 when user not found")
         @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
-        void cambiarRolUserNotFoundNotFound() throws Exception {
+        void changeRoleUserNotFoundNotFound() throws Exception {
             // Arrange
             final Long userId = 999L;
-            Usuario.Role newRole = Usuario.Role.ADMIN;
-            UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(newRole);
+            User.Role newRole = User.Role.ADMIN;
+            UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(newRole);
             
             doThrow(new ResourceNotFoundException("No existe ningún usuario con el ID proporcionado"))
-                .when(usuarioService).cambiarRol(userId, newRole);
+                .when(userService).changeRole(userId, newRole);
 
             // Act & Assert
             mockMvc.perform(patch(createChangeRoleRequest(userId))
@@ -555,17 +555,17 @@ class UsuarioControllerTest {
                 .andExpect(status().isNotFound())
                 .andExpect(errorMessage("No existe ningún usuario con el ID proporcionado"));
 
-            verify(usuarioService).cambiarRol(userId, newRole);
+            verify(userService).changeRole(userId, newRole);
         }
 
         @Test
         @DisplayName("Should return 403 when authenticated as regular user")
         @WithMockUser(username = TEST_USER_EMAIL, roles = USER_ROLE)
-        void cambiarRolAuthenticatedAsUserForbidden() throws Exception {
+        void changeRoleAuthenticatedAsUserForbidden() throws Exception {
             // Arrange
             Long userId = 1L;
-            Usuario.Role newRole = Usuario.Role.ADMIN;
-            UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(newRole);
+            User.Role newRole = User.Role.ADMIN;
+            UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(newRole);
 
             // Act & Assert
             mockMvc.perform(patch(createChangeRoleRequest(userId))
@@ -573,17 +573,17 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isForbidden());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
 
         @Test
         @WithAnonymousUser
         @DisplayName("Should return 401 when not authenticated")
-        void cambiarRolNotAuthenticatedUnauthorized() throws Exception {
+        void changeRoleNotAuthenticatedUnauthorized() throws Exception {
             // Arrange
             Long userId = 1L;
-            Usuario.Role newRole = Usuario.Role.ADMIN;
-            UsuarioRoleUpdateDTO newRoleDTO = new UsuarioRoleUpdateDTO(newRole);
+            User.Role newRole = User.Role.ADMIN;
+            UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(newRole);
 
             // Act & Assert
             mockMvc.perform(patch(createChangeRoleRequest(userId))
@@ -591,7 +591,7 @@ class UsuarioControllerTest {
                     .content(objectMapper.writeValueAsString(newRoleDTO)))
                 .andExpect(status().isUnauthorized());
             
-            verifyNoInteractions(usuarioService);
+            verifyNoInteractions(userService);
         }
     }
 }

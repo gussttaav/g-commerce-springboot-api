@@ -1,7 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
 import java.time.LocalDateTime;
-import java.util.Base64;
 import java.util.Optional;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -18,17 +17,17 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gplanet.commerce.api.configs.TestRedisConfiguration;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.gplanet.commerce.api.services.AuthService;
 
 /**
- * Clase base abstracta para pruebas de integración.
+ * Abstract base class for integration tests.
  * 
- * <p>Provee utilidades comunes como limpieza de la base de datos,
- * creación de usuarios y generación de tokens JWT.
+ * <p>Provides common utilities such as database cleanup,
+ * user creation and JWT token generation.
  * 
  * @author Gustavo
  * @version 1.0
@@ -49,7 +48,7 @@ public abstract class AbstractIntegrationTest {
     protected ObjectMapper objectMapper;
     
     @Autowired
-    protected UsuarioRepository usuarioRepository;
+    protected UserRepository userRepository;
     
     @Autowired
     protected ProductRepository productRepository;
@@ -70,27 +69,27 @@ public abstract class AbstractIntegrationTest {
     void limpiarBaseDeDatos() {
         purchaseRepository.deleteAll();
         productRepository.deleteAll();
-        usuarioRepository.deleteAll();
+        userRepository.deleteAll();
     }
     
-    protected Usuario crearUsuarioAdmin() {
-        return crearUsuario("Admin User", ADMIN_EMAIL, ADMIN_PASSWORD, Usuario.Role.ADMIN);
+    protected User crearUsuarioAdmin() {
+        return crearUsuario("Admin User", ADMIN_EMAIL, ADMIN_PASSWORD, User.Role.ADMIN);
     }
     
-    protected Usuario crearUsuario(String nombre, String email, String password, Usuario.Role rol) {
+    protected User crearUsuario(String nombre, String email, String password, User.Role rol) {
         // First check if user exists
-        Optional<Usuario> existingUser = usuarioRepository.findByEmail(email);
+        Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
             return existingUser.get();
         }
         
-        Usuario usuario = new Usuario();
-        usuario.setNombre(nombre);
-        usuario.setEmail(email);
-        usuario.setPassword(passwordEncoder.encode(password));
-        usuario.setRol(rol);
-        usuario.setFechaCreacion(LocalDateTime.now());
-        return usuarioRepository.save(usuario);
+        User user = new User();
+        user.setName(nombre);
+        user.setEmail(email);
+        user.setPassword(passwordEncoder.encode(password));
+        user.setRole(rol);
+        user.setCreationDate(LocalDateTime.now());
+        return userRepository.save(user);
     }
     
     protected String obtenerJwtToken(String username, String password) {
@@ -101,12 +100,5 @@ public abstract class AbstractIntegrationTest {
         } catch (Exception e) {
             throw new RuntimeException("Failed to obtain JWT token", e);
         }
-    }
-    
-    // Keep for backward compatibility or remove if not needed
-    @Deprecated
-    protected String obtenerBasicAuthHeader(String username, String password) {
-        String auth = username + ":" + password;
-        return "Basic " + Base64.getEncoder().encodeToString(auth.getBytes());
     }
 }

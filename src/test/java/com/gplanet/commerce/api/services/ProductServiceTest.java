@@ -66,7 +66,7 @@ class ProductServiceTest {
 
     private Page<ProductResponseDTO> searchProductsOnePageResultSorteAscByName(
             ProductStatus status, String searchString) {
-        return productService.listarProductos(
+        return productService.listProducts(
             status, searchString, 0, 10, "name", "ASC"
         );        
     }
@@ -303,7 +303,7 @@ class ProductServiceTest {
         when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
 
         // Act
-        ProductResponseDTO resultado = productService.crearProducto(productDTO);
+        ProductResponseDTO resultado = productService.createProduct(productDTO);
 
         // Assert
         assertNotNull(resultado);
@@ -324,7 +324,7 @@ class ProductServiceTest {
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
         // Act
-        productService.eliminarProducto(1L);
+        productService.removeProduct(1L);
 
         // Assert
         assertFalse(product.isActive());
@@ -339,7 +339,7 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> 
-            productService.eliminarProducto(1L)
+            productService.removeProduct(1L)
         );
         verify(productRepository).findById(1L);
         verify(productRepository, never()).save(any());
@@ -354,7 +354,7 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(RuntimeException.class, () ->
-            productService.crearProducto(productDTO)
+            productService.createProduct(productDTO)
         );
         verify(productMapper).toProducto(productDTO);
         verify(productRepository).save(any(Product.class));
@@ -397,7 +397,7 @@ class ProductServiceTest {
             .thenReturn(updatedProductResponseDTO);
 
         // Act
-        ProductResponseDTO resultado = productService.actualizarProducto(1L, updatedProductDTO);
+        ProductResponseDTO resultado = productService.updateProduct(1L, updatedProductDTO);
 
         // Assert
         assertNotNull(resultado);
@@ -421,7 +421,7 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> 
-            productService.actualizarProducto(1L, productDTO)
+            productService.updateProduct(1L, productDTO)
         );
         verify(productRepository).findById(1L);
         verify(productMapper, never()).updateProductoFromDTO(any(), any());
@@ -441,7 +441,7 @@ class ProductServiceTest {
 
         // Act & Assert
         assertThrows(RuntimeException.class, () ->
-            productService.actualizarProducto(1L, productDTO)
+            productService.updateProduct(1L, productDTO)
         );
         verify(productRepository).findById(1L);
         verify(productMapper).updateProductoFromDTO(productDTO, product);

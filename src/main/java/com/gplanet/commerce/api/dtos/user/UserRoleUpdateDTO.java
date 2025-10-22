@@ -1,6 +1,6 @@
-package com.gplanet.commerce.api.dtos.usuario;
+package com.gplanet.commerce.api.dtos.user;
 
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
@@ -16,12 +16,12 @@ import jakarta.validation.constraints.NotNull;
  * @author Gustavo
  * @version 1.0
  * 
- * @param rol The new role to assign to the user (ADMIN or USER).
+ * @param role The new role to assign to the user (ADMIN or USER).
  */
 @Schema(name = "RoleUpdate", description = "Payload to update a user's role. Valid values: ADMIN, USER")
-public record UsuarioRoleUpdateDTO(
+public record UserRoleUpdateDTO(
     @Schema(description = "New role to assign (ADMIN or USER)", example = "ADMIN", nullable = false,
-            allowableValues = {"ADMIN", "USER"})
-    @NotNull(message = "El rol es obligatorio")
-    Usuario.Role rol
+        allowableValues = {"ADMIN", "USER"})
+    @NotNull(message = "Role is required")
+    User.Role role
 ) {}

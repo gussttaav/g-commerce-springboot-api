@@ -3,14 +3,13 @@ package com.gplanet.commerce.api.services;
 import java.util.Collections;
 
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.entities.User;
+import com.gplanet.commerce.api.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,9 +22,9 @@ import lombok.RequiredArgsConstructor;
  */
 @Service
 @RequiredArgsConstructor
-public class UsuarioDetallesService implements UserDetailsService {
+public class CustomUserDetailsService implements UserDetailsService {
 
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
     /**
      * Loads user details by email for Spring Security authentication.
@@ -36,13 +35,13 @@ public class UsuarioDetallesService implements UserDetailsService {
      */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
-        Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("No user found with email " + email));
 
-        return new User(
-            usuario.getEmail(),
-            usuario.getPassword(),
-            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + usuario.getRol()))
+        return new org.springframework.security.core.userdetails.User(
+            user.getEmail(),
+            user.getPassword(),
+            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + user.getRole()))
         );
     }
 }

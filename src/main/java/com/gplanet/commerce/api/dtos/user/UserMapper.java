@@ -1,8 +1,8 @@
-package com.gplanet.commerce.api.dtos.usuario;
+package com.gplanet.commerce.api.dtos.user;
 
 import org.mapstruct.Mapper;
 
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 
 /**
  * Mapper interface for converting between Usuario entity and DTOs.
@@ -14,12 +14,12 @@ import com.gplanet.commerce.api.entities.Usuario;
  */
 @Mapper(componentModel = "spring")
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
-public interface UsuarioMapper {
+public interface UserMapper {
     /**
      * Converts a Usuario entity to a UsuarioResponseDTO.
      *
-     * @param usuario the Usuario entity to convert
+     * @param user the User entity to convert
      * @return the corresponding UsuarioResponseDTO
      */
-    UsuarioResponseDTO toUsuarioResponseDTO(Usuario usuario);
+    UserResponseDTO toUserResponseDTO(User user);
 }

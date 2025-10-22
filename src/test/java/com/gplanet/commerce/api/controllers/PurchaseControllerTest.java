@@ -40,8 +40,8 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseProductResponseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
+import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.PurchaseService;
-import com.gplanet.commerce.api.services.UsuarioDetallesService;
 
 @WebMvcTest(PurchaseController.class)
 @Import(TestSecurityConfig.class)
@@ -69,7 +69,7 @@ class PurchaseControllerTest {
     private PurchaseService purchaseService;
 
     @MockitoBean
-    private UsuarioDetallesService usuarioDetallesService;
+    private CustomUserDetailsService customUserDetailsService;
     
     @BeforeEach
     void setUp() {

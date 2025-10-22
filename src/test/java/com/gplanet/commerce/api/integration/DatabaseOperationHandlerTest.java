@@ -12,9 +12,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.test.context.ActiveProfiles;
 
 import com.gplanet.commerce.api.configs.TestRedisConfiguration;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ApiException;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -24,19 +24,19 @@ import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
 class DatabaseOperationHandlerTest extends AbstractIntegrationTest {
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private UserRepository usuarioRepository;
     
     @Test
     void executeOperationSuccess() {
         // Arrange
-        Usuario usuario = new Usuario();
-        usuario.setNombre("Test");
+        User usuario = new User();
+        usuario.setName("Test");
         usuario.setEmail("test@example.com");
         usuario.setPassword("password");
-        usuario.setRol(Usuario.Role.USER);
+        usuario.setRole(User.Role.USER);
         
         // Act
-        Usuario result = DatabaseOperationHandler.executeOperation(() -> 
+        User result = DatabaseOperationHandler.executeOperation(() -> 
             usuarioRepository.save(usuario));
             
         // Assert
@@ -47,15 +47,15 @@ class DatabaseOperationHandlerTest extends AbstractIntegrationTest {
     @Test
     void executeOperationDuplicateKeyThrowsException() {
         // Arrange
-        Usuario usuario1 = new Usuario();
+        User usuario1 = new User();
         usuario1.setEmail("duplicate@example.com");
-        usuario1.setNombre("Test 1");
+        usuario1.setName("Test 1");
         usuario1.setPassword("password1");
         usuarioRepository.save(usuario1);
         
-        Usuario usuario2 = new Usuario();
+        User usuario2 = new User();
         usuario2.setEmail("duplicate@example.com");
-        usuario2.setNombre("Test 2");
+        usuario2.setName("Test 2");
         usuario2.setPassword("password2");
         
         // Act & Assert

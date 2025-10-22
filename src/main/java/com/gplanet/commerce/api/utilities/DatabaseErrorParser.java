@@ -19,7 +19,7 @@ public final class DatabaseErrorParser {
      * Private constructor to prevent instantiation of this utility class.
      */
     private DatabaseErrorParser() {
-        // Evita la instanciación
+        // Prevent instantiation
     }
     
     /**
@@ -38,7 +38,7 @@ public final class DatabaseErrorParser {
             return handleNullConstraint(originalMessage);
         }
         
-        return new DatabaseError("Error de base de datos", "Se produjo un error al procesar la operación");
+        return new DatabaseError("Database error", "An error ocurred processing this operation");
     }
     
     /**
@@ -50,12 +50,12 @@ public final class DatabaseErrorParser {
         try {
             String field = extractConstraintName(message);
             return new DatabaseError(
-                "Valor duplicado",
-                String.format("Ya existe un registro con el mismo valor para '%s'", field)
+                "Duplicated value",
+                String.format("Already exists an entry with value '%s'", field)
             );
         } catch (Exception e) {
             log.error("Error parsing duplicate entry message", e);
-            return new DatabaseError("Valor duplicado", "Ya existe un registro con estos datos");
+            return new DatabaseError("Duplicated value", "Already exists a record with these data");
         }
     }
     
@@ -68,14 +68,14 @@ public final class DatabaseErrorParser {
         try {
             String constraintName = extractConstraintName(message);
             return new DatabaseError(
-                "Error de referencia",
-                String.format("No se puede realizar la operación porque afectaría la relación '%s'", constraintName)
+                "Foreign key violation",
+                String.format("The operation violates the relation '%s'", constraintName)
             );
         } catch (Exception e) {
             log.error("Error parsing foreign key message", e);
             return new DatabaseError(
-                "Error de referencia",
-                "No se puede realizar la operación porque afectaría datos relacionados"
+                "Foreign key violation",
+                "The operation violates integrity in related data"
             );
         }
     }
@@ -92,14 +92,14 @@ public final class DatabaseErrorParser {
                 message.indexOf("' cannot")
             );
             return new DatabaseError(
-                "Valor requerido",
-                String.format("El campo '%s' no puede estar vacío", column)
+                "Value required",
+                String.format("The field '%s' can not be null", column)
             );
         } catch (Exception e) {
             log.error("Error parsing null constraint message", e);
             return new DatabaseError(
-                "Valor requerido",
-                "Uno o más campos requeridos están vacíos"
+                "Value required",
+                "One or more required fields are null"
             );
         }
     }
@@ -115,6 +115,6 @@ public final class DatabaseErrorParser {
         if (keyIdx != -1) {
             return message.substring(keyIdx + 9, message.lastIndexOf('\''));
         }
-        throw new IllegalArgumentException("No se pudo extraer el nombre de la restricción");
+        throw new IllegalArgumentException("The restriction name could not be obtained");
     }
 }

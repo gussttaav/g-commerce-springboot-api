@@ -15,15 +15,15 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserMapper;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.exceptions.TokenBlacklistException;
 import com.gplanet.commerce.api.exceptions.TokenStorageException;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jwt.SignedJWT;
 
 import lombok.RequiredArgsConstructor;
@@ -44,10 +44,10 @@ public class AuthService {
     private static final String BLACKLIST_PREFIX = "token:blacklist:";
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
 
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final UsuarioMapper usuarioMapper;
-    private final UsuarioDetallesService usuarioDetallesService;
+    private final UserMapper userMapper;
+    private final CustomUserDetailsService userDetallesService;
     private final OAuth2TokenService oauth2TokenService;
     private final JwtProperties jwtProperties;
     private final StringRedisTemplate stringRedisTemplate;
@@ -63,14 +63,14 @@ public class AuthService {
     public LoginResponseDTO login(LoginDTO loginDTO) {
         log.info("Login attempt for user: {}", loginDTO.email());
         try {
-            UserDetails userDetails = usuarioDetallesService.loadUserByUsername(loginDTO.email());
+            UserDetails userDetails = userDetallesService.loadUserByUsername(loginDTO.email());
 
-            Usuario usuario = usuarioRepository.findByEmail(loginDTO.email())
+            User user = userRepository.findByEmail(loginDTO.email())
                 .orElseThrow(() -> new ResourceNotFoundException(
-                    "No existe ningún usuario con el email proporcionado"
+                    "No user exists with the provided email"
                 ));
 
-            if (!passwordEncoder.matches(loginDTO.password(), usuario.getPassword())) {
+            if (!passwordEncoder.matches(loginDTO.password(), user.getPassword())) {
                 throw new InvalidPasswordException("Contraseña incorrecta.");
             }
 
@@ -82,7 +82,7 @@ public class AuthService {
 
             log.info("Successful login for user: {}", loginDTO.email());
             return new LoginResponseDTO(
-                usuarioMapper.toUsuarioResponseDTO(usuario),
+                userMapper.toUserResponseDTO(user),
                 token,
                 "Bearer",
                 jwtProperties.getAccessExpirationMs() / 1000,
@@ -117,7 +117,7 @@ public class AuthService {
             validateRefreshToken(token);
             
             String username = SignedJWT.parse(token).getJWTClaimsSet().getSubject();
-            UserDetails userDetails = usuarioDetallesService.loadUserByUsername(username);
+            UserDetails userDetails = userDetallesService.loadUserByUsername(username);
             
             String access = oauth2TokenService.generateAccessToken(userDetails);
             String refresh = oauth2TokenService.generateRefreshToken(userDetails);
@@ -125,13 +125,13 @@ public class AuthService {
             // Store new refresh token
             storeRefreshToken(refresh, username);
 
-            Usuario usuario = usuarioRepository.findByEmail(username)
+            User user = userRepository.findByEmail(username)
                     .orElseThrow(() -> new ResourceNotFoundException(
-                        "No existe ningún usuario con el email proporcionado"
+                        "No user found with email " + username
                     ));
             
             return new LoginResponseDTO(
-                usuarioMapper.toUsuarioResponseDTO(usuario),
+                userMapper.toUserResponseDTO(user),
                 access,
                 "Bearer",
                 jwtProperties.getAccessExpirationMs() / 1000,
@@ -140,7 +140,7 @@ public class AuthService {
             );
         } catch (ParseException e) {
             log.error("Failed to parse refresh token", e);
-            throw new InvalidTokenException("Token inválido");
+            throw new InvalidTokenException("Invalid token");
         }
     }
 
@@ -197,7 +197,7 @@ public class AuthService {
             return new TokenValidationResponseDTO(true, "Token is valid");
             
         } catch (ParseException ex) {
-            throw new InvalidTokenException("Token inválido");
+            throw new InvalidTokenException("Invalid token");
         }
     }
 

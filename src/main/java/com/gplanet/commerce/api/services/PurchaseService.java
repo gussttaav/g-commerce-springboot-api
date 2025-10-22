@@ -18,11 +18,11 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
 import com.gplanet.commerce.api.entities.PurchaseProduct;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
 
 import lombok.RequiredArgsConstructor;
@@ -42,7 +42,7 @@ public class PurchaseService {
     private final PurchaseMapper purchaseMapper;
     private final PurchaseRepository purchaseRepository;
     private final ProductRepository productRepository;
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
 
     /**
      * Lists purchases based on user role with pagination support.
@@ -61,8 +61,8 @@ public class PurchaseService {
         log.debug("Listing purchases for user: {} with pagination - page: {}, size: {}, sort: {}, direction: {}", 
                 email, page, size, sort, direction);
         
-        Usuario usuario = usuarioRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
             
         // Create Pageable object with sort direction
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
@@ -70,10 +70,10 @@ public class PurchaseService {
         
         // Get paginated result based on user role
         Page<Purchase> purchasesPage;
-        if (usuario.getRol() == Usuario.Role.ADMIN) {
+        if (user.getRole() == User.Role.ADMIN) {
             purchasesPage = purchaseRepository.findAll(pageable);
         } else {
-            purchasesPage = purchaseRepository.findByUsuario(usuario, pageable);
+            purchasesPage = purchaseRepository.findByUser(user, pageable);
         }
         
         // Map to DTOs
@@ -100,23 +100,23 @@ public class PurchaseService {
     @Transactional
     public PurchaseResponseDTO createPurchase(String email, PurchaseDTO purchaseDTO) {
         log.info("Starting new purchase for user: {}", email);
-        Usuario usuario = usuarioRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
 
         Purchase purchase = new Purchase();
-        purchase.setUsuario(usuario);
-        purchase.setFecha(LocalDateTime.now());
+        purchase.setUser(user);
+        purchase.setDate(LocalDateTime.now());
         purchase.setTotal(BigDecimal.ZERO);
 
         BigDecimal total = BigDecimal.ZERO;
 
         for (PurchaseProductDTO item : purchaseDTO.products()) {
             Product product = productRepository.findById(item.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
 
             PurchaseProduct purchaseProduct = new PurchaseProduct();
             purchaseProduct.setProduct(product);
-            purchaseProduct.setCantidad(item.quantity());
+            purchaseProduct.setQuantity(item.quantity());
             purchaseProduct.setSubtotal(
                 product.getPrice().multiply(BigDecimal.valueOf(item.quantity()))
             );

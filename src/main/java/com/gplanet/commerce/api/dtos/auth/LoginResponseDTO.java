@@ -1,6 +1,6 @@
 package com.gplanet.commerce.api.dtos.auth;
 
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -11,7 +11,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * the token type, and the token expiration time in seconds.
  * </p>
  *
- * @param usuario   The authenticated user's information.
+ * @param user   The authenticated user's information.
  * @param token     The JWT token issued after successful authentication.
  * @param tokenType The type of the token (e.g., "Bearer").
  * @param expiresIn The number of seconds until the access token expires.
@@ -24,7 +24,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(name = "LoginResponse", description = "Login response data")
 public record LoginResponseDTO(
     @Schema(description = "Authenticated user information")
-    UsuarioResponseDTO usuario,
+    UserResponseDTO user,
 
     @Schema(description = "JWT access token issued after successful authentication", 
             example = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")

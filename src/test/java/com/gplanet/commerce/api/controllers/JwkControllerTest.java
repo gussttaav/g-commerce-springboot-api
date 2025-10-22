@@ -9,6 +9,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -70,7 +71,7 @@ class JwkControllerTest {
     private RSAPublicKey createTestRSAPublicKey() {
         try {
             // Create a minimal RSA public key for testing
-            java.security.KeyPairGenerator keyGen = java.security.KeyPairGenerator.getInstance(RSA_ALGORITHM);
+            KeyPairGenerator keyGen = KeyPairGenerator.getInstance(RSA_ALGORITHM);
             keyGen.initialize(RSA_KEY_SIZE);
             return (RSAPublicKey) keyGen.generateKeyPair().getPublic();
         } catch (Exception e) {

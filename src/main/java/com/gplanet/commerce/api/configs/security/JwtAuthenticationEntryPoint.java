@@ -73,7 +73,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
                 LocalDateTime.now(),
                 HttpServletResponse.SC_UNAUTHORIZED,
                 "Unauthorized",
-                "Token de acceso requerido para acceder a este recurso",
+                "Access token required",
                 request.getRequestURI(),
                 new ArrayList<>()
         );

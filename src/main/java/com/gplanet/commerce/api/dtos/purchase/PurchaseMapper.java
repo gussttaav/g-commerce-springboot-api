@@ -29,10 +29,10 @@ public class PurchaseMapper {
     public PurchaseResponseDTO toPurchaseResponseDTO(Purchase entity) {
         return new PurchaseResponseDTO(
             entity.getId(),
-            entity.getUsuario().getNombre(),
-            entity.getFecha(),
+            entity.getUser().getName(),
+            entity.getDate(),
             entity.getTotal(),
-            entity.getProductos().stream()
+            entity.getProducts().stream()
                 .map(this::toPurchaseProductResponseDTO)
                 .collect(Collectors.toList())
         );
@@ -51,7 +51,7 @@ public class PurchaseMapper {
             entity.getProduct().getId(),
             entity.getProduct().getName(),
             entity.getProduct().getPrice(),
-            entity.getCantidad(),
+            entity.getQuantity(),
             entity.getSubtotal()
         );
     }

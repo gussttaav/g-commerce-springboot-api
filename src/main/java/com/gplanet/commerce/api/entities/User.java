@@ -22,7 +22,7 @@ import lombok.Data;
 @Data
 @Entity
 @Table(name = "usuario")
-public class Usuario {
+public class User {
     /** 
      * Unique identifier for the user. 
      */
@@ -33,7 +33,8 @@ public class Usuario {
     /** 
      * User's full name. 
      */
-    private String nombre;
+    @Column(name = "nombre")
+    private String name;
     
     /** 
      * User's email address (unique). 
@@ -50,13 +51,14 @@ public class Usuario {
      * User's role in the system. 
      * */
     @Enumerated(EnumType.STRING)
-    private Role rol;
+    @Column(name = "rol")
+    private Role role;
     
     /** 
      * Timestamp when the user was created. 
      */
     @Column(name = "fecha_creacion")
-    private LocalDateTime fechaCreacion;
+    private LocalDateTime creationDate;
     
     /**
      * Enum representing possible user roles in the system.

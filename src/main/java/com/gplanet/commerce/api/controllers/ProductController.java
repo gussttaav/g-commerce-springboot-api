@@ -77,7 +77,7 @@ public class ProductController {
      * @param sort The field to sort by
      * @param direction The sort direction (ASC or DESC)
      * @param authentication Spring Security authentication object, may be null for unauthenticated requests
-     * @return {@code PaginatedResponse<ProductoResponseDTO>} containing the filtered and searched paginated products
+     * @return {@code PaginatedResponse<ProductResponseDTO>} containing the filtered and searched paginated products
      * @throws AccessDeniedException if a non-admin user attempts to access non-active products
      */
     @Operation(
@@ -100,7 +100,7 @@ public class ProductController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping
-    public PaginatedResponse<ProductResponseDTO> listarProductos(
+    public PaginatedResponse<ProductResponseDTO> listProducts(
             @RequestParam(required = false, defaultValue = "ACTIVE") 
             @Schema(description = "Filter products by status (ADMIN only for non-ACTIVE)")
             ProductStatus status,
@@ -112,7 +112,7 @@ public class ProductController {
             @RequestParam(defaultValue = "10") 
             @Schema(description = "Page size", example = "10") int size,
             @RequestParam(defaultValue = "name") 
-            @Schema(description = "Sort field", example = "name") String sort,
+            @Schema(description = "Sort field", example = "name", allowableValues = {"name", "price"}) String sort,
             @RequestParam(defaultValue = "ASC") 
             @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"})
             String direction,
@@ -123,7 +123,7 @@ public class ProductController {
             if (status != ProductStatus.ACTIVE) {
                 throw new AccessDeniedException("Unauthenticated users can only access active products");
             }
-            Page<ProductResponseDTO> pageResult = productService.listarProductos(
+            Page<ProductResponseDTO> pageResult = productService.listProducts(
                 ProductStatus.ACTIVE, searchText, page, size, sort, direction
             );
             return PaginatedResponse.fromPage(pageResult);
@@ -138,7 +138,7 @@ public class ProductController {
         }
     
         Page<ProductResponseDTO> pageResult = 
-            productService.listarProductos(status, searchText, page, size, sort, direction);
+            productService.listProducts(status, searchText, page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }
 
@@ -164,10 +164,10 @@ public class ProductController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PostMapping
-    public ProductResponseDTO crearProducto(
+    public ProductResponseDTO createProduct(
             @Valid @RequestBody @Parameter(description = "New product parameters", required = true) 
             ProductDTO productDTO) {
-        return productService.crearProducto(productDTO);
+        return productService.createProduct(productDTO);
     }
 
 
@@ -198,7 +198,7 @@ public class ProductController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PutMapping("/{id}")
-    public ProductResponseDTO actualizarProducto(
+    public ProductResponseDTO updateProduct(
             @Parameter(name = "id", description = "Unique identifier of the product to update",
                       required = true,
                       example = "1",
@@ -207,7 +207,7 @@ public class ProductController {
             @Valid @RequestBody
             @Parameter(description = "Updated product parameters", required = true)
             ProductDTO productDTO) {
-        return productService.actualizarProducto(id, productDTO);
+        return productService.updateProduct(id, productDTO);
     }
 
 
@@ -229,12 +229,12 @@ public class ProductController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @DeleteMapping("/{id}")
-    public void eliminarProducto(
+    public void removeProduct(
         @Parameter(name = "id", description = "Unique identifier of the product to delete",
                    required = true,
                    example = "1",
                    schema = @Schema(type = "long", minimum = "1"))
         @PathVariable @Min(1) Long id) {
-        productService.eliminarProducto(id);
+        productService.removeProduct(id);
     }
 }

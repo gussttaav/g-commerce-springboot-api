@@ -29,8 +29,8 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
+import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.KeyStoreService;
-import com.gplanet.commerce.api.services.UsuarioDetallesService;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.JWKSet;
 import com.nimbusds.jose.jwk.RSAKey;
@@ -67,7 +67,7 @@ public class SecurityConfig {
 
     private final CorsProperties corsProperties;
     private final KeyStoreService keyStoreService;
-    private final UsuarioDetallesService customUserDetailsService;
+    private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
 
@@ -116,12 +116,12 @@ public class SecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/validate").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
 
                 // Admin-only endpoints
-                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole(ROLE_ADMIN)
-                .requestMatchers(HttpMethod.PATCH, "/api/usuarios/{id}/role").hasRole(ROLE_ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/users").hasRole(ROLE_ADMIN)
+                .requestMatchers(HttpMethod.PATCH, "/api/users/{id}/role").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/products/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints

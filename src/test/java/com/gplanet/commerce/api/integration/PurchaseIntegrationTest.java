@@ -30,7 +30,7 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 
 import jakarta.transaction.Transactional;
 
@@ -49,7 +49,7 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
     void configurarDatosPrueba() {
         // Create admin and buyer users
         crearUsuarioAdmin(); // Create admin user first
-        crearUsuario("Buyer", USER_EMAIL, USER_PASSWORD, Usuario.Role.USER);
+        crearUsuario("Buyer", USER_EMAIL, USER_PASSWORD, User.Role.USER);
         
         // Create product
         Product product = new Product();
@@ -88,16 +88,16 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
         );
         
         // Use findAllByUsuarioIdWithProductos instead
-        Usuario usuario = usuarioRepository.findByEmail(USER_EMAIL).orElseThrow();
-        Page<Purchase> purchasesPage = purchaseRepository.findAllByUsuarioIdWithProductos(
-            usuario.getId(),
-            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"))
+        User user = userRepository.findByEmail(USER_EMAIL).orElseThrow();
+        Page<Purchase> purchasesPage = purchaseRepository.findAllByUserIdWithProducts(
+            user.getId(),
+            PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "date"))
         );
         
         assertTrue(!purchasesPage.isEmpty());
         Purchase purchaseSaved = purchasesPage.getContent().get(0);
         assertEquals(response.id(), purchaseSaved.getId());
-        assertEquals(1, purchaseSaved.getProductos().size());
+        assertEquals(1, purchaseSaved.getProducts().size());
     }
     
     @Test
@@ -110,7 +110,7 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
                 .param("page", "0")
                 .param("size", "10")
-                .param("sort", "fecha")
+                .param("sort", "date")
                 .param("direction", "DESC"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())

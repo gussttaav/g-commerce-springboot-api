@@ -35,11 +35,11 @@ import com.gplanet.commerce.api.dtos.purchase.PurchaseProductDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
 import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.Purchase;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.repositories.PurchaseRepository;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
 class PurchaseServiceTest {
@@ -53,13 +53,13 @@ class PurchaseServiceTest {
     private ProductRepository productRepository;
     
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private UserRepository userRepository;
     
     @InjectMocks
     private PurchaseService purchaseService;
     
-    private Usuario usuarioNormal;
-    private Usuario usuarioAdmin;
+    private User regularUser;
+    private User adminUser;
     private Product product1;
     private Product product2;
     private Purchase purchase;
@@ -69,17 +69,17 @@ class PurchaseServiceTest {
     @BeforeEach
     void setUp() {
         // Setup Usuario
-        usuarioNormal = new Usuario();
-        usuarioNormal.setId(1L);
-        usuarioNormal.setEmail("user@example.com");
-        usuarioNormal.setNombre("Usuario Normal");
-        usuarioNormal.setRol(Usuario.Role.USER);
+        regularUser = new User();
+        regularUser.setId(1L);
+        regularUser.setEmail("user@example.com");
+        regularUser.setName("Usuario Normal");
+        regularUser.setRole(User.Role.USER);
         
-        usuarioAdmin = new Usuario();
-        usuarioAdmin.setId(2L);
-        usuarioAdmin.setEmail("admin@example.com");
-        usuarioAdmin.setNombre("Usuario Admin");
-        usuarioAdmin.setRol(Usuario.Role.ADMIN);
+        adminUser = new User();
+        adminUser.setId(2L);
+        adminUser.setEmail("admin@example.com");
+        adminUser.setName("Usuario Admin");
+        adminUser.setRole(User.Role.ADMIN);
         
         // Setup Productos
         product1 = new Product();
@@ -100,15 +100,15 @@ class PurchaseServiceTest {
         // Setup Purchase
         purchase = new Purchase();
         purchase.setId(1L);
-        purchase.setUsuario(usuarioNormal);
-        purchase.setFecha(LocalDateTime.now());
+        purchase.setUser(regularUser);
+        purchase.setDate(LocalDateTime.now());
         purchase.setTotal(new BigDecimal("400.00"));
         
         // Setup PurchaseResponseDTO
         purchaseResponseDTO = new PurchaseResponseDTO(
             1L,
-            usuarioNormal.getNombre(),
-            purchase.getFecha(),
+            regularUser.getName(),
+            purchase.getDate(),
             purchase.getTotal(),
             null // products, no se usan en los asserts
         );
@@ -122,21 +122,21 @@ class PurchaseServiceTest {
     void listPurchasesUserRoleReturnsUserPurchases() {
         // Arrange
         Page<Purchase> purchasesPage = new PageImpl<>(Collections.singletonList(purchase));
-        when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
-            .thenReturn(Optional.of(usuarioNormal));
-        when(purchaseRepository.findByUsuario(eq(usuarioNormal), any(Pageable.class)))
+        when(userRepository.findByEmail(regularUser.getEmail()))
+            .thenReturn(Optional.of(regularUser));
+        when(purchaseRepository.findByUser(eq(regularUser), any(Pageable.class)))
             .thenReturn(purchasesPage);
         when(purchaseMapper.toPurchaseResponseDTO(purchase))
             .thenReturn(purchaseResponseDTO);
             
         // Act
-        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioNormal.getEmail());
+        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(regularUser.getEmail());
         
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(purchaseResponseDTO, result.getContent().get(0));
-        verify(purchaseRepository).findByUsuario(eq(usuarioNormal), any(Pageable.class));
+        verify(purchaseRepository).findByUser(eq(regularUser), any(Pageable.class));
         verify(purchaseRepository, never()).findAll(any(Pageable.class));
     }
 
@@ -144,28 +144,28 @@ class PurchaseServiceTest {
     void listPurchasesAdminRoleReturnsAllPurchases() {
         // Arrange
         Page<Purchase> purchasesPage = new PageImpl<>(Collections.singletonList(purchase));
-        when(usuarioRepository.findByEmail(usuarioAdmin.getEmail()))
-            .thenReturn(Optional.of(usuarioAdmin));
+        when(userRepository.findByEmail(adminUser.getEmail()))
+            .thenReturn(Optional.of(adminUser));
         when(purchaseRepository.findAll(any(Pageable.class)))
             .thenReturn(purchasesPage);
         when(purchaseMapper.toPurchaseResponseDTO(purchase))
             .thenReturn(purchaseResponseDTO);
             
         // Act
-        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(usuarioAdmin.getEmail());
+        Page<PurchaseResponseDTO> result = listOnePagePurchasesSortDescByDate(adminUser.getEmail());
         
         // Assert
         assertNotNull(result);
         assertEquals(1, result.getTotalElements());
         assertEquals(purchaseResponseDTO, result.getContent().get(0));
         verify(purchaseRepository).findAll(any(Pageable.class));
-        verify(purchaseRepository, never()).findByUsuario(any(), any(Pageable.class));
+        verify(purchaseRepository, never()).findByUser(any(), any(Pageable.class));
     }
 
     @Test
     void listPurchasesUserNotFoundThrowsException() {
         // Arrange
-        when(usuarioRepository.findByEmail(anyString()))
+        when(userRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
@@ -176,8 +176,8 @@ class PurchaseServiceTest {
     @Test
     void createPurchaseSuccess() {
         // Arrange
-        when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
-            .thenReturn(Optional.of(usuarioNormal));
+        when(userRepository.findByEmail(regularUser.getEmail()))
+            .thenReturn(Optional.of(regularUser));
         when(productRepository.findById(1L))
             .thenReturn(Optional.of(product1));
         when(productRepository.findById(2L))
@@ -188,7 +188,7 @@ class PurchaseServiceTest {
             .thenReturn(purchaseResponseDTO);
             
         // Act
-        PurchaseResponseDTO result = purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO);
+        PurchaseResponseDTO result = purchaseService.createPurchase(regularUser.getEmail(), purchaseDTO);
         
         // Assert
         assertNotNull(result);
@@ -200,7 +200,7 @@ class PurchaseServiceTest {
     @Test
     void createPurchaseUserNotFoundThrowsException() {
         // Arrange
-        when(usuarioRepository.findByEmail(anyString()))
+        when(userRepository.findByEmail(anyString()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
@@ -211,21 +211,21 @@ class PurchaseServiceTest {
     @Test
     void createPurchaseProductNotFoundThrowsException() {
         // Arrange
-        when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
-            .thenReturn(Optional.of(usuarioNormal));
+        when(userRepository.findByEmail(regularUser.getEmail()))
+            .thenReturn(Optional.of(regularUser));
         when(productRepository.findById(anyLong()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
         assertThrows(ResourceNotFoundException.class,
-            () -> purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO));
+            () -> purchaseService.createPurchase(regularUser.getEmail(), purchaseDTO));
     }
     
     @Test
     void createPurchaseCalculatesCorrectTotal() {
         // Arrange
-        when(usuarioRepository.findByEmail(usuarioNormal.getEmail()))
-            .thenReturn(Optional.of(usuarioNormal));
+        when(userRepository.findByEmail(regularUser.getEmail()))
+            .thenReturn(Optional.of(regularUser));
         when(productRepository.findById(1L))
             .thenReturn(Optional.of(product1));
         when(productRepository.findById(2L))
@@ -238,7 +238,7 @@ class PurchaseServiceTest {
             });
             
         // Act
-        purchaseService.createPurchase(usuarioNormal.getEmail(), purchaseDTO);
+        purchaseService.createPurchase(regularUser.getEmail(), purchaseDTO);
         
         // Assert
         ArgumentCaptor<Purchase> purchaseCaptor = ArgumentCaptor.forClass(Purchase.class);

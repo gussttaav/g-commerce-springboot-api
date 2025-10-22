@@ -4,6 +4,7 @@ import java.math.BigDecimal;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -52,7 +53,8 @@ public class PurchaseProduct {
     /** 
      * Quantity of the product purchased. 
      */
-    private Integer cantidad;
+    @Column(name = "cantidad")
+    private Integer quantity;
     
     /** 
      * Subtotal for this item (price * quantity). 

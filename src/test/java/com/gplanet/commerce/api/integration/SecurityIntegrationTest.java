@@ -14,8 +14,8 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.ActiveProfiles;
 
-import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserDTO;
+import com.gplanet.commerce.api.entities.User;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -24,7 +24,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     
     @Test
     void accederEndpointPublicoSinAutenticacionPermitido() throws Exception {
-        UsuarioDTO usuarioDTO = new UsuarioDTO("New User", "new@example.com", "password123");
+        UserDTO usuarioDTO = new UserDTO("New User", "new@example.com", "password123");
         
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
@@ -41,7 +41,7 @@ class SecurityIntegrationTest extends AbstractIntegrationTest {
     @Test
     void accederEndpointAdminUsuarioNormalForbidden() throws Exception {
         // Create regular user using the helper method which properly handles password encoding
-        crearUsuario("Regular User", "user@example.com", "Password123!", Usuario.Role.USER);
+        crearUsuario("Regular User", "user@example.com", "Password123!", User.Role.USER);
         
         // Use the JWT token obtained through proper authentication flow
         String jwtToken = obtenerJwtToken("user@example.com", "Password123!");

@@ -64,12 +64,12 @@ public class TestSecurityConfig {
                 .requestMatchers("/api/auth/login", "/api/auth/refresh", "/api/auth/validate").permitAll()
                 .requestMatchers("/actuator/health/**").permitAll()
                 .requestMatchers("/actuator/info", "/actuator/prometheus").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/usuarios").permitAll()
+                .requestMatchers(HttpMethod.POST, "/api/users").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/products").permitAll()
 
                 // Admin-only endpoints
-                .requestMatchers(HttpMethod.GET, "/api/usuarios").hasRole(ROLE_ADMIN)
-                .requestMatchers(HttpMethod.PATCH, "/api/usuarios/{id}/role").hasRole(ROLE_ADMIN)
+                .requestMatchers(HttpMethod.GET, "/api/users").hasRole(ROLE_ADMIN)
+                .requestMatchers(HttpMethod.PATCH, "/api/users/{id}/role").hasRole(ROLE_ADMIN)
                 .requestMatchers("/api/products/**").hasRole(ROLE_ADMIN)
 
                 // User-specific endpoints

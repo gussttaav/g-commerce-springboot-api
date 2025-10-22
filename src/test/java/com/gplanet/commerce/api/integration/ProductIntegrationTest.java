@@ -19,7 +19,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.gplanet.commerce.api.dtos.product.ProductDTO;
 import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.entities.User;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -53,13 +53,13 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
     @Test
     void crearProductoUsuarioRetornaForbidden() throws Exception {
         // Create regular user
-        Usuario user = new Usuario();
-        user.setNombre("User");
+        User user = new User();
+        user.setName("User");
         user.setEmail(USER_EMAIL);
         user.setPassword(passwordEncoder.encode(USER_PASSWORD));
-        user.setRol(Usuario.Role.USER);
-        user.setFechaCreacion(LocalDateTime.now());
-        usuarioRepository.save(user);
+        user.setRole(User.Role.USER);
+        user.setCreationDate(LocalDateTime.now());
+        userRepository.save(user);
 
         // Arrange
         ProductDTO productDTO = new ProductDTO(
@@ -118,7 +118,7 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
     void actualizarProductoUsuarioRetornaForbidden() throws Exception {
         // Arrange
         crearUsuarioAdmin();
-        crearUsuario("Regular user", USER_EMAIL, USER_PASSWORD, Usuario.Role.USER);
+        crearUsuario("Regular user", USER_EMAIL, USER_PASSWORD, User.Role.USER);
         
         // First create a product as admin
         ProductDTO originalProducto = new ProductDTO(

@@ -49,7 +49,7 @@ public class ProductService {
      * @param direction The sort direction (ASC or DESC)
      * @return Page of ProductoResponseDTO containing filtered and searched paginated products
      */
-    public Page<ProductResponseDTO> listarProductos(
+    public Page<ProductResponseDTO> listProducts(
             ProductStatus status, 
             String searchText, 
             int page, 
@@ -100,10 +100,10 @@ public class ProductService {
      * Creates a new product in the system.
      * 
      * @param productDTO Data transfer object containing product information
-     * @return ProductoResponseDTO containing the created product's information
+     * @return ProductResponseDTO containing the created product's information
      */
     @Transactional
-    public ProductResponseDTO crearProducto(ProductDTO productDTO) {
+    public ProductResponseDTO createProduct(ProductDTO productDTO) {
         log.info("Creating new product: {}", productDTO.name());
         Product product = productMapper.toProducto(productDTO);
         product.setCreationDate(LocalDateTime.now());
@@ -120,14 +120,14 @@ public class ProductService {
      * 
      * @param id ID of the product to update
      * @param productDTO Data transfer object containing updated product information
-     * @return ProductoResponseDTO containing the updated product's information
+     * @return ProductResponseDTO containing the updated product's information
      * @throws ResourceNotFoundException if product is not found
      */
     @Transactional
-    public ProductResponseDTO actualizarProducto(Long id, ProductDTO productDTO) {
+    public ProductResponseDTO updateProduct(Long id, ProductDTO productDTO) {
         log.info("Updating product with ID: {}", id);
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         
         productMapper.updateProductoFromDTO(productDTO, product);
         
@@ -145,10 +145,10 @@ public class ProductService {
      * @throws ResourceNotFoundException if product is not found
      */
     @Transactional
-    public void eliminarProducto(Long id) {
+    public void removeProduct(Long id) {
         log.info("Attempting to delete product with ID: {}", id);
         Product product = productRepository.findById(id)
-            .orElseThrow(() -> new ResourceNotFoundException("Producto no encontrado"));
+            .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         product.setActive(false);
         productRepository.save(product);
         log.info("Product successfully marked as inactive - ID: {}", id);

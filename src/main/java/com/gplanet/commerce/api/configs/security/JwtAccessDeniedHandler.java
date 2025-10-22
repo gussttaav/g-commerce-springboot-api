@@ -73,7 +73,7 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
                 LocalDateTime.now(),
                 HttpServletResponse.SC_FORBIDDEN,
                 "Forbidden",
-                "No tiene permisos para realizar esta operación",
+                "Unauthorized operation",
                 request.getRequestURI(),
                 new ArrayList<>()
         );

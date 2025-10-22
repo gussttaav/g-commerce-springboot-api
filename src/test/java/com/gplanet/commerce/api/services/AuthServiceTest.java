@@ -26,7 +26,6 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -35,13 +34,13 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioMapper;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserMapper;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.JWSHeader;
@@ -63,16 +62,16 @@ class AuthServiceTest {
     private static final Long REFRESH_TOKEN_EXPIRATION_MS = 86400000L;
 
     @Mock
-    private UsuarioRepository usuarioRepository;
+    private UserRepository userRepository;
 
     @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
-    private UsuarioMapper usuarioMapper;
+    private UserMapper userMapper;
 
     @Mock
-    private UsuarioDetallesService usuarioDetallesService;
+    private CustomUserDetailsService customUserDetailsService;
 
     @Mock
     private OAuth2TokenService oauth2TokenService;
@@ -89,28 +88,28 @@ class AuthServiceTest {
     @InjectMocks
     private AuthService authService;
 
-    private Usuario usuario;
+    private User user;
     private UserDetails userDetails;
     private LoginDTO loginDTO;
-    private UsuarioResponseDTO usuarioResponseDTO;
+    private UserResponseDTO userResponseDTO;
 
     @BeforeEach
     void setUp() {
-        usuario = new Usuario();
-        usuario.setId(1L);
-        usuario.setEmail(TEST_EMAIL);
-        usuario.setPassword("encodedPassword");
-        usuario.setNombre("Test User");
+        user = new User();
+        user.setId(1L);
+        user.setEmail(TEST_EMAIL);
+        user.setPassword("encodedPassword");
+        user.setName("Test User");
 
-        userDetails = User.withUsername(TEST_EMAIL)
+        userDetails = org.springframework.security.core.userdetails.User.withUsername(TEST_EMAIL)
                 .password("encodedPassword")
                 .authorities("ROLE_USER")
                 .build();
 
         loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
 
-        usuarioResponseDTO = new UsuarioResponseDTO(
-                1L, "Test User", TEST_EMAIL, Usuario.Role.USER, null);
+        userResponseDTO = new UserResponseDTO(
+                1L, "Test User", TEST_EMAIL, User.Role.USER, null);
 
         // Use lenient() for properties that might not be used in all tests
         lenient().when(jwtProperties.getAccessExpirationMs()).thenReturn(TOKEN_ACCESS_EXPIRATION_MS);
@@ -124,12 +123,12 @@ class AuthServiceTest {
     void loginValidCredentialsReturnsLoginResponse() throws Exception {
         // Arrange
         String validRefreshToken = createValidJWT(); // Use valid JWT for refresh token
-        when(usuarioRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(usuario));
-        when(usuarioDetallesService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
-        when(passwordEncoder.matches(TEST_PASSWORD, usuario.getPassword())).thenReturn(true);
+        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
+        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
+        when(passwordEncoder.matches(TEST_PASSWORD, user.getPassword())).thenReturn(true);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn(ACCESS_TOKEN);
         when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(validRefreshToken); // Use valid JWT
-        when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(usuarioResponseDTO);
+        when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
         // Mock Redis set operation for storeRefreshToken
         doNothing().when(valueOperations).set(
             anyString(),
@@ -143,12 +142,12 @@ class AuthServiceTest {
 
         // Assert
         assertNotNull(result);
-        assertEquals(usuarioResponseDTO, result.usuario());
+        assertEquals(userResponseDTO, result.user());
         assertEquals(ACCESS_TOKEN, result.token());
         assertEquals(validRefreshToken, result.refreshToken());
         assertEquals(TOKEN_TYPE, result.tokenType());
-        verify(usuarioRepository).findByEmail(TEST_EMAIL);
-        verify(passwordEncoder).matches(TEST_PASSWORD, usuario.getPassword());
+        verify(userRepository).findByEmail(TEST_EMAIL);
+        verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
         verify(valueOperations).set(
             eq(REFRESH_TOKEN_PREFIX + validRefreshToken),
             eq(TEST_EMAIL),
@@ -160,24 +159,24 @@ class AuthServiceTest {
     @Test
     void loginInvalidPasswordThrowsException() {
         // Arrange
-        when(usuarioRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(usuario));
-        when(usuarioDetallesService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
-        when(passwordEncoder.matches(TEST_PASSWORD, usuario.getPassword())).thenReturn(false);
+        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
+        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
+        when(passwordEncoder.matches(TEST_PASSWORD, user.getPassword())).thenReturn(false);
 
         // Act & Assert
         assertThrows(InvalidPasswordException.class, () -> authService.login(loginDTO));
-        verify(usuarioRepository).findByEmail(TEST_EMAIL);
-        verify(passwordEncoder).matches(TEST_PASSWORD, usuario.getPassword());
+        verify(userRepository).findByEmail(TEST_EMAIL);
+        verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
     }
 
     @Test
     void loginUserNotFoundThrowsException() {
         // Arrange
-        when(usuarioRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
+        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> authService.login(loginDTO));
-        verify(usuarioRepository).findByEmail(TEST_EMAIL);
+        verify(userRepository).findByEmail(TEST_EMAIL);
         verify(passwordEncoder, never()).matches(anyString(), anyString());
     }
 
@@ -189,11 +188,11 @@ class AuthServiceTest {
         
         when(valueOperations.get(REFRESH_TOKEN_PREFIX + validRefreshToken)).thenReturn(TEST_EMAIL);
         when(stringRedisTemplate.hasKey(BLACKLIST_PREFIX + validRefreshToken)).thenReturn(false);
-        when(usuarioDetallesService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
+        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn("newAccessToken");
         when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(newRefreshToken);
-        when(usuarioRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(usuario));
-        when(usuarioMapper.toUsuarioResponseDTO(usuario)).thenReturn(usuarioResponseDTO);
+        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
+        when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
         
         // Mock the Redis set operation for storing the new refresh token
         doNothing().when(valueOperations).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));

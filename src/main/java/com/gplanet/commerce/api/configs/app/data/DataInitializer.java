@@ -8,8 +8,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import com.gplanet.commerce.api.configs.app.props.AdminProperties;
-import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.entities.User;
+import com.gplanet.commerce.api.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,7 +26,7 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class DataInitializer {
 
-    private final UsuarioRepository usuarioRepository;
+    private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final AdminProperties adminProperties;
 
@@ -45,19 +45,19 @@ public class DataInitializer {
             log.warn("Admin credentials not configured. Skipping admin user creation.");
             return;
         }
-        if (usuarioRepository.count() == 0) {
+        if (userRepository.count() == 0) {
             createDefaultAdmin();
         }
     }
 
     private void createDefaultAdmin() {
-        Usuario admin = new Usuario();
-        admin.setNombre("Admin");
+        User admin = new User();
+        admin.setName("Admin");
         admin.setEmail(adminProperties.getEmail());
         admin.setPassword(passwordEncoder.encode(adminProperties.getPassword()));
-        admin.setRol(Usuario.Role.ADMIN);
-        admin.setFechaCreacion(LocalDateTime.now());
-        usuarioRepository.save(admin);
+        admin.setRole(User.Role.ADMIN);
+        admin.setCreationDate(LocalDateTime.now());
+        userRepository.save(admin);
         log.info("Default admin user created successfully");
     }
 }

@@ -19,7 +19,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
+import com.gplanet.commerce.api.dtos.user.UserDTO;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -33,11 +33,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     @Test
     void loginCredencialesValidasRetornaTokens() throws Exception {
         // Arrange - Create user first
-        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
+        UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
         LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
@@ -69,11 +69,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     @Test
     void refreshTokenValidoRetornaNuevosTokens() throws Exception {
         // Arrange - Login first to get token
-        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
+        UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
 
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
         
         LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
@@ -99,11 +99,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     @Test
     void validateTokenValidoRetornaValidationSuccess() throws Exception {
         // Arrange - Login first to get token
-        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
+        UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
         LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);
@@ -128,11 +128,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     @Test
     void logoutValidoBlacklistsTokens() throws Exception {
         // Arrange - Login first to get tokens
-        UsuarioDTO usuarioDTO = new UsuarioDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
+        UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
         LoginDTO loginDTO = new LoginDTO(TEST_EMAIL, TEST_PASSWORD);

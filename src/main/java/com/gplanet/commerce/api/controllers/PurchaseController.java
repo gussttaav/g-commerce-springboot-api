@@ -113,8 +113,8 @@ public class PurchaseController {
            @Schema(description = "Page number (zero-based)", example = "0") int page,
            @RequestParam(defaultValue = "10")
            @Schema(description = "Page size", example = "10") int size,
-           @RequestParam(defaultValue = "fecha")
-           @Schema(description = "Sort field", example = "fecha") String sort,
+           @RequestParam(defaultValue = "date")
+           @Schema(description = "Sort field", example = "date") String sort,
            @RequestParam(defaultValue = "DESC")
            @Schema(description = "Sort direction", example = "DESC", allowableValues = {"ASC", "DESC"}) 
            String direction,

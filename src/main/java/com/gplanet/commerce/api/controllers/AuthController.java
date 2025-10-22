@@ -12,7 +12,7 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
@@ -70,7 +70,7 @@ public class AuthController {
     @Operation(summary = "Authenticate user", description = "Authenticates a user with email and password")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Successfully authenticated",
-            content = @Content(schema = @Schema(implementation = UsuarioResponseDTO.class))),
+            content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")

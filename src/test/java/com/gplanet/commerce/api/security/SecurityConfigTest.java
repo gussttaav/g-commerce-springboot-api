@@ -52,13 +52,13 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.product.ProductDTO;
 import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
 import com.gplanet.commerce.api.dtos.product.ProductStatus;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
-import com.gplanet.commerce.api.entities.Usuario;
-import com.gplanet.commerce.api.repositories.UsuarioRepository;
+import com.gplanet.commerce.api.dtos.user.UserDTO;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
+import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
+import com.gplanet.commerce.api.entities.User;
+import com.gplanet.commerce.api.repositories.UserRepository;
 import com.gplanet.commerce.api.services.ProductService;
-import com.gplanet.commerce.api.services.UsuarioService;
+import com.gplanet.commerce.api.services.UserService;
 
 /**
  * Security configuration tests for JWT/OAuth2 authentication.
@@ -88,13 +88,13 @@ class SecurityConfigTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private UsuarioRepository usuarioRepository;
+    private UserRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     @MockitoBean
-    private UsuarioService usuarioService;
+    private UserService userService;
     
     @MockitoBean
     private ProductService productService;
@@ -111,39 +111,39 @@ class SecurityConfigTest {
 
     @BeforeEach
     void setup() {
-        usuarioRepository.deleteAll();
+        userRepository.deleteAll();
 
         // Create real test user
-        Usuario user = new Usuario();
-        user.setNombre(USER_NAME);
+        User user = new User();
+        user.setName(USER_NAME);
         user.setEmail(USER_EMAIL);
         user.setPassword(passwordEncoder.encode(USER_PASSWORD));
-        user.setRol(Usuario.Role.USER);
-        user.setFechaCreacion(LocalDateTime.now());
-        usuarioRepository.save(user);
+        user.setRole(User.Role.USER);
+        user.setCreationDate(LocalDateTime.now());
+        userRepository.save(user);
 
         // Create real test admin
-        Usuario admin = new Usuario();
-        admin.setNombre(USER_NAME);
+        User admin = new User();
+        admin.setName(USER_NAME);
         admin.setEmail(ADMIN_EMAIL);
         admin.setPassword(passwordEncoder.encode(ADMIN_PASSWORD));
-        admin.setRol(Usuario.Role.ADMIN);
-        admin.setFechaCreacion(LocalDateTime.now());
-        usuarioRepository.save(admin);
+        admin.setRole(User.Role.ADMIN);
+        admin.setCreationDate(LocalDateTime.now());
+        userRepository.save(admin);
     }
 
     @Test
     void whenPublicEndpointThenAllowsAccess() throws Exception {
         // Test registration endpoint
-        UsuarioDTO usuarioDto = new UsuarioDTO("test", "test@test.com", "Password123!");
-        UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, "test", "test@test.com", 
-            Usuario.Role.USER, LocalDateTime.now());
+        UserDTO userDto = new UserDTO("test", "test@test.com", "Password123!");
+        UserResponseDTO responseDto = new UserResponseDTO(1L, "test", "test@test.com", 
+            User.Role.USER, LocalDateTime.now());
         
-        when(usuarioService.registrarUsuario(any(UsuarioDTO.class))).thenReturn(responseDto);
+        when(userService.registerUser(any(UserDTO.class))).thenReturn(responseDto);
 
         mockMvc.perform(post(ENDPOINT_USUARIOS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(usuarioDto)))
+                .content(OBJECT_MAPPER.writeValueAsString(userDto)))
                 .andExpect(status().isOk());
 
         // Test products listing endpoint
@@ -152,7 +152,7 @@ class SecurityConfigTest {
                 TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
         ));
         
-        when(productService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+        when(productService.listProducts(eq(ProductStatus.ACTIVE), eq(null), 
             eq(0), eq(10), eq("name"), eq("ASC")))
             .thenReturn(productPage);
 
@@ -188,7 +188,7 @@ class SecurityConfigTest {
                 TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
         ));
         
-        when(productService.listarProductos(eq(ProductStatus.ACTIVE), eq(null), 
+        when(productService.listProducts(eq(ProductStatus.ACTIVE), eq(null), 
             eq(0), eq(10), eq("nombre"), eq("ASC")))
             .thenReturn(productPage);
 
@@ -238,7 +238,7 @@ class SecurityConfigTest {
         ProductResponseDTO responseDto = new ProductResponseDTO(1L, TEST_PRODUCT_NAME, 
             TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
 
-        when(productService.crearProducto(any(ProductDTO.class))).thenReturn(responseDto);
+        when(productService.createProduct(any(ProductDTO.class))).thenReturn(responseDto);
 
         // Get admin JWT token
         String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
@@ -275,7 +275,7 @@ class SecurityConfigTest {
         ProductResponseDTO responseDto = new ProductResponseDTO(1L, TEST_PRODUCT_NAME, 
             TEST_PRODUCT_DESC, TEST_PRODUCT_PRICE, LocalDateTime.now(), true);
 
-        when(productService.crearProducto(any(ProductDTO.class))).thenReturn(responseDto);
+        when(productService.createProduct(any(ProductDTO.class))).thenReturn(responseDto);
 
         // Get admin JWT token
         String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
@@ -301,12 +301,12 @@ class SecurityConfigTest {
         // Arrange
         LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
         
-        UsuarioUpdateDTO actualizacionDto = new UsuarioUpdateDTO(
+        UserUpdateDTO actualizacionDto = new UserUpdateDTO(
             "Updated Name", "updated@test.com");
-        UsuarioResponseDTO responseDto = new UsuarioResponseDTO(1L, "Updated Name", 
-            "updated@test.com", Usuario.Role.USER, LocalDateTime.now());
+        UserResponseDTO responseDto = new UserResponseDTO(1L, "Updated Name", 
+            "updated@test.com", User.Role.USER, LocalDateTime.now());
             
-        when(usuarioService.actualizarPerfil(anyString(), any(UsuarioUpdateDTO.class)))
+        when(userService.updateProfile(anyString(), any(UserUpdateDTO.class)))
             .thenReturn(responseDto);
 
         // Get user JWT token

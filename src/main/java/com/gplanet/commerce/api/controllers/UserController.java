@@ -14,15 +14,15 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioRoleUpdateDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioUpdateDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserDTO;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
+import com.gplanet.commerce.api.dtos.user.UserRoleUpdateDTO;
+import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ApiException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.services.UsuarioService;
+import com.gplanet.commerce.api.services.UserService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -58,13 +58,13 @@ import lombok.RequiredArgsConstructor;
  * @version 1.0
  */
 @RestController
-@RequestMapping("/api/usuarios")
+@RequestMapping("/api/users")
 @Tag(name = "User", 
      description = "API endpoints for user management")
 @RequiredArgsConstructor
-public class UsuarioController {
+public class UserController {
 
-    private final UsuarioService usuarioService;
+    private final UserService userService;
 
     /**
      * Registers a new user in the system. 
@@ -72,7 +72,7 @@ public class UsuarioController {
      * with ADMIN role; otherwise an {@link AccessDeniedException} will be thrown.
      *
      * @param authentication the current authentication object; may be null for unauthenticated requests
-     * @param usuarioDTO the user registration data containing email, password, and personal information
+     * @param userDTO the user registration data containing email, password, and personal information
      * @return UsuarioResponseDTO containing the created user's information
      * @throws ApiException if the user could not be registered due to a constraint violation
      * @throws AccessDeniedException if a non-admin user attempts to create an ADMIN user
@@ -83,7 +83,7 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User successfully registered",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UsuarioResponseDTO.class))),
+                schema = @Schema(implementation = UserResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
@@ -91,20 +91,20 @@ public class UsuarioController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
     @PostMapping
-    public UsuarioResponseDTO crearUsuario(
+    public UserResponseDTO register(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "User registration details", required = true)
-            UsuarioDTO usuarioDTO) {
+            UserDTO userDTO) {
 
         // If the request explicitly asks for ADMIN role, require caller to be ADMIN
-        if (usuarioDTO.rol() == Usuario.Role.ADMIN) {
+        if (userDTO.role() == User.Role.ADMIN) {
             if (authentication == null || authentication.getAuthorities().stream()
                     .noneMatch(a -> a.getAuthority().equals("ROLE_ADMIN"))) {
                 throw new AccessDeniedException("Only administrators can create admin users");
             }
         }
 
-        return usuarioService.registrarUsuario(usuarioDTO);
+        return userService.registerUser(userDTO);
     }
 
 
@@ -119,13 +119,13 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Profile successfully retrieved",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UsuarioResponseDTO.class))),
+                schema = @Schema(implementation = UserResponseDTO.class))),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @GetMapping("/me")
-    public UsuarioResponseDTO obtenerPerfil(Authentication authentication) {
-        return usuarioService.obtenerPerfil(authentication.getName());
+    public UserResponseDTO getProfile(Authentication authentication) {
+        return userService.getProfile(authentication.getName());
     }
 
 
@@ -133,7 +133,7 @@ public class UsuarioController {
      * Updates the profile information of the authenticated user.
      * 
      * @param authentication the current user's authentication object
-     * @param perfilDTO the profile information to be updated
+     * @param profileDTO the profile information to be updated
      * @return UsuarioResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if the user is not found
      * @throws PasswordMismatchException if the new password is not confirmed correctly
@@ -143,18 +143,18 @@ public class UsuarioController {
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Profile successfully updated",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UsuarioResponseDTO.class))),
+                schema = @Schema(implementation = UserResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
     })
     @PatchMapping("/me")
-    public UsuarioResponseDTO actualizarPerfil(
+    public UserResponseDTO updateProfile(
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "Updated profile information", required = true) 
-            UsuarioUpdateDTO perfilDTO) {
-        return usuarioService.actualizarPerfil(
-                authentication.getName(), perfilDTO);
+            UserUpdateDTO profileDTO) {
+        return userService.updateProfile(
+                authentication.getName(), profileDTO);
     }
 
 
@@ -179,18 +179,19 @@ public class UsuarioController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @GetMapping
-    public PaginatedResponse<UsuarioResponseDTO> listarUsuarios(
+    public PaginatedResponse<UserResponseDTO> listUsers(
             @RequestParam(defaultValue = "0") 
             @Schema(description = "Page number (zero-based)", example = "0") int page,
             @RequestParam(defaultValue = "10") 
             @Schema(description = "Page size", example = "10") int size,
             @RequestParam(defaultValue = "email") 
-            @Schema(description = "Sort field", example = "email") String sort,
+            @Schema(description = "Sort field", example = "email", allowableValues = {"email", "name", "creationDate"}) 
+            String sort,
             @RequestParam(defaultValue = "ASC") 
             @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"}) 
             String direction) {
         
-        Page<UsuarioResponseDTO> pageResult = usuarioService.listarUsuarios(page, size, sort, direction);
+        Page<UserResponseDTO> pageResult = userService.listUsers(page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }
     
@@ -213,12 +214,12 @@ public class UsuarioController {
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @PatchMapping("/{id}/role")
-    public void cambiarRol(
+    public void changeRole(
             @Parameter(description = "ID of the user", required = true)
             @NotNull @PathVariable("id") Long userId,
             @Valid @RequestBody
             @Parameter(description = "New role payload", required = true)
-            UsuarioRoleUpdateDTO roleDTO) {
-        usuarioService.cambiarRol(userId, roleDTO.rol());
+            UserRoleUpdateDTO roleDTO) {
+        userService.changeRole(userId, roleDTO.role());
     }
 }

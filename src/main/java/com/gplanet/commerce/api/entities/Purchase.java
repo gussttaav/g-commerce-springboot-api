@@ -8,6 +8,7 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 
 import jakarta.persistence.CascadeType;
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
@@ -44,12 +45,13 @@ public class Purchase {
      */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "usuario_id")
-    private Usuario usuario;
+    private User user;
     
     /** 
      * Date and time when the purchase was made. 
      */
-    private LocalDateTime fecha;
+    @Column(name = "fecha")
+    private LocalDateTime date;
     
     /** 
      * Total amount of the purchase. 
@@ -61,7 +63,7 @@ public class Purchase {
      */
     @JsonManagedReference
     @OneToMany(mappedBy = "purchase", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<PurchaseProduct> productos = new ArrayList<>();
+    private List<PurchaseProduct> products = new ArrayList<>();
 
     /**
      * Adds a product to the purchase and maintains the bidirectional relationship.
@@ -69,7 +71,7 @@ public class Purchase {
      * @param purchaseProduct The product entry to add to the purchase
      */
     public void addPurchaseProduct(PurchaseProduct purchaseProduct) {
-        productos.add(purchaseProduct);
+        products.add(purchaseProduct);
         purchaseProduct.setPurchase(this);
     }
 }

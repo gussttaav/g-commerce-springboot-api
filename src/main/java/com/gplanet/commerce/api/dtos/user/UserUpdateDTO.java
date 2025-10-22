@@ -1,4 +1,4 @@
-package com.gplanet.commerce.api.dtos.usuario;
+package com.gplanet.commerce.api.dtos.user;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
@@ -16,29 +16,30 @@ import jakarta.validation.constraints.Size;
  *
  * @author Gustavo
  * @version 1.0
- * @param nombre The updated full name of the user.
- * @param nuevoEmail The new email address for the user account.
+ * 
+ * @param name The updated full name of the user.
+ * @param newEmail The new email address for the user account.
  * @param currentPassword The user's current password for verification (optional).
  * @param newPassword The new password to be set (optional).
  * @param confirmPassword Confirmation of the new password (optional).
  */
 @Schema(name = "UpdateUserInfo", description = "Logged in user's information to be updated; optionally change password")
-public record UsuarioUpdateDTO(
+public record UserUpdateDTO(
     @Schema(description = "User's name (optional; if present must not be empty)", 
-            example = "John Doe", nullable = true)
-    @Size(min = 1, max = 100, message = "El nombre no puede estar vacío")
-    String nombre,
+        example = "John Doe", nullable = true)
+    @Size(min = 1, max = 100, message = "Name cannot be empty")
+    String name,
 
     @Schema(description = "User's new email (optional; if present must be valid)", 
-            example = "john.doe@example.com", nullable = true)
-    @Email(message = "El email debe ser válido")
-    String nuevoEmail,
+        example = "john.doe@example.com", nullable = true)
+    @Email(message = "Email must be valid")
+    String newEmail,
 
     @Schema(description = "Current password (required to change password)", example = "oldPassword123", nullable = true)
     String currentPassword,
 
     @Schema(description = "New password", example = "newPassword123", nullable = true)
-    @Size(min = 8, message = "La nueva contraseña debe tener al menos 8 caracteres")
+    @Size(min = 8, message = "New password must be at least 8 characters long")
     String newPassword,
 
     @Schema(description = "Confirmation of new password", example = "newPassword123", nullable = true)
@@ -48,11 +49,11 @@ public record UsuarioUpdateDTO(
     /**
      * Convenience constructor for updating only name and email.
      *
-     * @param nombre updated name
-     * @param nuevoEmail updated email
+     * @param name updated name
+     * @param newEmail updated email
      */
-    public UsuarioUpdateDTO(String nombre, String nuevoEmail) {
-        this(nombre, nuevoEmail, null, null, null);
+    public UserUpdateDTO(String name, String newEmail) {
+        this(name, newEmail, null, null, null);
     }
 
     /**
@@ -62,7 +63,7 @@ public record UsuarioUpdateDTO(
      * @param newPassword the new password
      * @param confirmPassword confirmation of the new password
      */
-    public UsuarioUpdateDTO(String currentPassword, String newPassword, String confirmPassword) {
+    public UserUpdateDTO(String currentPassword, String newPassword, String confirmPassword) {
         this(null, null, currentPassword, newPassword, confirmPassword);
     }
 

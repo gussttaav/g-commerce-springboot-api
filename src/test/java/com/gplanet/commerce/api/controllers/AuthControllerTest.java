@@ -39,8 +39,8 @@ import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
-import com.gplanet.commerce.api.dtos.usuario.UsuarioResponseDTO;
-import com.gplanet.commerce.api.entities.Usuario;
+import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
+import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.services.AuthService;
@@ -87,7 +87,7 @@ class AuthControllerTest {
             // Arrange
             LoginDTO loginDTO = new LoginDTO(TEST_USER_EMAIL, TEST_PASSWORD);
             LoginResponseDTO loginResponse = new LoginResponseDTO(
-                new UsuarioResponseDTO(1L, "Test User", TEST_USER_EMAIL, Usuario.Role.USER, null),
+                new UserResponseDTO(1L, "Test User", TEST_USER_EMAIL, User.Role.USER, null),
                 ACCESS_TOKEN,
                 TOKEN_TYPE,
                 TOKEN_ACCESS_EXPIRATION_MS,
@@ -103,7 +103,7 @@ class AuthControllerTest {
                     .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.usuario.email").value(TEST_USER_EMAIL))
+                .andExpect(jsonPath("$.user.email").value(TEST_USER_EMAIL))
                 .andExpect(jsonPath("$.token").value(ACCESS_TOKEN))
                 .andExpect(jsonPath("$.refreshToken").value(REFRESH_TOKEN))
                 .andExpect(jsonPath("$.tokenType").value(TOKEN_TYPE))
@@ -196,7 +196,7 @@ class AuthControllerTest {
         void refreshValidTokenReturnsNewTokens() throws Exception {
             // Arrange
             LoginResponseDTO refreshResponse = new LoginResponseDTO(
-                new UsuarioResponseDTO(1L, "Test User", TEST_USER_EMAIL, Usuario.Role.USER, null),
+                new UserResponseDTO(1L, "Test User", TEST_USER_EMAIL, User.Role.USER, null),
                 "new-access-token",
                 TOKEN_TYPE,
                 TOKEN_ACCESS_EXPIRATION_MS,

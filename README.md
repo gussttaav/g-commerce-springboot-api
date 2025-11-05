@@ -16,10 +16,10 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
   - User registration and authentication
   - Role-based authorization (ADMIN, USER)
   - Profile management and password updates
-  - Paginated user listing for administrators
+  - Admin-only user listing with pagination
 
 - **Product Management**
-  - Product creation, update, delete and list
+  - Full CRUD operations on `/api/products`
   - Product status management (active/inactive)
   - Public access to active products
   - Role-based access control for product operations
@@ -275,7 +275,7 @@ mvn clean verify
 
 ### Authentication
 ```
-POST /api/auth/login            # Login with credentials, returns JWT tokens
+POST /api/auth/login            # Login → access + refresh tokens
 POST /api/auth/refresh          # Refresh access token using refresh token
 POST /api/auth/logout           # Logout and blacklist tokens
 GET  /api/auth/validate         # Validate JWT token
@@ -283,33 +283,30 @@ GET  /api/auth/validate         # Validate JWT token
 
 ### User Management
 ```
-POST /api/usuarios/registro         # Register a new user
-PUT  /api/usuarios/perfil           # Update user profile
-GET  /api/usuarios/perfil           # Obtain the user profile
-PUT  /api/usuarios/password         # Change password
+POST /api/users                 # Register new user (role: USER or ADMIN if caller is ADMIN)
+GET  /api/users/me              # Get current user profile
+PATCH /api/users/me             # Update profile or password
 
 # With ADMIN role only:
-POST /api/usuarios/admin/registro   # Register a new admin
-GET /api/usuarios/admin/listar      # List all users (paginated)
-PUT /api/usuarios/admin/change-role # Change user role
+GET    /api/users               # List all users (paginated)
+PATCH  /api/users/{id}/role     # Change user role (ADMIN/USER)
 ```
 
 ### Product Management
 ```
-GET    /api/productos/listar        # List active products open to all users (paginated)
+GET /api/products               # List active products (search, pagination)
 
 # With ADMIN role only:
-GET    /api/productos/listar?status=INACTIVE  # Returns inactive products
-GET    /api/productos/listar?status=ALL       # Returns all products
-POST   /api/productos/crear                   # Create a new product
-DELETE /api/productos/eliminar/{id}           # Delete a product
-PUT    /api/productos/actualizar/{id}         # Update a product information
+GET    /api/products?status=INACTIVE|ALL   # List inactive or all products
+POST   /api/products                       # Create product
+PUT    /api/products/{id}                  # Update product
+DELETE /api/products/{id}                  # Delete product
 ```
 
 ### Purchase Management
 ```
-POST /api/compras/nueva            # Create a new purchase
-GET  /api/compras/listar           # List user purchases (paginated)
+POST /api/purchases             # Create new purchase
+GET  /api/purchases             # List user purchases (paginated)
 ```
 
 ### Discovery Endpoints
@@ -357,9 +354,9 @@ Content-Type: application/json
 {
     "usuario": {
         "id": 1,
-        "nombre": "John Doe",
+        "name": "John Doe",
         "email": "user@example.com",
-        "rol": "USER"
+        "role": "USER"
     },
     "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
     "tokenType": "Bearer",
@@ -371,7 +368,7 @@ Content-Type: application/json
 
 ### 2. Authenticated Requests
 ```bash
-GET /api/usuarios/perfil
+GET /api/users/me
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
@@ -396,42 +393,39 @@ Content-Type: application/json
 
 ### Register a User
 ```bash
-POST /api/usuarios/registro
+POST /api/users
 Content-Type: application/json
 
 {
-    "nombre": "John Doe",
-    "email": "john@example.com",
-    "contraseña": "password123"
+  "name": "John Doe",
+  "email": "john@example.com",
+  "password": "password123"
 }
 ```
 
 ### Create a Product (Admin only)
 ```bash
-POST /api/productos/crear
+POST /api/products
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
-    "nombre": "Product Name",
-    "descripcion": "Product Description",
-    "precio": 99.99
+  "name": "Laptop",
+  "description": "High-performance laptop",
+  "price": 999.99
 }
 ```
 
 ### Make a Purchase
 ```bash
-POST /api/compras/nueva
+POST /api/purchases
 Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...
 Content-Type: application/json
 
 {
-    "productos": [
-        {
-            "productoId": 1,
-            "cantidad": 2
-        }
-    ]
+  "products": [
+    { "productId": 1, "quantity": 2 }
+  ]
 }
 ```
 
@@ -455,10 +449,10 @@ src/
 │   │       ├── dtos/
 │   │       │   ├── api/
 │   │       │   ├── auth/
-│   │       │   ├── compra/
 │   │       │   ├── jwks/
-│   │       │   ├── producto/
-│   │       │   └── usuario/
+│   │       │   ├── product/
+│   │       │   ├── purchase/
+│   │       │   └── user/
 │   │       ├── entities/
 │   │       ├── exceptions/
 │   │       ├── repositories/

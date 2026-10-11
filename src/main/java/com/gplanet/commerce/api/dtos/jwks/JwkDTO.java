@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.jwks;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -18,27 +20,27 @@ import io.swagger.v3.oas.annotations.media.Schema;
  */
 @Schema(description = "JSON Web Key containing RSA public key information")
 public record JwkDTO(
-    @Schema(description = "Key type", example = "RSA", required = true)
+    @Schema(description = "Key type", example = "RSA", requiredMode = REQUIRED)
     String kty,
     
-    @Schema(description = "Public key use", example = "sig", required = true)
+    @Schema(description = "Public key use", example = "sig", requiredMode = REQUIRED)
     String use,
     
     @Schema(description = "Key ID - unique identifier for this key", 
-            example = "12345678-1234-1234-1234-123456789012", required = true)
+            example = "12345678-1234-1234-1234-123456789012", requiredMode = REQUIRED)
     String kid,
     
     @Schema(description = "Algorithm intended for use with this key", 
-            example = "RS256", required = true)
+            example = "RS256", requiredMode = REQUIRED)
     String alg,
     
     @Schema(description = "RSA public key modulus (Base64url encoded)", 
             example = "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx...", 
-            required = true)
+            requiredMode = REQUIRED)
     String n,
     
     @Schema(description = "RSA public key exponent (Base64url encoded)", 
-            example = "AQAB", required = true)
+            example = "AQAB", requiredMode = REQUIRED)
     String e
 ) {
 }

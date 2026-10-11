@@ -2,7 +2,6 @@ package com.gplanet.commerce.api.configs.app.props;
 
 import java.util.List;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
@@ -24,8 +23,7 @@ public class CorsProperties {
     /** 
      * List of allowed origins for CORS requests. 
     */
-    @Value("${CORS_ALLOWED_ORIGINS:http://localhost:3000}")
-    private List<String> allowedOrigins;
+    private List<String> allowedOrigins = List.of("http://localhost:3000");
     
     /** 
      * List of allowed HTTP methods. 

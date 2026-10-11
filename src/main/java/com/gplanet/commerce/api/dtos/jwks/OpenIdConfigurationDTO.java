@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.jwks;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -18,23 +20,23 @@ import io.swagger.v3.oas.annotations.media.Schema;
 @Schema(description = "OpenID Connect Provider configuration metadata")
 public record OpenIdConfigurationDTO(
     @Schema(description = "Authorization server's issuer identifier", 
-            example = "https://api.g-commerce.com", required = true)
+            example = "https://api.g-commerce.com", requiredMode = REQUIRED)
     String issuer,
     
     @Schema(description = "URL of the authorization server's JWK Set document", 
-            example = "/.well-known/jwks.json", required = true)
+            example = "/.well-known/jwks.json", requiredMode = REQUIRED)
     String jwks_uri,
     
     @Schema(description = "URL of the token endpoint", 
-            example = "/api/auth/login", required = true)
+            example = "/api/auth/login", requiredMode = REQUIRED)
     String token_endpoint,
     
     @Schema(description = "Grant types supported by the authorization server", 
-            example = "[\"password\", \"refresh_token\"]", required = true)
+            example = "[\"password\", \"refresh_token\"]", requiredMode = REQUIRED)
     String[] grant_types_supported,
     
     @Schema(description = "JWS signing algorithms supported for ID Tokens", 
-            example = "[\"RS256\"]", required = true)
+            example = "[\"RS256\"]", requiredMode = REQUIRED)
     String[] id_token_signing_alg_values_supported
 ) {
 }

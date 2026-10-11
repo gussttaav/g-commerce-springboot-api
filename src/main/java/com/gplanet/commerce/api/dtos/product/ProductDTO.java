@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.product;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.math.BigDecimal;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -23,14 +25,14 @@ import jakarta.validation.constraints.Positive;
 @Schema(name = "ProductRequest", 
         description = "Product data for creation and updates")
 public record ProductDTO(
-    @Schema(description = "Product name", example = "Laptop", required = true)
+    @Schema(description = "Product name", example = "Laptop", requiredMode = REQUIRED)
     @NotBlank(message = "The name of the product is mandatory")
     String name,
 
     @Schema(description = "Product description", example = "High performance laptop")
     String description,
 
-    @Schema(description = "Product price", example = "999.99", required = true)
+    @Schema(description = "Product price", example = "999.99", requiredMode = REQUIRED)
     @Positive(message = "The price of the product must be greater than 0")
     BigDecimal price,
 

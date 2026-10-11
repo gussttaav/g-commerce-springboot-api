@@ -28,3 +28,6 @@ logs/
 
 ### Exclude the endpoint testing files
 *.http
+
+### Claude Code ###
+CLAUDE.md

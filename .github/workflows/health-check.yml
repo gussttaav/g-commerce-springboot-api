@@ -45,4 +45,4 @@ jobs:
           script: |
             cd /home/${{ secrets.EC2_USER }}/g-commerce
             echo "Deployment may have failed. Here are the logs:"
-            docker-compose logs --tail=50
+            docker compose logs --tail=50

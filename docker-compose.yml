@@ -2,8 +2,7 @@ services:
   app:
     image: gussttaav/g-commerce-backend:latest
     ports:
-      - "8080:8080"
-      - "8443:8443"
+      - "443:8443"
     env_file:
       - .env
     environment:
@@ -28,8 +27,6 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_USER: ${MYSQL_USER}
       MYSQL_PASSWORD: ${MYSQL_PASSWORD}
-    ports:
-      - "3306:3306"
     volumes:
       - mysql-data:/var/lib/mysql
     healthcheck:
@@ -43,8 +40,6 @@ services:
   redis:
     image: redis:7-alpine
     command: ["redis-server", "--appendonly", "yes", "--requirepass", "${REDIS_PASSWORD}"]
-    ports:
-      - "6379:6379"
     environment:
       - REDIS_PASSWORD=${REDIS_PASSWORD}
     networks:

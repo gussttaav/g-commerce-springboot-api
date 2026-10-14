@@ -105,6 +105,10 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
         stringRedisTemplate.opsForSet().remove(KEY_IDS_ENTRY, keyId);
         String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
 
+        // Requests served before the startup adoption must still see the active key
+        mockMvc.perform(get(ENDPOINT_JWKS))
+                .andExpect(jsonPath("$.keys[0].kid").value(keyId));
+
         keyStoreService.initializeActiveKey();
 
         assertThat(keyEntries).allSatisfy(entry ->

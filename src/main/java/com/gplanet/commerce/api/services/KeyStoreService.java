@@ -126,7 +126,8 @@ public class KeyStoreService {
      * Retrieves a specific RSA key pair by its ID.
      *
      * @param keyId the key pair identifier
-     * @return RSAKey the retrieved RSA key pair, or null if not found
+     * @return RSAKey the retrieved RSA key pair, or null if it is missing or cannot be decoded
+     * @throws org.springframework.dao.DataAccessException if Redis cannot be read
      */
     public RSAKey getKeyPair(String keyId) {
         try {
@@ -140,7 +141,8 @@ public class KeyStoreService {
             RSAPrivateKey priv = (RSAPrivateKey) KeyFactory.getInstance(RSA_ALGORITHM)
                     .generatePrivate(new PKCS8EncodedKeySpec(privBytes));
             return rsaKeyBuilder(keyId, decodePublicKey(publicKey)).privateKey(priv).build();
-        } catch (Exception ex) {
+        } catch (GeneralSecurityException | IllegalArgumentException | IllegalStateException ex) {
+            // Unreadable key material. Redis errors propagate: they must not be mistaken for a missing key.
             log.error("Failed to retrieve key pair for ID: {}", keyId, ex);
             return null;
         }
@@ -149,18 +151,25 @@ public class KeyStoreService {
     /**
      * Retrieves the public keys that tokens may still be signed with: the active key and every retired key
      * whose retention period has not ended yet.
+     * <p>
+     * The active key is included even if it is not registered in the key set, which is the case for a key
+     * created by an earlier version until {@link #initializeActiveKey()} adopts it.
+     * </p>
      *
      * @return the public keys, with the active key first
      */
     public List<RSAKey> getPublicKeys() {
-        Set<String> storedKeyIds = stringRedisTemplate.opsForSet().members(KEY_IDS);
-        if (storedKeyIds == null || storedKeyIds.isEmpty()) {
-            return List.of();
-        }
-        List<String> keyIds = new ArrayList<>(storedKeyIds);
         String activeKeyId = stringRedisTemplate.opsForValue().get(ACTIVE_KEY_ID);
-        if (keyIds.remove(activeKeyId)) {
-            keyIds.addFirst(activeKeyId);
+        Set<String> storedKeyIds = stringRedisTemplate.opsForSet().members(KEY_IDS);
+        List<String> keyIds = new ArrayList<>();
+        if (activeKeyId != null) {
+            keyIds.add(activeKeyId);
+        }
+        if (storedKeyIds != null) {
+            storedKeyIds.stream().filter(keyId -> !keyId.equals(activeKeyId)).forEach(keyIds::add);
+        }
+        if (keyIds.isEmpty()) {
+            return List.of();
         }
 
         List<String> encodedKeys = stringRedisTemplate.opsForValue()
@@ -317,9 +326,10 @@ public class KeyStoreService {
      * @param keyId the key pair identifier
      * @param encryptedPrivateKey the encrypted private key
      * @return String the decrypted private key
-     * @throws Exception if decryption operations fail
+     * @throws GeneralSecurityException if decryption operations fail
+     * @throws IllegalStateException if the encryption key is missing
      */
-    private String decryptPrivateKey(String keyId, String encryptedPrivateKey) throws Exception {
+    private String decryptPrivateKey(String keyId, String encryptedPrivateKey) throws GeneralSecurityException {
         String encryptionKeyEncoded = stringRedisTemplate.opsForValue().get(encryptionKeyEntry(keyId));
         if (encryptionKeyEncoded == null) {
             throw new IllegalStateException("Encryption key not found for key ID: " + keyId);

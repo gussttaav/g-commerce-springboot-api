@@ -36,6 +36,7 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
@@ -193,6 +194,19 @@ class KeyStoreServiceTest {
     }
 
     @Test
+    void getOrCreateActiveKeyPairRedisFailurePropagatesWithoutRotating() {
+        // Arrange - Redis fails while reading the active key pair
+        when(valueOperations.get(ACTIVE_KEY_ID_KEY)).thenReturn(TEST_KEY_ID);
+        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID)))
+            .thenThrow(new RedisConnectionFailureException("Redis unavailable"));
+
+        // Act & Assert - A Redis error is not missing key material, so the key must not be replaced
+        assertThrows(RedisConnectionFailureException.class, () ->
+            keyStoreService.getOrCreateActiveKeyPair());
+        verify(valueOperations, never()).set(eq(ACTIVE_KEY_ID_KEY), anyString());
+    }
+
+    @Test
     void rotateKeyPairActivatesNewKeyAndRetiresPreviousKey() {
         // Arrange
         when(valueOperations.get(ACTIVE_KEY_ID_KEY)).thenReturn(TEST_KEY_ID);
@@ -254,6 +268,21 @@ class KeyStoreServiceTest {
         assertThat(result).extracting(JWK::getKeyID).containsExactly(TEST_KEY_ID, RETIRED_KEY_ID);
         assertThat(result).noneMatch(JWK::isPrivate);
         verify(setOperations).remove(KEY_IDS_KEY, EXPIRED_KEY_ID);
+    }
+
+    @Test
+    void getPublicKeysIncludesActiveKeyMissingFromKeySet() {
+        // Arrange - Active key created by a previous version, not adopted into the key set yet
+        when(setOperations.members(KEY_IDS_KEY)).thenReturn(Set.of());
+        when(valueOperations.get(ACTIVE_KEY_ID_KEY)).thenReturn(TEST_KEY_ID);
+        when(valueOperations.multiGet(List.of(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID))))
+            .thenReturn(List.of(publicKeyEncoded));
+
+        // Act
+        List<RSAKey> result = keyStoreService.getPublicKeys();
+
+        // Assert
+        assertThat(result).extracting(JWK::getKeyID).containsExactly(TEST_KEY_ID);
     }
 
     @Test

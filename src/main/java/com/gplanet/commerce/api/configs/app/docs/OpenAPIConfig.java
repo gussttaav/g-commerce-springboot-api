@@ -3,9 +3,10 @@ package com.gplanet.commerce.api.configs.app.docs;
 import java.util.Map;
 
 import org.springdoc.core.customizers.OpenApiCustomizer;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+
+import com.gplanet.commerce.api.configs.app.props.RateLimitProperties;
 
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.enums.SecuritySchemeIn;
@@ -24,6 +25,7 @@ import io.swagger.v3.oas.models.media.ObjectSchema;
 import io.swagger.v3.oas.models.media.Schema;
 import io.swagger.v3.oas.models.responses.ApiResponse;
 import io.swagger.v3.oas.models.responses.ApiResponses;
+import lombok.RequiredArgsConstructor;
 
 /**
  * Configuration class for OpenAPI documentation.
@@ -52,22 +54,14 @@ import io.swagger.v3.oas.models.responses.ApiResponses;
     in = SecuritySchemeIn.HEADER,
     description = "JWT Bearer token authentication. Use format: Bearer {your-token}"
 )
+@RequiredArgsConstructor
 public class OpenAPIConfig {
 
-    private static final String RATE_LIMIT_MSG = "Rate limit exceeded. Maximum allowed: %d requests per %d minutes.";
+    private static final String RATE_LIMIT_MSG =
+        "Rate limit exceeded. %s are limited to bursts of %d, refilled at %d every %d minute(s).";
     private static final String INT32 = "int32";
 
-    @Value("${rate-limit.unauthenticated.capacity:10}")
-    private int unauthenticatedCapacity;
-    
-    @Value("${rate-limit.user.capacity:30}")
-    private int userCapacity;
-    
-    @Value("${rate-limit.admin.capacity:100}")
-    private int adminCapacity;
-
-    @Value("${rate-limit.window-minutes:1}")
-    private int windowMinutes;
+    private final RateLimitProperties rateLimitProperties;
 
     /**
      * Creates and configures the OpenAPI documentation.
@@ -122,13 +116,27 @@ public class OpenAPIConfig {
                                 "Invalid, expired, already used or revoked refresh token"))
                             
                             // Rate limiting errors
-                            .addApiResponse("UnauthenticatedRateLimitExceeded", createErrorApiResponse(
-                                String.format(RATE_LIMIT_MSG, unauthenticatedCapacity, windowMinutes)))
-                            .addApiResponse("UserRateLimitExceeded", createErrorApiResponse(
-                                String.format(RATE_LIMIT_MSG, userCapacity, windowMinutes)))
-                            .addApiResponse("AdminRateLimitExceeded", createErrorApiResponse(
-                                String.format(RATE_LIMIT_MSG, adminCapacity, windowMinutes)))
+                            .addApiResponse("UnauthenticatedRateLimitExceeded", createRateLimitApiResponse(
+                                "Anonymous requests per IP address", rateLimitProperties.getUnauthenticated()))
+                            .addApiResponse("UserRateLimitExceeded", createRateLimitApiResponse(
+                                "Requests per user", rateLimitProperties.getUser()))
+                            .addApiResponse("AdminRateLimitExceeded", createRateLimitApiResponse(
+                                "Requests per admin", rateLimitProperties.getAdmin()))
+                            .addApiResponse("LoginRateLimitExceeded", createRateLimitApiResponse(
+                                "Login attempts per IP address", rateLimitProperties.getLogin()))
                 ));
+    }
+
+    /**
+     * Creates the API response of a request rejected by a rate limit.
+     *
+     * @param limitedRequests the requests the limit applies to
+     * @param limit the rate limit
+     * @return configured ApiResponse instance
+     */
+    private ApiResponse createRateLimitApiResponse(String limitedRequests, RateLimitProperties.Limit limit) {
+        return createErrorApiResponse(String.format(RATE_LIMIT_MSG, limitedRequests, limit.getCapacity(),
+            limit.getRefill(), rateLimitProperties.getWindowMinutes()));
     }
 
     /**

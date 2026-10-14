@@ -29,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -45,6 +46,7 @@ import com.gplanet.commerce.api.services.PurchaseService;
 
 @WebMvcTest(PurchaseController.class)
 @Import(TestSecurityConfig.class)
+@ActiveProfiles("test")
 class PurchaseControllerTest {
 
     public static final PageRequest PAGE_REQUEST_DESC_BY_FECHA = 

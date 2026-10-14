@@ -1,5 +1,8 @@
 package com.gplanet.commerce.api.configs.security.ratelimiting;
 
+import java.util.function.Function;
+
+import org.springframework.http.HttpHeaders;
 import org.springframework.lang.NonNull;
 import org.springframework.web.servlet.HandlerInterceptor;
 
@@ -12,22 +15,22 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Interceptor that implements rate limiting for API requests.
- * Uses token bucket algorithm to control request rates based on user roles.
+ * Each request consumes a token from the bucket resolved for it, and is rejected when the bucket is empty.
  * 
  * @author Gustavo
- * @version 1.0
+ * @version 1.1
  */
 public class RateLimitInterceptor implements HandlerInterceptor {
     private static final long NANOS_PER_SECOND = 1_000_000_000L;
-    private final RateLimitingConfig rateLimitingConfig;
+    private final Function<HttpServletRequest, Bucket> bucketResolver;
 
     /**
-     * Constructs a new rate limit interceptor with the specified configuration.
+     * Constructs a new rate limit interceptor that consumes from the buckets of the given resolver.
      * 
-     * @param rateLimitingConfig the configuration containing rate limit settings
+     * @param bucketResolver resolves the bucket each request consumes from
      */
-    public RateLimitInterceptor(RateLimitingConfig rateLimitingConfig) {
-        this.rateLimitingConfig = rateLimitingConfig;
+    public RateLimitInterceptor(Function<HttpServletRequest, Bucket> bucketResolver) {
+        this.bucketResolver = bucketResolver;
     }
 
     /**
@@ -46,14 +49,15 @@ public class RateLimitInterceptor implements HandlerInterceptor {
         @NonNull HttpServletResponse response, 
         @NonNull Object handler
     ) throws Exception {
-        Bucket bucket = rateLimitingConfig.resolveBucket();
+        Bucket bucket = bucketResolver.apply(request);
         ConsumptionProbe probe = bucket.tryConsumeAndReturnRemaining(1);
         if (probe.isConsumed()) {
             response.addHeader("X-Rate-Limit-Remaining", String.valueOf(probe.getRemainingTokens()));
             return true;
         } else {
-            long waitForRefill = probe.getNanosToWaitForRefill() 
-                / NANOS_PER_SECOND;
+            // Rounded up, so a client that waits that long finds a token
+            long waitForRefill = Math.ceilDiv(probe.getNanosToWaitForRefill(), NANOS_PER_SECOND);
+            response.addHeader(HttpHeaders.RETRY_AFTER, String.valueOf(waitForRefill));
             response.addHeader("X-Rate-Limit-Retry-After-Seconds", String.valueOf(waitForRefill));
             throw new RateLimitExceededException("Rate limit exceeded");
         }

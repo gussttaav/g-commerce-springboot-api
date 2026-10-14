@@ -48,13 +48,13 @@
     {
       "name": "rate-limit.unauthenticated.capacity",
       "type": "java.lang.Integer",
-      "description": "Maximum number of requests allowed per window for unauthenticated users.",
-      "defaultValue": 5
+      "description": "Maximum number of anonymous requests allowed in a burst, per client IP address. Login attempts have their own limit.",
+      "defaultValue": 10
     },
     {
       "name": "rate-limit.unauthenticated.refill",
       "type": "java.lang.Integer",
-      "description": "Number of tokens refilled per window for unauthenticated users.",
+      "description": "Number of tokens refilled per window for anonymous requests, per client IP address.",
       "defaultValue": 5
     },
     {
@@ -80,6 +80,18 @@
       "type": "java.lang.Integer",
       "description": "Number of tokens refilled per window for admin users.",
       "defaultValue": 50
+    },
+    {
+      "name": "rate-limit.login.capacity",
+      "type": "java.lang.Integer",
+      "description": "Maximum number of login attempts allowed in a burst, per client IP address.",
+      "defaultValue": 5
+    },
+    {
+      "name": "rate-limit.login.refill",
+      "type": "java.lang.Integer",
+      "description": "Number of tokens refilled per window for login attempts, per client IP address.",
+      "defaultValue": 1
     },
     {
       "name": "jwt.issuer",

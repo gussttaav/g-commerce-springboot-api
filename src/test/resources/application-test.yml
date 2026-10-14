@@ -51,8 +51,9 @@ oauth2:
   key-rotation:
     enabled: false
 
-# Rate-limit buckets are kept for the lifetime of the application context, which test classes share, so
-# the limits are high enough that no test depends on the requests made by earlier tests
+# Rate-limit buckets are kept for the lifetime of the application context, which test classes share, and all
+# MockMvc requests come from the same IP address, so the limits are high enough that no test depends on the
+# requests made by earlier tests
 rate-limit:
   unauthenticated:
     capacity: 10000
@@ -61,6 +62,9 @@ rate-limit:
     capacity: 10000
     refill: 10000
   admin:
+    capacity: 10000
+    refill: 10000
+  login:
     capacity: 10000
     refill: 10000
 

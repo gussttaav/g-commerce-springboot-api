@@ -22,6 +22,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithAnonymousUser;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -34,6 +35,7 @@ import com.nimbusds.jose.jwk.RSAKey;
 
 @WebMvcTest(JwkController.class)
 @Import(TestSecurityConfig.class)
+@ActiveProfiles("test")
 class JwkControllerTest {
 
     private static final String TEST_KEY_ID = "test-key-id";

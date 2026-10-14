@@ -47,7 +47,9 @@ cors:
   allowed-methods: GET,POST,PUT,PATCH,DELETE,OPTIONS
   allowed-headers: Authorization,Content-Type,X-Requested-With
 
-# Rate limiting configuration
+# Rate limiting configuration: each bucket allows bursts of `capacity` requests and refills `refill` requests
+# per window. Anonymous requests and login attempts are limited per client IP address. Behind a reverse proxy, set
+# server.forward-headers-strategy=native so the client address is taken from the proxy's X-Forwarded-For header.
 rate-limit:
   window-minutes: 1
   unauthenticated:
@@ -59,6 +61,9 @@ rate-limit:
   admin:
     capacity: 100
     refill: 50
+  login:
+    capacity: 5
+    refill: 1
 
 # Springdoc OpenAPI configuration
 springdoc:

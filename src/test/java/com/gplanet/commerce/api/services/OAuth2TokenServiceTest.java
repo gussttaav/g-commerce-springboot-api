@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.services;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.lenient;
@@ -21,6 +22,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
 
 @ExtendWith(MockitoExtension.class)
 class OAuth2TokenServiceTest {
@@ -64,6 +67,22 @@ class OAuth2TokenServiceTest {
         lenient().when(jwtProperties.getAccessExpirationMs()).thenReturn(ACCESS_EXPIRATION_MS);
         lenient().when(jwtProperties.getRefreshExpirationMs()).thenReturn(REFRESH_EXPIRATION_MS);
         lenient().when(jwtProperties.getIssuer()).thenReturn("test-issuer");
+        lenient().when(jwtProperties.getAudience()).thenReturn("test-audience");
+    }
+
+    @Test
+    void generateAccessTokenUsesConfiguredIssuerAudienceAndKeyId() throws Exception {
+        // Arrange
+        when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+
+        // Act
+        SignedJWT token = SignedJWT.parse(oauth2TokenService.generateAccessToken(userDetails));
+
+        // Assert
+        JWTClaimsSet claims = token.getJWTClaimsSet();
+        assertThat(claims.getIssuer()).isEqualTo("test-issuer");
+        assertThat(claims.getAudience()).containsExactly("test-audience");
+        assertThat(token.getHeader().getKeyID()).isEqualTo("test-key-id");
     }
 
     @Test

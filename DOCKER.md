@@ -79,6 +79,7 @@ ADMIN_PASSWORD=your_admin_password
 
 # JWT Configuration
 JWT_ISSUER=g-commerce-api
+JWT_AUDIENCE=g-commerce-api
 JWT_ACCESS_EXPIRATION_MS=3600000
 JWT_REFRESH_EXPIRATION_MS=86400000
 
@@ -245,6 +246,7 @@ GET  /actuator/prometheus          # Prometheus-formatted metrics
 | `ADMIN_EMAIL` | Admin user email | - | Yes |
 | `ADMIN_PASSWORD` | Admin user password | - | Yes |
 | `JWT_ISSUER` | JWT token issuer | g-commerce-api | No |
+| `JWT_AUDIENCE` | JWT token audience (required on incoming tokens) | g-commerce-api | No |
 | `JWT_ACCESS_EXPIRATION_MS` | Access token expiration (ms) | 3600000 | No |
 | `JWT_REFRESH_EXPIRATION_MS` | Refresh token expiration (ms) | 86400000 | No |
 | `OAUTH2_KEY_ROTATION_ENABLED` | Enable automatic key rotation | true | No |

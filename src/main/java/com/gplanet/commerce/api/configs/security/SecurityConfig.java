@@ -14,7 +14,10 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
+import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
@@ -24,6 +27,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
+import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.KeyStoreService;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -62,6 +66,7 @@ public class SecurityConfig {
     private static final String ROLE_USER = "USER";
 
     private final CorsProperties corsProperties;
+    private final JwtProperties jwtProperties;
     private final KeyStoreService keyStoreService;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
@@ -183,7 +188,7 @@ public class SecurityConfig {
 
     /**
      * Provides a JWT decoder that selects the verification key by the token's key ID and validates
-     * its timestamps.
+     * its timestamps, issuer and audience.
      *
      * @param jwkSource the JWK source bean
      * @return a {@link JwtDecoder} instance
@@ -192,10 +197,14 @@ public class SecurityConfig {
     JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
         DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
         jwtProcessor.setJWSKeySelector(new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource));
-        // Claims are checked by Spring's JWT validators instead
+        // Claims are checked by the Spring validators below
         jwtProcessor.setJWTClaimsSetVerifier((claims, context) -> { });
 
-        return new NimbusJwtDecoder(jwtProcessor);
+        NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
+        decoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
+                new JwtIssuerValidator(jwtProperties.getIssuer()),
+                new JwtAudienceValidator(jwtProperties.getAudience())));
+        return decoder;
     }
 
     /**

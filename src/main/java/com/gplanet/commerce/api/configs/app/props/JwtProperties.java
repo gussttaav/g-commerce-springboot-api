@@ -13,9 +13,10 @@ import lombok.Data;
  * </p>
  *
  * <ul>
- *   <li><b>secret</b>: The secret key used to sign and validate JWT tokens.</li>
- *   <li><b>expirationMs</b>: The validity period of the JWT token in milliseconds.</li>
- *   <li><b>issuer</b>: The issuer claim to be set in the JWT token.</li>
+ *   <li><b>accessExpirationMs</b>: The validity period of access tokens in milliseconds.</li>
+ *   <li><b>refreshExpirationMs</b>: The validity period of refresh tokens in milliseconds.</li>
+ *   <li><b>issuer</b>: The issuer claim to be set in, and required on, JWT tokens.</li>
+ *   <li><b>audience</b>: The audience claim to be set in, and required on, JWT tokens.</li>
  * </ul>
  * 
  * @author Gustavo
@@ -39,4 +40,9 @@ public class JwtProperties {
      * The issuer to be included in the JWT token's claims.
      */
     private String issuer;
+
+    /**
+     * The audience to be included in the JWT token's claims.
+     */
+    private String audience = "g-commerce-api";
 }

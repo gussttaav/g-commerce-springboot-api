@@ -87,6 +87,12 @@
       "description": "The issuer to be included in the JWT token's claims."
     },
     {
+      "name": "jwt.audience",
+      "type": "java.lang.String",
+      "description": "The audience to be included in the JWT token's claims and required on incoming tokens.",
+      "defaultValue": "g-commerce-api"
+    },
+    {
       "name": "jwt.access-expiration-ms",
       "type": "java.lang.Long",
       "description": "The expiration time (in milliseconds) for the access token."

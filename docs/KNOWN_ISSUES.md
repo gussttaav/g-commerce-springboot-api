@@ -18,7 +18,7 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 
 | ID | Severity | Issue |
 |----|----------|-------|
-| SEC-5 | High | **Anonymous requests are not rate-limited.** `RateLimitingConfig.resolveBucket()` creates a fresh bucket on every unauthenticated request instead of caching it, so the "unauthenticated" limit never triggers — including on `/api/auth/login` (unlimited password brute force). Related: the bucket map is never evicted, and a user's tier is fixed at their first request (a role change is not applied until restart). |
+| SEC-5 | High | **Anonymous requests share one global rate-limit bucket.** Spring Security gives anonymous requests an `AnonymousAuthenticationToken`, whose `isAuthenticated()` is true, so `RateLimitingConfig.resolveBucket()` puts all of them in a single bucket keyed `anonymousUser` with the user limits; the `unauthenticated` limits are never used. One client can exhaust it and block login, registration, product listing, token refresh and token validation for everyone, and there is no per-client limit on login attempts. Related: the bucket map is never evicted, and a user's tier is fixed at their first request (a role change is not applied until restart). |
 | SEC-6 | Medium | **User enumeration on login.** Unknown email → 401 "No user found with email …"; wrong password → 401 "Contraseña incorrecta.". The different messages reveal which emails are registered. |
 
 ### Functional bugs
@@ -52,7 +52,7 @@ The decoder looks keys up by `kid` in Redis, the active key never expires, a rot
 The resource server decodes access tokens with validators that reject refresh tokens and tokens whose `jti` is blacklisted or missing; logout blacklists the access token's `jti` and deletes the refresh token. Refresh tokens are stored by `jti` and are single-use: the entry is deleted atomically before a new pair is issued, so a replayed token gets 401 even under concurrent requests. `/api/auth/refresh` and `/api/auth/validate` bypass the bearer token filter and decode the token themselves (refresh tokens with a decoder that only accepts refresh tokens), and `/api/auth/validate` reports an invalid token as `valid: false` with the reason.
 
 ### Phase 3 — Abuse protection (SEC-5, SEC-6)
-1. Key anonymous buckets by client IP (honor `X-Forwarded-For` only behind the trusted reverse proxy) and store buckets in an expiring cache (Caffeine) or the Bucket4j Redis backend.
+1. Treat `AnonymousAuthenticationToken` as unauthenticated, key anonymous buckets by client IP (honor `X-Forwarded-For` only behind the trusted reverse proxy) and store buckets in an expiring cache (Caffeine) or the Bucket4j Redis backend.
 2. Add a stricter dedicated limit for `POST /api/auth/login`.
 3. Resolve the tier on every request rather than at bucket creation.
 4. Return one generic 401 "Invalid email or password" for both unknown email and wrong password (SEC-6).

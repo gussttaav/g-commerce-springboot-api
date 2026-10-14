@@ -32,6 +32,7 @@ import org.springframework.security.oauth2.server.resource.web.BearerTokenResolv
 import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.OrRequestMatcher;
 import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -207,7 +208,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Provides the decoder for access tokens, used by the resource server.
+     * Provides the decoder for access tokens, used by the resource server and by {@code /api/auth/validate}.
      * <p>
      * On top of the checks shared by every token, it rejects refresh tokens and revoked tokens.
      * </p>
@@ -268,8 +269,10 @@ public class SecurityConfig {
     /**
      * Provides the resolver of the bearer token that authenticates a request.
      * <p>
-     * {@code /api/auth/refresh} receives a refresh token, which the access token decoder rejects. The token is
-     * not resolved there, so the request reaches the endpoint, which decodes the refresh token itself.
+     * {@code /api/auth/refresh} and {@code /api/auth/validate} receive a token to check rather than to
+     * authenticate the request: a refresh token, which the access token decoder rejects, and a token that may
+     * be invalid, which must be reported instead of failing with 401. The token is not resolved there, so the
+     * requests reach the endpoints, which decode the token themselves.
      * </p>
      *
      * @return a {@link BearerTokenResolver} for the resource server
@@ -277,8 +280,10 @@ public class SecurityConfig {
     @Bean
     BearerTokenResolver bearerTokenResolver() {
         DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
-        RequestMatcher refreshEndpoint = PathPatternRequestMatcher.withDefaults().matcher("/api/auth/refresh");
-        return request -> refreshEndpoint.matches(request) ? null : resolver.resolve(request);
+        RequestMatcher tokenEndpoints = new OrRequestMatcher(
+                PathPatternRequestMatcher.withDefaults().matcher("/api/auth/refresh"),
+                PathPatternRequestMatcher.withDefaults().matcher("/api/auth/validate"));
+        return request -> tokenEndpoints.matches(request) ? null : resolver.resolve(request);
     }
 
     /**

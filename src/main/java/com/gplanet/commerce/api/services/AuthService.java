@@ -1,7 +1,7 @@
 package com.gplanet.commerce.api.services;
 
-import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
@@ -9,9 +9,11 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +60,7 @@ public class AuthService {
     private final CustomUserDetailsService userDetallesService;
     private final OAuth2TokenService oauth2TokenService;
     private final TokenBlacklistService tokenBlacklistService;
+    private final JwtDecoder accessTokenDecoder;
     @Qualifier(SecurityConfig.REFRESH_TOKEN_DECODER)
     private final JwtDecoder refreshTokenDecoder;
     private final JwtProperties jwtProperties;
@@ -152,28 +155,25 @@ public class AuthService {
     }
 
     /**
-     * Validates the structure and status of a JWT token.
-     * Checks if the token is properly formatted and not blacklisted.
+     * Checks whether a token is a valid access token, with the same checks the API applies to every request:
+     * signature, expiration, issuer, audience, token type and revocation.
      * 
      * @param authorizationHeader the Authorization header containing the token to validate
      * @return TokenValidationResponseDTO containing validation results and token status
-     * @throws InvalidTokenException if the token format is invalid
+     * @throws InvalidTokenException if the Authorization header doesn't contain a Bearer token
      */
     public TokenValidationResponseDTO validateToken(String authorizationHeader) {
+        String token = extractToken(authorizationHeader);
         try {
-            String token = extractToken(authorizationHeader);
-            
-            // Parse token to validate structure
-            String tokenId = SignedJWT.parse(token).getJWTClaimsSet().getJWTID();
-
-            // Check if token is blacklisted
-            if (tokenBlacklistService.isBlacklisted(tokenId)) {
-                return new TokenValidationResponseDTO(false, "Token is blacklisted");
-            }
+            accessTokenDecoder.decode(token);
             return new TokenValidationResponseDTO(true, "Token is valid");
-            
-        } catch (ParseException ex) {
-            throw new InvalidTokenException("Invalid token");
+        } catch (JwtValidationException e) {
+            String reasons = e.getErrors().stream()
+                    .map(OAuth2Error::getDescription)
+                    .collect(Collectors.joining("; "));
+            return new TokenValidationResponseDTO(false, reasons);
+        } catch (BadJwtException e) {
+            return new TokenValidationResponseDTO(false, "Token is malformed or its signature is invalid");
         }
     }
 

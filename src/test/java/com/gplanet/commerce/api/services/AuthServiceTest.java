@@ -1,8 +1,10 @@
 package com.gplanet.commerce.api.services;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -18,13 +20,13 @@ import static org.mockito.Mockito.when;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Date;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -32,9 +34,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2Error;
+import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
+import org.springframework.security.oauth2.jwt.JwtValidationException;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
@@ -65,7 +70,7 @@ class AuthServiceTest {
     private static final String ACCESS_TOKEN = "access.token.123";
     private static final String REFRESH_TOKEN = "refresh.token.123";
     private static final String REFRESH_TOKEN_ID = "refresh-token-id";
-    private static final String TOKEN_ID = "test-jwt-id";
+    private static final String NEW_REFRESH_TOKEN_ID = "test-jwt-id";
     private static final String TOKEN_TYPE = "Bearer";
     private static final String TOKEN_TYPE_PREFIX = "Bearer ";
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
@@ -91,6 +96,9 @@ class AuthServiceTest {
     private TokenBlacklistService tokenBlacklistService;
 
     @Mock
+    private JwtDecoder accessTokenDecoder;
+
+    @Mock
     private JwtDecoder refreshTokenDecoder;
 
     @Mock
@@ -102,7 +110,6 @@ class AuthServiceTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
-    @InjectMocks
     private AuthService authService;
 
     private User user;
@@ -112,6 +119,11 @@ class AuthServiceTest {
 
     @BeforeEach
     void setUp() {
+        // Built by hand: @InjectMocks can't tell the two decoders apart
+        authService = new AuthService(userRepository, passwordEncoder, userMapper, customUserDetailsService,
+                oauth2TokenService, tokenBlacklistService, accessTokenDecoder, refreshTokenDecoder,
+                jwtProperties, stringRedisTemplate);
+
         user = new User();
         user.setId(1L);
         user.setEmail(TEST_EMAIL);
@@ -167,7 +179,7 @@ class AuthServiceTest {
         verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
         // The refresh token is stored by its ID
         verify(valueOperations).set(
-            eq(REFRESH_TOKEN_PREFIX + TOKEN_ID),
+            eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID),
             eq(TEST_EMAIL),
             anyLong(),
             eq(TimeUnit.MILLISECONDS)
@@ -218,7 +230,7 @@ class AuthServiceTest {
         assertEquals("newAccessToken", result.token());
         assertEquals(newRefreshToken, result.refreshToken());
         verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID);
-        verify(valueOperations).set(eq(REFRESH_TOKEN_PREFIX + TOKEN_ID), eq(TEST_EMAIL), anyLong(),
+        verify(valueOperations).set(eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID), eq(TEST_EMAIL), anyLong(),
                 eq(TimeUnit.MILLISECONDS));
     }
 
@@ -305,42 +317,52 @@ class AuthServiceTest {
     }
 
     @Test
-    void validateTokenValidTokenReturnsValidationResponse() throws Exception {
+    void validateTokenValidTokenReturnsValidationResponse() {
         // Arrange
-        String validToken = createValidJWT();
-        when(tokenBlacklistService.isBlacklisted(TOKEN_ID)).thenReturn(false);
+        when(accessTokenDecoder.decode(ACCESS_TOKEN)).thenReturn(accessToken(TEST_EMAIL));
 
         // Act
-        TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + validToken);
+        TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + ACCESS_TOKEN);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(true, result.valid());
+        assertTrue(result.valid());
         assertEquals("Token is valid", result.message());
-        verify(tokenBlacklistService).isBlacklisted(TOKEN_ID);
     }
 
     @Test
-    void validateTokenBlacklistedTokenReturnsInvalidResponse() throws Exception {
+    void validateTokenRejectedByValidatorsReturnsReasons() {
         // Arrange
-        String validToken = createValidJWT();
-        when(tokenBlacklistService.isBlacklisted(TOKEN_ID)).thenReturn(true);
+        when(accessTokenDecoder.decode(ACCESS_TOKEN)).thenThrow(new JwtValidationException("Invalid token", List.of(
+                new OAuth2Error(OAuth2ErrorCodes.INVALID_TOKEN, "The token has been revoked", null),
+                new OAuth2Error(OAuth2ErrorCodes.INVALID_TOKEN, "The token_type claim is not valid", null))));
 
         // Act
-        TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + validToken);
+        TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + ACCESS_TOKEN);
 
         // Assert
-        assertNotNull(result);
-        assertEquals(false, result.valid());
-        assertEquals("Token is blacklisted", result.message());
-        verify(tokenBlacklistService).isBlacklisted(TOKEN_ID);
+        assertFalse(result.valid());
+        assertEquals("The token has been revoked; The token_type claim is not valid", result.message());
+    }
+
+    @Test
+    void validateTokenWithInvalidSignatureReturnsInvalidResponse() {
+        // Arrange
+        when(accessTokenDecoder.decode(ACCESS_TOKEN)).thenThrow(new BadJwtException("Invalid signature"));
+
+        // Act
+        TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + ACCESS_TOKEN);
+
+        // Assert
+        assertFalse(result.valid());
+        assertEquals("Token is malformed or its signature is invalid", result.message());
     }
 
     @Test
     void validateTokenInvalidFormatThrowsException() {
-        // Act & Assert - The service throws UsernameNotFoundException for invalid token format
+        // Act & Assert - The Authorization header has no Bearer token
         assertThrows(InvalidTokenException.class,
                 () -> authService.validateToken("InvalidTokenFormat"));
+        verifyNoInteractions(accessTokenDecoder);
     }
 
     private static Jwt accessToken(String subject) {
@@ -376,7 +398,7 @@ class AuthServiceTest {
                 .expirationTime(new Date(System.currentTimeMillis() + TOKEN_ACCESS_EXPIRATION_MS))
                 .notBeforeTime(new Date())
                 .issueTime(new Date())
-                .jwtID(TOKEN_ID)
+                .jwtID(NEW_REFRESH_TOKEN_ID)
                 .build();
 
         // Create a signed JWT (using HMAC for simplicity in tests)

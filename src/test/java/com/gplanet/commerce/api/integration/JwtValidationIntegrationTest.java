@@ -1,7 +1,9 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
@@ -29,8 +31,9 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 
 /**
- * Integration tests for the checks the resource server applies to incoming access tokens:
- * signature key, issuer and audience (SEC-7), token type (SEC-2) and token ID (SEC-1).
+ * Integration tests for the checks applied to incoming access tokens: signature key, timestamps, issuer and
+ * audience (SEC-7), token type (SEC-2) and token ID (SEC-1). Each case also checks that
+ * {@code /api/auth/validate} gives the same verdict as the resource server (SEC-4).
  */
 class JwtValidationIntegrationTest extends AbstractIntegrationTest {
 
@@ -51,65 +54,95 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
 
     @Test
     void tokenWithExpectedIssuerAndAudienceIsAccepted() throws Exception {
-        String token = sign(validClaims().build(), keyStoreService.getOrCreateActiveKeyPair());
-
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isOk());
+        assertAccepted(sign(validClaims().build(), activeKey()));
     }
 
     @Test
     void tokenFromAnotherIssuerIsRejected() throws Exception {
         JWTClaimsSet claims = validClaims().issuer("https://another-issuer.example.com").build();
-        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isUnauthorized());
+        assertRejected(sign(claims, activeKey()));
     }
 
     @Test
     void tokenForAnotherAudienceIsRejected() throws Exception {
         JWTClaimsSet claims = validClaims().audience("another-api").build();
-        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isUnauthorized());
+        assertRejected(sign(claims, activeKey()));
     }
 
     @Test
     void tokenWithoutAudienceIsRejected() throws Exception {
         JWTClaimsSet claims = validClaims().audience((String) null).build();
-        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isUnauthorized());
+        assertRejected(sign(claims, activeKey()));
     }
 
     @Test
     void tokenSignedWithUnknownKeyIsRejected() throws Exception {
         RSAKey unknownKey = new RSAKeyGenerator(RSA_KEY_SIZE).keyID(UUID.randomUUID().toString()).generate();
-        String token = sign(validClaims().build(), unknownKey);
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isUnauthorized());
+        assertRejected(sign(validClaims().build(), unknownKey));
+    }
+
+    @Test
+    void tokenWithTamperedClaimsIsRejected() throws Exception {
+        SignedJWT original = SignedJWT.parse(sign(validClaims().build(), activeKey()));
+        SignedJWT tampered = SignedJWT.parse(
+                sign(validClaims().claim("authorities", List.of("ROLE_ADMIN")).build(), activeKey()));
+
+        // The admin claims with the signature of the original token
+        SignedJWT forged = new SignedJWT(tampered.getHeader().toBase64URL(), tampered.getPayload().toBase64URL(),
+                original.getSignature());
+
+        assertRejected(forged.serialize());
+    }
+
+    @Test
+    void expiredTokenIsRejected() throws Exception {
+        Instant issuedAt = Instant.now().minus(Duration.ofHours(2));
+        JWTClaimsSet claims = validClaims()
+                .issueTime(Date.from(issuedAt))
+                .notBeforeTime(Date.from(issuedAt))
+                .expirationTime(Date.from(issuedAt.plus(Duration.ofHours(1))))
+                .build();
+
+        assertRejected(sign(claims, activeKey()));
     }
 
     @Test
     void refreshTokenIsRejected() throws Exception {
         JWTClaimsSet claims = validClaims().claim("token_type", "refresh").build();
-        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
-                .andExpect(status().isUnauthorized());
+        assertRejected(sign(claims, activeKey()));
     }
 
     @Test
     void tokenWithoutIdIsRejected() throws Exception {
         // Tokens are revoked by ID, so a token without one could never be revoked
         JWTClaimsSet claims = validClaims().jwtID(null).build();
-        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+        assertRejected(sign(claims, activeKey()));
+    }
+
+    private void assertAccepted(String token) throws Exception {
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk());
+        mockMvc.perform(get(ENDPOINT_AUTH_VALIDATE).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true));
+    }
+
+    private void assertRejected(String token) throws Exception {
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized());
+        mockMvc.perform(get(ENDPOINT_AUTH_VALIDATE).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(false));
+    }
+
+    private RSAKey activeKey() {
+        return keyStoreService.getOrCreateActiveKeyPair();
     }
 
     private JWTClaimsSet.Builder validClaims() {
@@ -132,6 +165,6 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
                 .build();
         SignedJWT jwt = new SignedJWT(header, claims);
         jwt.sign(new RSASSASigner(key));
-        return "Bearer " + jwt.serialize();
+        return jwt.serialize();
     }
 }

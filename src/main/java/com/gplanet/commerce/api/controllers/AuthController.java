@@ -143,17 +143,18 @@ public class AuthController {
     }
 
     /**
-     * Validates the structure and status of a JWT token.
-     * Checks if the token is properly formatted and not blacklisted.
+     * Checks whether a token is a valid access token.
+     * Verifies its signature, expiration, issuer, audience, type and revocation status.
      *
      * @param authorization the Authorization header containing the token to validate
      * @return TokenValidationResponseDTO containing validation results and token status
-     * @throws InvalidTokenException if the token format is invalid
+     * @throws InvalidTokenException if the Authorization header doesn't contain a Bearer token
      */
     @SecurityRequirements
     @Operation(summary = "Validate JWT token", 
-               description = "Validates the structure, signature, and blacklist status of a JWT token. "
-                           + "Returns detailed information about token validity and claims.")
+               description = "Checks whether a token would be accepted as an access token: verifies its "
+                           + "signature, expiration, issuer, audience, type and revocation status. An invalid "
+                           + "token is reported with valid=false and the reason in the message.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Token validation completed",
             content = @Content(mediaType = "application/json",

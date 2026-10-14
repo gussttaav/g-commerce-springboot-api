@@ -2,10 +2,12 @@ package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.util.ArrayList;
@@ -70,8 +72,20 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void validateReportsLoggedOutTokenAsInvalid() throws Exception {
+        logout(session);
+
+        validate(session.token()).andExpect(jsonPath("$.valid").value(false));
+    }
+
+    @Test
     void refreshTokenIsRejectedAsAccessToken() throws Exception {
         getProfile(session.refreshToken()).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void validateReportsRefreshTokenAsInvalid() throws Exception {
+        validate(session.refreshToken()).andExpect(jsonPath("$.valid").value(false));
     }
 
     @Test
@@ -142,6 +156,11 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     private ResultActions refresh(String token) throws Exception {
         return mockMvc.perform(post(ENDPOINT_AUTH_REFRESH).header(HttpHeaders.AUTHORIZATION, bearer(token)));
+    }
+
+    private ResultActions validate(String token) throws Exception {
+        return mockMvc.perform(get(ENDPOINT_AUTH_VALIDATE).header(HttpHeaders.AUTHORIZATION, bearer(token)))
+                .andExpect(status().isOk());
     }
 
     private LoginResponseDTO readSession(ResultActions result) throws Exception {

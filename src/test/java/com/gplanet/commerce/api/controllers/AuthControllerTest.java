@@ -27,7 +27,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.test.context.support.WithAnonymousUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -44,7 +43,7 @@ import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.entities.User;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
+import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.services.AuthService;
 
@@ -119,38 +118,19 @@ class AuthControllerTest {
 
         @Test
         @WithAnonymousUser
-        @DisplayName("Should return 404 when user not found")
-        void loginUserNotFoundReturnsUnauthorized() throws Exception {
-            // Arrange
-            LoginDTO loginDTO = new LoginDTO(TEST_USER_EMAIL, TEST_PASSWORD);
-            when(authService.login(any(LoginDTO.class)))
-                .thenThrow(new UsernameNotFoundException("User not found"));
-
-            // Act & Assert
-            mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
-                    .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(loginDTO)))
-                .andExpect(status().isUnauthorized())
-                .andExpect(errorMessage("User not found"));
-
-            verify(authService).login(any(LoginDTO.class));
-        }
-
-        @Test
-        @WithAnonymousUser
-        @DisplayName("Should return 401 when password is invalid")
-        void loginInvalidPasswordReturnsUnauthorized() throws Exception {
+        @DisplayName("Should return 401 when the email is unknown or the password is invalid")
+        void loginInvalidCredentialsReturnsUnauthorized() throws Exception {
             // Arrange
             LoginDTO loginDTO = new LoginDTO(TEST_USER_EMAIL, "wrong-password");
             when(authService.login(any(LoginDTO.class)))
-                .thenThrow(new InvalidPasswordException("Invalid password"));
+                .thenThrow(new InvalidCredentialsException("Invalid email or password"));
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isUnauthorized())
-                .andExpect(errorMessage("Invalid password"));
+                .andExpect(errorMessage("Invalid email or password"));
 
             verify(authService).login(any(LoginDTO.class));
         }

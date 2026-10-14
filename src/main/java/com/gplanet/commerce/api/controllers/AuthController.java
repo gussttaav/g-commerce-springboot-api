@@ -15,7 +15,7 @@ import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
+import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.TokenStorageException;
@@ -64,8 +64,7 @@ public class AuthController {
      * 
      * @param loginDTO the login credentials containing email and password
      * @return LoginResponseDTO containing the authenticated user's information
-     * @throws InvalidPasswordException if the user password is incorrect
-     * @throws UsernameNotFoundException if the user cannot be loaded
+     * @throws InvalidCredentialsException if the email is not registered or the password is incorrect
      */
     @SecurityRequirements
     @Operation(summary = "Authenticate user", description = "Authenticates a user with email and password")
@@ -73,7 +72,7 @@ public class AuthController {
         @ApiResponse(responseCode = "200", description = "Successfully authenticated",
             content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidPassword"),
+        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidCredentials"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/LoginRateLimitExceeded")
     })
     @PostMapping("/login")

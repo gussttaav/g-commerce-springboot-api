@@ -6,9 +6,11 @@ import java.util.stream.Collectors;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -25,7 +27,7 @@ import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserMapper;
 import com.gplanet.commerce.api.entities.User;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
+import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
@@ -53,9 +55,10 @@ import lombok.extern.slf4j.Slf4j;
 public class AuthService {
 
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
+    private static final String INVALID_CREDENTIALS_MSG = "Invalid email or password";
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
     private final CustomUserDetailsService userDetallesService;
     private final OAuth2TokenService oauth2TokenService;
@@ -71,31 +74,18 @@ public class AuthService {
      * 
      * @param loginDTO Data transfer object containing login credentials
      * @return LoginResponseDTO containing the authenticated user's information and JWT token
-     * @throws UsernameNotFoundException if user is not found
-     * @throws InvalidPasswordException if password is incorrect
+     * @throws InvalidCredentialsException if the email is not registered or the password is incorrect
      */
     public LoginResponseDTO login(LoginDTO loginDTO) {
         log.info("Login attempt for user: {}", loginDTO.email());
-        try {
-            UserDetails userDetails = userDetallesService.loadUserByUsername(loginDTO.email());
+        UserDetails userDetails = authenticate(loginDTO);
+        // Only fails if the user was deleted since authenticating
+        User user = userRepository.findByEmail(userDetails.getUsername())
+                .orElseThrow(() -> new InvalidCredentialsException(INVALID_CREDENTIALS_MSG));
 
-            User user = userRepository.findByEmail(loginDTO.email())
-                .orElseThrow(() -> new ResourceNotFoundException(
-                    "No user exists with the provided email"
-                ));
-
-            if (!passwordEncoder.matches(loginDTO.password(), user.getPassword())) {
-                throw new InvalidPasswordException("Contraseña incorrecta.");
-            }
-
-            LoginResponseDTO response = issueTokens(user, userDetails);
-            log.info("Successful login for user: {}", loginDTO.email());
-            return response;
-            
-        } catch (UsernameNotFoundException | InvalidPasswordException e) {
-            log.warn("Login failed for user: {} - {}", loginDTO.email(), e.getMessage());
-            throw e;
-        }
+        LoginResponseDTO response = issueTokens(user, userDetails);
+        log.info("Successful login for user: {}", loginDTO.email());
+        return response;
     }
 
     /**
@@ -174,6 +164,27 @@ public class AuthService {
             return new TokenValidationResponseDTO(false, reasons);
         } catch (BadJwtException e) {
             return new TokenValidationResponseDTO(false, "Token is malformed or its signature is invalid");
+        }
+    }
+
+    /**
+     * Checks the email and password of a login.
+     * <p>
+     * An unknown email and a wrong password are reported with the same error, so the response doesn't reveal
+     * which emails are registered.
+     * </p>
+     *
+     * @param loginDTO the login credentials
+     * @return the security details of the authenticated user
+     * @throws InvalidCredentialsException if the email is not registered or the password is incorrect
+     */
+    private UserDetails authenticate(LoginDTO loginDTO) {
+        try {
+            return (UserDetails) authenticationManager.authenticate(UsernamePasswordAuthenticationToken
+                    .unauthenticated(loginDTO.email(), loginDTO.password())).getPrincipal();
+        } catch (BadCredentialsException e) {
+            log.warn("Login failed for user: {} - unknown email or wrong password", loginDTO.email());
+            throw new InvalidCredentialsException(INVALID_CREDENTIALS_MSG);
         }
     }
 

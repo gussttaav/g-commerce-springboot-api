@@ -8,6 +8,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -32,8 +33,11 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.core.OAuth2ErrorCodes;
 import org.springframework.security.oauth2.jwt.BadJwtException;
@@ -49,10 +53,9 @@ import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserMapper;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.entities.User;
-import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
+import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
-import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jose.JOSEObjectType;
 import com.nimbusds.jose.JWSAlgorithm;
@@ -81,7 +84,7 @@ class AuthServiceTest {
     private UserRepository userRepository;
 
     @Mock
-    private PasswordEncoder passwordEncoder;
+    private AuthenticationManager authenticationManager;
 
     @Mock
     private UserMapper userMapper;
@@ -120,7 +123,7 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         // Built by hand: @InjectMocks can't tell the two decoders apart
-        authService = new AuthService(userRepository, passwordEncoder, userMapper, customUserDetailsService,
+        authService = new AuthService(userRepository, authenticationManager, userMapper, customUserDetailsService,
                 oauth2TokenService, tokenBlacklistService, accessTokenDecoder, refreshTokenDecoder,
                 jwtProperties, stringRedisTemplate);
 
@@ -152,9 +155,9 @@ class AuthServiceTest {
     void loginValidCredentialsReturnsLoginResponse() throws Exception {
         // Arrange
         String validRefreshToken = createValidJWT(); // Use valid JWT for refresh token
+        when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(
+                UsernamePasswordAuthenticationToken.authenticated(userDetails, null, userDetails.getAuthorities()));
         when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
-        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
-        when(passwordEncoder.matches(TEST_PASSWORD, user.getPassword())).thenReturn(true);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn(ACCESS_TOKEN);
         when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(validRefreshToken); // Use valid JWT
         when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
@@ -175,8 +178,9 @@ class AuthServiceTest {
         assertEquals(ACCESS_TOKEN, result.token());
         assertEquals(validRefreshToken, result.refreshToken());
         assertEquals(TOKEN_TYPE, result.tokenType());
-        verify(userRepository).findByEmail(TEST_EMAIL);
-        verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
+        verify(authenticationManager).authenticate(argThat(authentication ->
+                TEST_EMAIL.equals(authentication.getPrincipal())
+                        && TEST_PASSWORD.equals(authentication.getCredentials())));
         // The refresh token is stored by its ID
         verify(valueOperations).set(
             eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID),
@@ -187,27 +191,17 @@ class AuthServiceTest {
     }
 
     @Test
-    void loginInvalidPasswordThrowsException() {
-        // Arrange
-        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
-        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
-        when(passwordEncoder.matches(TEST_PASSWORD, user.getPassword())).thenReturn(false);
+    void loginWithBadCredentialsThrowsGenericException() {
+        // Arrange - Thrown for an unknown email as well as for a wrong password
+        when(authenticationManager.authenticate(any(Authentication.class)))
+                .thenThrow(new BadCredentialsException("Bad credentials"));
 
         // Act & Assert
-        assertThrows(InvalidPasswordException.class, () -> authService.login(loginDTO));
-        verify(userRepository).findByEmail(TEST_EMAIL);
-        verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
-    }
-
-    @Test
-    void loginUserNotFoundThrowsException() {
-        // Arrange
-        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.empty());
-
-        // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> authService.login(loginDTO));
-        verify(userRepository).findByEmail(TEST_EMAIL);
-        verify(passwordEncoder, never()).matches(anyString(), anyString());
+        InvalidCredentialsException exception =
+                assertThrows(InvalidCredentialsException.class, () -> authService.login(loginDTO));
+        assertEquals("Invalid email or password", exception.getMessage());
+        verifyNoInteractions(oauth2TokenService);
+        verifyNoInteractions(valueOperations);
     }
 
     @Test

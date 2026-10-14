@@ -9,7 +9,8 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -170,23 +171,21 @@ public class SecurityConfig {
     }
 
     /**
-     * Configures the {@link AuthenticationManager} with the custom user details service and password encoder.
+     * Provides the {@link AuthenticationManager} that checks the email and password of a login.
+     * <p>
+     * An unknown email and a wrong password fail with the same {@code BadCredentialsException}, and the password
+     * of an unknown email is still checked against a dummy hash, so neither the error nor the response time reveal
+     * which emails are registered.
+     * </p>
      *
-     * @param http the {@link HttpSecurity} to use for shared objects
      * @param passwordEncoder the password encoder bean
      * @return the configured {@link AuthenticationManager}
-     * @throws Exception if an error occurs during configuration
      */
     @Bean
-    AuthenticationManager authManager(HttpSecurity http, PasswordEncoder passwordEncoder) throws Exception {
-        AuthenticationManagerBuilder authenticationManagerBuilder = 
-                http.getSharedObject(AuthenticationManagerBuilder.class);
-
-        authenticationManagerBuilder
-                .userDetailsService(customUserDetailsService)
-                .passwordEncoder(passwordEncoder);
-        
-        return authenticationManagerBuilder.build();
+    AuthenticationManager authManager(PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(customUserDetailsService);
+        provider.setPasswordEncoder(passwordEncoder);
+        return new ProviderManager(provider);
     }
 
     /**

@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGIN;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
@@ -20,6 +21,7 @@ import org.springframework.test.context.ActiveProfiles;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.user.UserDTO;
+import com.gplanet.commerce.api.entities.User;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @AutoConfigureMockMvc
@@ -29,6 +31,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     private static final String TEST_EMAIL = "test@example.com";
     private static final String TEST_PASSWORD = "password123";
     private static final String BEARER_PREFIX = "Bearer ";
+    private static final String INVALID_CREDENTIALS = "Invalid email or password";
 
     @Test
     void loginCredencialesValidasRetornaTokens() throws Exception {
@@ -64,6 +67,27 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(loginDTO)))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginWithUnknownEmailOrWrongPasswordReturnsTheSameError() throws Exception {
+        // Arrange
+        crearUsuario(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD, User.Role.USER);
+
+        // Act & Assert - The response doesn't reveal whether the email is registered
+        mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginDTO(TEST_EMAIL, "wrongPassword123"))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(errorMessage(INVALID_CREDENTIALS));
+
+        mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new LoginDTO("unknown@example.com", TEST_PASSWORD))))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.error").value("Unauthorized"))
+                .andExpect(errorMessage(INVALID_CREDENTIALS));
     }
 
     @Test

@@ -88,7 +88,7 @@ public class OpenAPIConfig {
                             // User-related errors
                             .addApiResponse("DuplicatedEmail", createErrorApiResponse("User email already exists"))
                             .addApiResponse("UserNotFound", createErrorApiResponse("User not found"))
-                            .addApiResponse("InvalidPassword", createErrorApiResponse("Invalid password"))
+                            .addApiResponse("InvalidCredentials", createErrorApiResponse("Invalid email or password"))
                             
                             // General validation errors
                             .addApiResponse("InvalidInput", createErrorApiResponse("Invalid input data"))

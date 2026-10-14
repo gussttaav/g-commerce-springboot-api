@@ -3,9 +3,18 @@ package com.gplanet.commerce.api.integration;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,13 +28,14 @@ import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.entities.User;
 
 /**
- * Integration tests for the token lifecycle: logout revokes the session's tokens (SEC-1) and refresh tokens are
- * not accepted as access tokens (SEC-2).
+ * Integration tests for the token lifecycle: logout revokes the session's tokens (SEC-1), refresh tokens are not
+ * accepted as access tokens (SEC-2), and a refresh token can only be used once (SEC-3).
  */
 class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     private static final String USER_EMAIL = "lifecycle@example.com";
     private static final String USER_PASSWORD = "Password123!";
+    private static final int CONCURRENT_REFRESHES = 8;
 
     private LoginResponseDTO session;
 
@@ -75,6 +85,47 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
 
         getProfile(refreshed.token()).andExpect(status().isOk());
         refresh(refreshed.refreshToken()).andExpect(status().isOk());
+    }
+
+    @Test
+    void refreshTokenCanOnlyBeUsedOnce() throws Exception {
+        refresh(session.refreshToken()).andExpect(status().isOk());
+
+        refresh(session.refreshToken()).andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void concurrentRefreshesWithTheSameTokenSucceedOnlyOnce() throws Exception {
+        String authorization = bearer(session.refreshToken());
+        CountDownLatch start = new CountDownLatch(1);
+        List<Callable<Boolean>> refreshes = new ArrayList<>();
+        for (int i = 0; i < CONCURRENT_REFRESHES; i++) {
+            refreshes.add(() -> {
+                start.await();
+                try {
+                    authService.refresh(authorization);
+                    return true;
+                } catch (RuntimeException e) {
+                    return false;
+                }
+            });
+        }
+
+        ExecutorService executor = Executors.newFixedThreadPool(CONCURRENT_REFRESHES);
+        try {
+            List<Future<Boolean>> results = refreshes.stream().map(executor::submit).toList();
+            start.countDown();
+
+            int succeeded = 0;
+            for (Future<Boolean> result : results) {
+                if (result.get()) {
+                    succeeded++;
+                }
+            }
+            assertThat(succeeded).isEqualTo(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     private void logout(LoginResponseDTO loggedOutSession) throws Exception {

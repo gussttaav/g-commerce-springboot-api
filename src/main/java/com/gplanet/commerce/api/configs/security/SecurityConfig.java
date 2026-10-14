@@ -1,9 +1,12 @@
 package com.gplanet.commerce.api.configs.security;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
@@ -15,6 +18,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
@@ -70,6 +74,11 @@ import lombok.RequiredArgsConstructor;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    /**
+     * Name of the {@link JwtDecoder} bean that decodes refresh tokens.
+     */
+    public static final String REFRESH_TOKEN_DECODER = "refreshTokenDecoder";
 
     private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_USER = "USER";
@@ -198,34 +207,69 @@ public class SecurityConfig {
     }
 
     /**
-     * Provides a JWT decoder that selects the verification key by the token's key ID, validates
-     * its timestamps, issuer and audience, and rejects refresh tokens and revoked tokens.
+     * Provides the decoder for access tokens, used by the resource server.
+     * <p>
+     * On top of the checks shared by every token, it rejects refresh tokens and revoked tokens.
+     * </p>
      *
      * @param jwkSource the JWK source bean
-     * @return a {@link JwtDecoder} instance
+     * @return a {@link JwtDecoder} for access tokens
      */
     @Bean
+    @Primary
     JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+        return createDecoder(jwkSource, List.of(
+                // Access tokens carry no token type; refresh tokens do
+                new JwtClaimValidator<String>(OAuth2TokenService.TOKEN_TYPE_CLAIM, Objects::isNull),
+                new TokenBlacklistValidator(tokenBlacklistService)));
+    }
+
+    /**
+     * Provides the decoder for refresh tokens, used by {@code /api/auth/refresh} and {@code /api/auth/logout}.
+     * <p>
+     * On top of the checks shared by every token, it only accepts refresh tokens. Whether a refresh token has
+     * already been used or revoked is checked against the refresh tokens stored in Redis.
+     * </p>
+     *
+     * @param jwkSource the JWK source bean
+     * @return a {@link JwtDecoder} for refresh tokens
+     */
+    @Bean(REFRESH_TOKEN_DECODER)
+    JwtDecoder refreshTokenDecoder(JWKSource<SecurityContext> jwkSource) {
+        return createDecoder(jwkSource, List.of(new JwtClaimValidator<String>(
+                OAuth2TokenService.TOKEN_TYPE_CLAIM, OAuth2TokenService.REFRESH_TOKEN_TYPE::equals)));
+    }
+
+    /**
+     * Creates a JWT decoder that selects the verification key by the token's key ID and validates its
+     * timestamps, issuer, audience and the given token-specific claims.
+     *
+     * @param jwkSource the JWK source bean
+     * @param tokenValidators validators for the claims specific to the type of token
+     * @return a {@link JwtDecoder} instance
+     */
+    private JwtDecoder createDecoder(JWKSource<SecurityContext> jwkSource,
+                                     List<OAuth2TokenValidator<Jwt>> tokenValidators) {
         DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
         jwtProcessor.setJWSKeySelector(new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource));
         // Claims are checked by the Spring validators below
         jwtProcessor.setJWTClaimsSetVerifier((claims, context) -> { });
 
-        NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
-        decoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
+        List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>(List.of(
                 new JwtIssuerValidator(jwtProperties.getIssuer()),
-                new JwtAudienceValidator(jwtProperties.getAudience()),
-                // Access tokens carry no token type; refresh tokens do
-                new JwtClaimValidator<String>(OAuth2TokenService.TOKEN_TYPE_CLAIM, Objects::isNull),
-                new TokenBlacklistValidator(tokenBlacklistService)));
+                new JwtAudienceValidator(jwtProperties.getAudience())));
+        validators.addAll(tokenValidators);
+
+        NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
+        decoder.setJwtValidator(JwtValidators.createDefaultWithValidators(validators));
         return decoder;
     }
 
     /**
      * Provides the resolver of the bearer token that authenticates a request.
      * <p>
-     * {@code /api/auth/refresh} receives a refresh token, which the decoder rejects. The token is not resolved
-     * there, so the request reaches the endpoint, which only accepts refresh tokens it has stored.
+     * {@code /api/auth/refresh} receives a refresh token, which the access token decoder rejects. The token is
+     * not resolved there, so the request reaches the endpoint, which decodes the refresh token itself.
      * </p>
      *
      * @return a {@link BearerTokenResolver} for the resource server

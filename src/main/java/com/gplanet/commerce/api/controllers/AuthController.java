@@ -90,7 +90,7 @@ public class AuthController {
      *
      * @param authorization the Authorization header containing the refresh token
      * @return LoginResponseDTO containing the new access and refresh tokens
-     * @throws InvalidTokenException if the refresh token is invalid or expired
+     * @throws InvalidTokenException if the refresh token is invalid, expired, already used or revoked
      * @throws UsernameNotFoundException if the user cannot be loaded
      * @throws TokenStorageException if there's an error storing the new refresh token
      */
@@ -104,7 +104,6 @@ public class AuthController {
                 schema = @Schema(implementation = LoginResponseDTO.class))),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidRefreshToken"),
-        @ApiResponse(responseCode = "404", ref = "#/components/responses/RefreshTokenNotFound"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
     })
     @PostMapping("/refresh")
@@ -126,7 +125,8 @@ public class AuthController {
      */
     @Operation(summary = "User logout", 
                description = "Logs out the authenticated user by revoking the access token used for this request "
-                           + "and the given refresh token, preventing their future use.")
+                           + "and the given refresh token, preventing their future use. A refresh token that is "
+                           + "invalid, expired or issued to another user is ignored.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User logged out successfully"),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),

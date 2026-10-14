@@ -12,6 +12,7 @@ import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.time.Duration;
@@ -31,7 +32,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
@@ -57,11 +60,14 @@ import com.nimbusds.jwt.SignedJWT;
 class AuthServiceTest {
 
     private static final String TEST_EMAIL = "test@example.com";
+    private static final String OTHER_EMAIL = "other@example.com";
     private static final String TEST_PASSWORD = "password123";
     private static final String ACCESS_TOKEN = "access.token.123";
+    private static final String REFRESH_TOKEN = "refresh.token.123";
+    private static final String REFRESH_TOKEN_ID = "refresh-token-id";
+    private static final String TOKEN_ID = "test-jwt-id";
     private static final String TOKEN_TYPE = "Bearer";
     private static final String TOKEN_TYPE_PREFIX = "Bearer ";
-    private static final String TOKEN_ID = "test-jwt-id";
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
     private static final Long TOKEN_ACCESS_EXPIRATION_MS = 3600000L;
     private static final Long REFRESH_TOKEN_EXPIRATION_MS = 86400000L;
@@ -83,6 +89,9 @@ class AuthServiceTest {
 
     @Mock
     private TokenBlacklistService tokenBlacklistService;
+
+    @Mock
+    private JwtDecoder refreshTokenDecoder;
 
     @Mock
     private JwtProperties jwtProperties;
@@ -156,8 +165,9 @@ class AuthServiceTest {
         assertEquals(TOKEN_TYPE, result.tokenType());
         verify(userRepository).findByEmail(TEST_EMAIL);
         verify(passwordEncoder).matches(TEST_PASSWORD, user.getPassword());
+        // The refresh token is stored by its ID
         verify(valueOperations).set(
-            eq(REFRESH_TOKEN_PREFIX + validRefreshToken),
+            eq(REFRESH_TOKEN_PREFIX + TOKEN_ID),
             eq(TEST_EMAIL),
             anyLong(),
             eq(TimeUnit.MILLISECONDS)
@@ -189,65 +199,109 @@ class AuthServiceTest {
     }
 
     @Test
-    void refreshValidTokenReturnsNewTokens() throws Exception {
-        // Arrange - Create a valid JWT token for testing
-        String validRefreshToken = createValidJWT();
+    void refreshValidTokenReturnsNewTokensAndInvalidatesUsedToken() throws Exception {
+        // Arrange
         String newRefreshToken = createValidJWT();
-        
-        when(valueOperations.get(REFRESH_TOKEN_PREFIX + validRefreshToken)).thenReturn(TEST_EMAIL);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
+        when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID)).thenReturn(true);
         when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn("newAccessToken");
         when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(newRefreshToken);
         when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
         when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
         
-        // Mock the Redis set operation for storing the new refresh token
-        doNothing().when(valueOperations).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
-
         // Act
-        LoginResponseDTO result = authService.refresh(TOKEN_TYPE_PREFIX + validRefreshToken);
+        LoginResponseDTO result = authService.refresh(TOKEN_TYPE_PREFIX + REFRESH_TOKEN);
 
         // Assert
         assertNotNull(result);
         assertEquals("newAccessToken", result.token());
         assertEquals(newRefreshToken, result.refreshToken());
-        verify(valueOperations).get(REFRESH_TOKEN_PREFIX + validRefreshToken);
-        verify(valueOperations).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
+        verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID);
+        verify(valueOperations).set(eq(REFRESH_TOKEN_PREFIX + TOKEN_ID), eq(TEST_EMAIL), anyLong(),
+                eq(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void refreshUsedOrRevokedTokenThrowsException() {
+        // Arrange - The token is valid, but no longer stored
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
+        when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID)).thenReturn(false);
+
+        // Act & Assert
+        assertThrows(InvalidTokenException.class, () -> authService.refresh(TOKEN_TYPE_PREFIX + REFRESH_TOKEN));
+        verify(oauth2TokenService, never()).generateAccessToken(any());
+        verify(oauth2TokenService, never()).generateRefreshToken(any());
     }
 
     @Test
     void refreshInvalidTokenThrowsException() {
         // Arrange
-        when(valueOperations.get(anyString())).thenReturn(null);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenThrow(new BadJwtException("Invalid signature"));
 
         // Act & Assert
-        assertThrows(InvalidTokenException.class,
-                () -> authService.refresh("Bearer invalidToken"));
+        assertThrows(InvalidTokenException.class, () -> authService.refresh(TOKEN_TYPE_PREFIX + REFRESH_TOKEN));
+        verify(stringRedisTemplate, never()).delete(anyString());
     }
 
     @Test
-    void logoutRevokesAccessAndRefreshTokens() throws Exception {
+    void refreshWithoutBearerTokenThrowsException() {
+        // Act & Assert
+        assertThrows(InvalidTokenException.class, () -> authService.refresh(REFRESH_TOKEN));
+        verifyNoInteractions(refreshTokenDecoder);
+    }
+
+    @Test
+    void logoutRevokesAccessAndRefreshTokens() {
         // Arrange
-        String validRefreshToken = createValidJWT();
-        Jwt accessToken = accessToken();
+        Jwt accessToken = accessToken(TEST_EMAIL);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
 
         // Act
-        authService.logout(new LogoutRequestDTO(validRefreshToken), accessToken);
+        authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken);
 
         // Assert
         verify(tokenBlacklistService).blacklist(accessToken);
-        verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + validRefreshToken);
+        verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID);
     }
 
     @Test
-    void logoutWhenRedisFailsThrowsException() throws Exception {
+    void logoutWithInvalidRefreshTokenRevokesAccessToken() {
         // Arrange
-        LogoutRequestDTO logoutRequest = new LogoutRequestDTO(createValidJWT());
-        Jwt accessToken = accessToken();
+        Jwt accessToken = accessToken(TEST_EMAIL);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenThrow(new BadJwtException("Jwt expired"));
+
+        // Act
+        authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken);
+
+        // Assert
+        verify(tokenBlacklistService).blacklist(accessToken);
+        verify(stringRedisTemplate, never()).delete(anyString());
+    }
+
+    @Test
+    void logoutDoesNotRevokeRefreshTokenOfAnotherUser() {
+        // Arrange
+        Jwt accessToken = accessToken(TEST_EMAIL);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(OTHER_EMAIL));
+
+        // Act
+        authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken);
+
+        // Assert
+        verify(tokenBlacklistService).blacklist(accessToken);
+        verify(stringRedisTemplate, never()).delete(anyString());
+    }
+
+    @Test
+    void logoutWhenRedisFailsThrowsException() {
+        // Arrange
+        Jwt accessToken = accessToken(TEST_EMAIL);
         doThrow(new RedisConnectionFailureException("Redis is down")).when(tokenBlacklistService).blacklist(accessToken);
 
         // Act & Assert
-        assertThrows(LogoutFailedException.class, () -> authService.logout(logoutRequest, accessToken));
+        assertThrows(LogoutFailedException.class,
+                () -> authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken));
     }
 
     @Test
@@ -289,15 +343,24 @@ class AuthServiceTest {
                 () -> authService.validateToken("InvalidTokenFormat"));
     }
 
-    private static Jwt accessToken() {
-        Instant now = Instant.now();
-        return Jwt.withTokenValue(ACCESS_TOKEN)
-                .header("alg", "RS256")
-                .subject(TEST_EMAIL)
-                .jti(TOKEN_ID)
-                .issuedAt(now)
-                .expiresAt(now.plus(Duration.ofHours(1)))
+    private static Jwt accessToken(String subject) {
+        return token(ACCESS_TOKEN, subject, "access-token-id").build();
+    }
+
+    private static Jwt refreshToken(String subject) {
+        return token(REFRESH_TOKEN, subject, REFRESH_TOKEN_ID)
+                .claim(OAuth2TokenService.TOKEN_TYPE_CLAIM, OAuth2TokenService.REFRESH_TOKEN_TYPE)
                 .build();
+    }
+
+    private static Jwt.Builder token(String tokenValue, String subject, String tokenId) {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue(tokenValue)
+                .header("alg", "RS256")
+                .subject(subject)
+                .jti(tokenId)
+                .issuedAt(now)
+                .expiresAt(now.plus(Duration.ofHours(1)));
     }
 
     /**

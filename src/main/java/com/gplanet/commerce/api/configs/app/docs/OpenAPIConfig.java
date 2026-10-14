@@ -119,8 +119,7 @@ public class OpenAPIConfig {
                             .addApiResponse("TokenExpired", createErrorApiResponse("JWT token has expired"))
                             .addApiResponse("TokenBlacklisted", createErrorApiResponse("Token has been invalidated"))
                             .addApiResponse("InvalidRefreshToken", createErrorApiResponse(
-                                "Invalid or expired refresh token"))
-                            .addApiResponse("RefreshTokenNotFound", createErrorApiResponse("Refresh token not found"))
+                                "Invalid, expired, already used or revoked refresh token"))
                             
                             // Rate limiting errors
                             .addApiResponse("UnauthenticatedRateLimitExceeded", createErrorApiResponse(

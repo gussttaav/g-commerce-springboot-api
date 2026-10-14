@@ -18,10 +18,6 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 
 | ID | Severity | Issue |
 |----|----------|-------|
-| SEC-1 | High | **Logout does not revoke access tokens.** `AuthService.logout` writes the token to `token:blacklist:*`, but the blacklist is only consulted by `/api/auth/refresh` and `/api/auth/validate`. The resource-server filter never checks it, so a logged-out access token keeps working until it expires (1h by default). |
-| SEC-2 | High | **Refresh tokens are accepted as access tokens.** Both token types are signed with the same key and the decoder doesn't check `token_type`. A refresh token (24h lifetime) authenticates with no authorities, which is enough for every `.authenticated()` endpoint: `GET/PATCH /api/users/me`, `GET /api/purchases`, `POST /api/auth/logout`. |
-| SEC-3 | High | **Refresh does not invalidate the used refresh token.** `AuthService.refresh` stores the new refresh token but never deletes or blacklists the old one, so a stolen refresh token can be replayed indefinitely until it expires. The OpenAPI docs claim the opposite ("The old refresh token becomes invalid after successful refresh"). |
-| SEC-4 | Medium | **`/api/auth/validate` reports forged and expired tokens as valid.** It only calls `SignedJWT.parse` (structure) and checks the blacklist; signature, expiry and issuer are not verified, despite the endpoint docs saying they are. |
 | SEC-5 | High | **Anonymous requests are not rate-limited.** `RateLimitingConfig.resolveBucket()` creates a fresh bucket on every unauthenticated request instead of caching it, so the "unauthenticated" limit never triggers — including on `/api/auth/login` (unlimited password brute force). Related: the bucket map is never evicted, and a user's tier is fixed at their first request (a role change is not applied until restart). |
 | SEC-6 | Medium | **User enumeration on login.** Unknown email → 401 "No user found with email …"; wrong password → 401 "Contraseña incorrecta.". The different messages reveal which emails are registered. |
 
@@ -52,12 +48,8 @@ Each phase is one branch and one PR. Every fix starts with a failing test that r
 ### Phase 1 — Key management (KEY-1, KEY-2, SEC-7) — done
 The decoder looks keys up by `kid` in Redis, the active key never expires, a rotated-out key is kept for the longest token lifetime plus 1h, the JWKS publishes every key that is still kept, issuer and audience are validated, and scheduled rotation runs behind a Redis lock.
 
-### Phase 2 — Token lifecycle (SEC-1, SEC-2, SEC-3, SEC-4)
-1. Add a custom `OAuth2TokenValidator<Jwt>` to the decoder that rejects tokens with `token_type=refresh` (SEC-2) and tokens whose `jti` is blacklisted (SEC-1).
-2. Blacklist by `jti` instead of the full token string (smaller keys, same TTL logic).
-3. On refresh, delete `token:refresh:{old}` and blacklist its `jti` before issuing the new pair (SEC-3).
-4. Make `/api/auth/validate` run the real decoder (signature, expiry, issuer, blacklist) (SEC-4).
-5. Integration tests: logout → access token now gets 401; refresh token on `/api/users/me` → 401; reused refresh token → 401.
+### Phase 2 — Token lifecycle (SEC-1, SEC-2, SEC-3, SEC-4) — done
+The resource server decodes access tokens with validators that reject refresh tokens and tokens whose `jti` is blacklisted or missing; logout blacklists the access token's `jti` and deletes the refresh token. Refresh tokens are stored by `jti` and are single-use: the entry is deleted atomically before a new pair is issued, so a replayed token gets 401 even under concurrent requests. `/api/auth/refresh` and `/api/auth/validate` bypass the bearer token filter and decode the token themselves (refresh tokens with a decoder that only accepts refresh tokens), and `/api/auth/validate` reports an invalid token as `valid: false` with the reason.
 
 ### Phase 3 — Abuse protection (SEC-5, SEC-6)
 1. Key anonymous buckets by client IP (honor `X-Forwarded-For` only behind the trusted reverse proxy) and store buckets in an expiring cache (Caffeine) or the Bucket4j Redis backend.

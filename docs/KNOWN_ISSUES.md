@@ -12,8 +12,6 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 
 | ID | Severity | Issue |
 |----|----------|-------|
-| KEY-1 | High | **Tokens stop validating after the signing key changes.** `SecurityConfig.jwtDecoder()` is built once at startup with the public key active at that moment. The active key id is stored in Redis with a 30-day TTL (`KeyStoreService.KEY_EXPIRATION`); when it expires, `getOrCreateActiveKeyPair()` generates a new key and new tokens are signed with it, but the decoder still only knows the old key, so every authenticated request gets 401 until the app restarts. Any rotation has the same effect. `/.well-known/jwks.json` also publishes only the active key, so tokens signed with the previous key can't be verified externally after a rotation. |
-| KEY-2 | Medium | **Scheduled key rotation never runs.** No class declares `@EnableScheduling`, so `KeyRotationScheduler.rotateKeys()` is never invoked even though `oauth2.key-rotation.enabled` defaults to `true`. Must be fixed *after* KEY-1, otherwise enabling it would break authentication every month. |
 | KEY-3 | Medium | **Private-key encryption gives no protection.** The AES key that encrypts each RSA private key is stored in the same Redis instance right next to the ciphertext (`oauth2:encryption:{kid}`), and the cipher uses ECB mode (`AES/ECB/PKCS5Padding`). |
 
 ### Token lifecycle and authentication
@@ -26,7 +24,6 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 | SEC-4 | Medium | **`/api/auth/validate` reports forged and expired tokens as valid.** It only calls `SignedJWT.parse` (structure) and checks the blacklist; signature, expiry and issuer are not verified, despite the endpoint docs saying they are. |
 | SEC-5 | High | **Anonymous requests are not rate-limited.** `RateLimitingConfig.resolveBucket()` creates a fresh bucket on every unauthenticated request instead of caching it, so the "unauthenticated" limit never triggers — including on `/api/auth/login` (unlimited password brute force). Related: the bucket map is never evicted, and a user's tier is fixed at their first request (a role change is not applied until restart). |
 | SEC-6 | Medium | **User enumeration on login.** Unknown email → 401 "No user found with email …"; wrong password → 401 "Contraseña incorrecta.". The different messages reveal which emails are registered. |
-| SEC-7 | Low | **Issuer and audience are not validated.** Tokens carry `iss` and `aud`, but the decoder only uses the default timestamp validator. |
 
 ### Functional bugs
 
@@ -52,14 +49,8 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 
 Each phase is one branch and one PR. Every fix starts with a failing test that reproduces the issue (most of these slipped through because no test covered them), then the fix.
 
-### Phase 1 — Key management (KEY-1, KEY-2, SEC-7)
-Highest priority: KEY-1 takes the deployed app down every 30 days.
-1. Replace the pinned-key decoder with a `NimbusJwtDecoder` built on a `JWKSource` that looks keys up by `kid` in Redis (active + previous keys).
-2. Keep each retired key for at least the longest token lifetime (refresh: 24h) after rotation; stop relying on TTL expiry of the active key to trigger key changes.
-3. Publish all non-expired public keys in `/.well-known/jwks.json`.
-4. Add issuer + audience validators to the decoder (SEC-7).
-5. Add `@EnableScheduling` (in a config class conditional on `oauth2.key-rotation.enabled`), and a Redis lock so only one instance rotates.
-6. Tests: a token signed before `rotateKeyPair()` is still accepted after it; a token signed after rotation is accepted without restart.
+### Phase 1 — Key management (KEY-1, KEY-2, SEC-7) — done
+The decoder looks keys up by `kid` in Redis, the active key never expires, a rotated-out key is kept for the longest token lifetime plus 1h, the JWKS publishes every key that is still kept, issuer and audience are validated, and scheduled rotation runs behind a Redis lock.
 
 ### Phase 2 — Token lifecycle (SEC-1, SEC-2, SEC-3, SEC-4)
 1. Add a custom `OAuth2TokenValidator<Jwt>` to the decoder that rejects tokens with `token_type=refresh` (SEC-2) and tokens whose `jti` is blacklisted (SEC-1).

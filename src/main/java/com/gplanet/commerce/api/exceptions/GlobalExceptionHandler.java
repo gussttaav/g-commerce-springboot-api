@@ -280,31 +280,6 @@ public class GlobalExceptionHandler {
     }
 
     /**
-     * Handles token blacklist exceptions.
-     * Returns 401 Unauthorized for blacklisted tokens.
-     *
-     * @param ex The token blacklist exception
-     * @param request The current HTTP request
-     * @return ResponseEntity containing ApiErrorDTO with blacklist details
-     */
-    @ExceptionHandler(TokenBlacklistException.class)
-    public ResponseEntity<ApiErrorDTO> handleTokenBlacklist(TokenBlacklistException ex,
-                                                        HttpServletRequest request) {
-        log.warn("Blacklisted token for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        
-        ApiErrorDTO error = new ApiErrorDTO(
-                LocalDateTime.now(),
-                HttpStatus.UNAUTHORIZED.value(),
-                "Token Blacklisted",
-                ex.getMessage(),
-                request.getRequestURI(),
-                new ArrayList<>()
-        );
-
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-    }
-
-    /**
      * Handles logout failed exceptions.
      * Returns appropriate error code for logout failures.
      *

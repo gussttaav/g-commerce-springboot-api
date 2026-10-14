@@ -38,6 +38,7 @@ import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.KeyStoreService;
 import com.gplanet.commerce.api.services.OAuth2TokenService;
+import com.gplanet.commerce.api.services.TokenBlacklistService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
@@ -76,6 +77,7 @@ public class SecurityConfig {
     private final CorsProperties corsProperties;
     private final JwtProperties jwtProperties;
     private final KeyStoreService keyStoreService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final CustomUserDetailsService customUserDetailsService;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
@@ -197,7 +199,7 @@ public class SecurityConfig {
 
     /**
      * Provides a JWT decoder that selects the verification key by the token's key ID, validates
-     * its timestamps, issuer and audience, and rejects refresh tokens.
+     * its timestamps, issuer and audience, and rejects refresh tokens and revoked tokens.
      *
      * @param jwkSource the JWK source bean
      * @return a {@link JwtDecoder} instance
@@ -214,7 +216,8 @@ public class SecurityConfig {
                 new JwtIssuerValidator(jwtProperties.getIssuer()),
                 new JwtAudienceValidator(jwtProperties.getAudience()),
                 // Access tokens carry no token type; refresh tokens do
-                new JwtClaimValidator<String>(OAuth2TokenService.TOKEN_TYPE_CLAIM, Objects::isNull)));
+                new JwtClaimValidator<String>(OAuth2TokenService.TOKEN_TYPE_CLAIM, Objects::isNull),
+                new TokenBlacklistValidator(tokenBlacklistService)));
         return decoder;
     }
 

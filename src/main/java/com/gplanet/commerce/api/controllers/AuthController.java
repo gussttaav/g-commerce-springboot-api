@@ -1,6 +1,8 @@
 package com.gplanet.commerce.api.controllers;
 
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -16,7 +18,6 @@ import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
-import com.gplanet.commerce.api.exceptions.TokenBlacklistException;
 import com.gplanet.commerce.api.exceptions.TokenStorageException;
 import com.gplanet.commerce.api.services.AuthService;
 
@@ -90,7 +91,6 @@ public class AuthController {
      * @param authorization the Authorization header containing the refresh token
      * @return LoginResponseDTO containing the new access and refresh tokens
      * @throws InvalidTokenException if the refresh token is invalid or expired
-     * @throws TokenBlacklistException if the refresh token is blacklisted
      * @throws UsernameNotFoundException if the user cannot be loaded
      * @throws TokenStorageException if there's an error storing the new refresh token
      */
@@ -117,17 +117,16 @@ public class AuthController {
     }
 
     /**
-     * Logs out a user by blacklisting their tokens.
+     * Logs out a user by revoking the tokens of their session.
      * Invalidates both access and refresh tokens to prevent further use.
      *
      * @param logoutRequest the logout request containing token information
-     * @param authorization the Authorization header containing the access token
-     * @throws InvalidTokenException if the provided token is invalid
+     * @param accessToken the access token that authenticated the request
      * @throws LogoutFailedException if the logout operation fails
      */
     @Operation(summary = "User logout", 
-               description = "Logs out the authenticated user by blacklisting both access and refresh tokens, "
-                           + "preventing their future use")
+               description = "Logs out the authenticated user by revoking the access token used for this request "
+                           + "and the given refresh token, preventing their future use.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "User logged out successfully"),
         @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
@@ -139,11 +138,8 @@ public class AuthController {
             @Valid @RequestBody 
             @Parameter(description = "Logout request containing refresh token to invalidate", required = true) 
             LogoutRequestDTO logoutRequest, 
-            @RequestHeader("Authorization") 
-            @Parameter(description = "Bearer access token", required = true,
-                      example = "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
-            String authorization) {
-        authService.logout(logoutRequest, authorization);
+            @AuthenticationPrincipal @Parameter(hidden = true) Jwt accessToken) {
+        authService.logout(logoutRequest, accessToken);
     }
 
     /**

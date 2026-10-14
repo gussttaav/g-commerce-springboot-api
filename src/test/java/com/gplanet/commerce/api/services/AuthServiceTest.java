@@ -8,12 +8,14 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
-import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.time.Duration;
+import java.time.Instant;
 import java.util.Date;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
@@ -24,10 +26,12 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.RedisConnectionFailureException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
@@ -39,6 +43,7 @@ import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
+import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jose.JOSEObjectType;
@@ -56,7 +61,7 @@ class AuthServiceTest {
     private static final String ACCESS_TOKEN = "access.token.123";
     private static final String TOKEN_TYPE = "Bearer";
     private static final String TOKEN_TYPE_PREFIX = "Bearer ";
-    private static final String BLACKLIST_PREFIX = "token:blacklist:";
+    private static final String TOKEN_ID = "test-jwt-id";
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
     private static final Long TOKEN_ACCESS_EXPIRATION_MS = 3600000L;
     private static final Long REFRESH_TOKEN_EXPIRATION_MS = 86400000L;
@@ -75,6 +80,9 @@ class AuthServiceTest {
 
     @Mock
     private OAuth2TokenService oauth2TokenService;
+
+    @Mock
+    private TokenBlacklistService tokenBlacklistService;
 
     @Mock
     private JwtProperties jwtProperties;
@@ -187,7 +195,6 @@ class AuthServiceTest {
         String newRefreshToken = createValidJWT();
         
         when(valueOperations.get(REFRESH_TOKEN_PREFIX + validRefreshToken)).thenReturn(TEST_EMAIL);
-        when(stringRedisTemplate.hasKey(BLACKLIST_PREFIX + validRefreshToken)).thenReturn(false);
         when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
         when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn("newAccessToken");
         when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(newRefreshToken);
@@ -205,7 +212,6 @@ class AuthServiceTest {
         assertEquals("newAccessToken", result.token());
         assertEquals(newRefreshToken, result.refreshToken());
         verify(valueOperations).get(REFRESH_TOKEN_PREFIX + validRefreshToken);
-        verify(stringRedisTemplate).hasKey(BLACKLIST_PREFIX + validRefreshToken);
         verify(valueOperations).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
     }
 
@@ -220,32 +226,35 @@ class AuthServiceTest {
     }
 
     @Test
-    void logoutValidTokensBlacklistsTokens() throws Exception {
+    void logoutRevokesAccessAndRefreshTokens() throws Exception {
         // Arrange
         String validRefreshToken = createValidJWT();
-        LogoutRequestDTO logoutRequest = new LogoutRequestDTO(validRefreshToken);
-        
-        // Create valid JWT tokens for testing
-        String validAccessToken = createValidJWT();
-        
-        // Mock Redis operations
-        when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + validRefreshToken)).thenReturn(true);
-        doNothing().when(valueOperations).set(anyString(), anyString(), anyLong(), any(TimeUnit.class));
+        Jwt accessToken = accessToken();
 
         // Act
-        authService.logout(logoutRequest, TOKEN_TYPE_PREFIX + validAccessToken);
+        authService.logout(new LogoutRequestDTO(validRefreshToken), accessToken);
 
         // Assert
+        verify(tokenBlacklistService).blacklist(accessToken);
         verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + validRefreshToken);
-        // Verify that tokens are blacklisted (2 calls: one for access token, one for refresh token)
-        verify(valueOperations, times(2)).set(anyString(), eq("blacklisted"), anyLong(), eq(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void logoutWhenRedisFailsThrowsException() throws Exception {
+        // Arrange
+        LogoutRequestDTO logoutRequest = new LogoutRequestDTO(createValidJWT());
+        Jwt accessToken = accessToken();
+        doThrow(new RedisConnectionFailureException("Redis is down")).when(tokenBlacklistService).blacklist(accessToken);
+
+        // Act & Assert
+        assertThrows(LogoutFailedException.class, () -> authService.logout(logoutRequest, accessToken));
     }
 
     @Test
     void validateTokenValidTokenReturnsValidationResponse() throws Exception {
         // Arrange
         String validToken = createValidJWT();
-        when(stringRedisTemplate.hasKey(BLACKLIST_PREFIX + validToken)).thenReturn(false);
+        when(tokenBlacklistService.isBlacklisted(TOKEN_ID)).thenReturn(false);
 
         // Act
         TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + validToken);
@@ -254,14 +263,14 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals(true, result.valid());
         assertEquals("Token is valid", result.message());
-        verify(stringRedisTemplate).hasKey(BLACKLIST_PREFIX + validToken);
+        verify(tokenBlacklistService).isBlacklisted(TOKEN_ID);
     }
 
     @Test
     void validateTokenBlacklistedTokenReturnsInvalidResponse() throws Exception {
         // Arrange
         String validToken = createValidJWT();
-        when(stringRedisTemplate.hasKey(BLACKLIST_PREFIX + validToken)).thenReturn(true);
+        when(tokenBlacklistService.isBlacklisted(TOKEN_ID)).thenReturn(true);
 
         // Act
         TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + validToken);
@@ -270,7 +279,7 @@ class AuthServiceTest {
         assertNotNull(result);
         assertEquals(false, result.valid());
         assertEquals("Token is blacklisted", result.message());
-        verify(stringRedisTemplate).hasKey(BLACKLIST_PREFIX + validToken);
+        verify(tokenBlacklistService).isBlacklisted(TOKEN_ID);
     }
 
     @Test
@@ -278,6 +287,17 @@ class AuthServiceTest {
         // Act & Assert - The service throws UsernameNotFoundException for invalid token format
         assertThrows(InvalidTokenException.class,
                 () -> authService.validateToken("InvalidTokenFormat"));
+    }
+
+    private static Jwt accessToken() {
+        Instant now = Instant.now();
+        return Jwt.withTokenValue(ACCESS_TOKEN)
+                .header("alg", "RS256")
+                .subject(TEST_EMAIL)
+                .jti(TOKEN_ID)
+                .issuedAt(now)
+                .expiresAt(now.plus(Duration.ofHours(1)))
+                .build();
     }
 
     /**
@@ -293,7 +313,7 @@ class AuthServiceTest {
                 .expirationTime(new Date(System.currentTimeMillis() + TOKEN_ACCESS_EXPIRATION_MS))
                 .notBeforeTime(new Date())
                 .issueTime(new Date())
-                .jwtID("test-jwt-id")
+                .jwtID(TOKEN_ID)
                 .build();
 
         // Create a signed JWT (using HMAC for simplicity in tests)

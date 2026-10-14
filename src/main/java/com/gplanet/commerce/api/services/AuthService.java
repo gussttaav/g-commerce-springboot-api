@@ -3,10 +3,12 @@ package com.gplanet.commerce.api.services;
 import java.text.ParseException;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.dao.DataAccessException;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +23,6 @@ import com.gplanet.commerce.api.exceptions.InvalidPasswordException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
-import com.gplanet.commerce.api.exceptions.TokenBlacklistException;
 import com.gplanet.commerce.api.exceptions.TokenStorageException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jwt.SignedJWT;
@@ -41,7 +42,6 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class AuthService {
 
-    private static final String BLACKLIST_PREFIX = "token:blacklist:";
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
 
     private final UserRepository userRepository;
@@ -49,6 +49,7 @@ public class AuthService {
     private final UserMapper userMapper;
     private final CustomUserDetailsService userDetallesService;
     private final OAuth2TokenService oauth2TokenService;
+    private final TokenBlacklistService tokenBlacklistService;
     private final JwtProperties jwtProperties;
     private final StringRedisTemplate stringRedisTemplate;
 
@@ -104,7 +105,6 @@ public class AuthService {
      * @return LoginResponseDTO containing the new access and refresh tokens
      * @throws UsernameNotFoundException if user is not found
      * @throws InvalidTokenException if the refresh token is invalid or expired
-     * @throws TokenBlacklistException if refresh token is blacklisted
      * @throws TokenStorageException if there's an error storing the new refresh token
      */
     @Transactional
@@ -145,34 +145,24 @@ public class AuthService {
     }
 
     /**
-     * Logs out a user by blacklisting their tokens.
-     * Invalidates both access and refresh tokens to prevent further use.
+     * Logs out a session by revoking its tokens: the access token that authenticated the request is blacklisted
+     * and the refresh token is invalidated.
      * 
-     * @param logoutRequest the logout request containing refresh token information
-     * @param authorizationHeader the Authorization header containing the access token
-     * @throws InvalidTokenException if the provided token is invalid
-     * @throws LogoutFailedException if logout operations fail
+     * @param logoutRequest the logout request containing the session's refresh token
+     * @param accessToken the access token that authenticated the request
+     * @throws LogoutFailedException if the tokens cannot be revoked
      */
     @Transactional
-    public void logout(LogoutRequestDTO logoutRequest, String authorizationHeader) {
-        String accessToken = extractToken(authorizationHeader);
-        String refreshToken = logoutRequest.refreshToken();
-
+    public void logout(LogoutRequestDTO logoutRequest, Jwt accessToken) {
         try {
-            // Blacklist access token
-            blacklistToken(accessToken);
-            
-            // Blacklist refresh token
-            blacklistToken(refreshToken);
-            
-            // Remove refresh token from valid tokens
-            stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + refreshToken);
-            
-            log.info("User logged out successfully. Tokens blacklisted.");
-        } catch (Exception e) {
+            tokenBlacklistService.blacklist(accessToken);
+            // Refresh only accepts stored refresh tokens
+            stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + logoutRequest.refreshToken());
+        } catch (DataAccessException e) {
             log.error("Error during logout", e);
             throw new LogoutFailedException("Logout failed");
         }
+        log.info("User {} logged out successfully. Tokens revoked.", accessToken.getSubject());
     }
 
     /**
@@ -187,13 +177,13 @@ public class AuthService {
         try {
             String token = extractToken(authorizationHeader);
             
+            // Parse token to validate structure
+            String tokenId = SignedJWT.parse(token).getJWTClaimsSet().getJWTID();
+
             // Check if token is blacklisted
-            if (isTokenBlacklisted(token)) {
+            if (tokenBlacklistService.isBlacklisted(tokenId)) {
                 return new TokenValidationResponseDTO(false, "Token is blacklisted");
             }
-            
-            // Parse token to validate structure
-            SignedJWT.parse(token);
             return new TokenValidationResponseDTO(true, "Token is valid");
             
         } catch (ParseException ex) {
@@ -226,58 +216,17 @@ public class AuthService {
     }
 
     /**
-     * Validates that a refresh token exists and is not blacklisted.
+     * Validates that a refresh token is stored, which means it was issued by this API and has not expired
+     * or been revoked.
      * 
      * @param refreshToken the refresh token to validate
      * @throws InvalidTokenException if refresh token is not found or expired
-     * @throws TokenBlacklistException if refresh token is blacklisted
      */
     private void validateRefreshToken(String refreshToken) {
-        // Check if refresh token exists in valid tokens
         String username = stringRedisTemplate.opsForValue().get(REFRESH_TOKEN_PREFIX + refreshToken);
         if (username == null) {
             throw new InvalidTokenException("Refresh token not found or expired");
         }
-        
-        // Check if refresh token is blacklisted
-        if (isTokenBlacklisted(refreshToken)) {
-            throw new TokenBlacklistException("Refresh token is blacklisted");
-        }
-    }
-
-    /**
-     * Blacklists a token by storing it in Redis with TTL.
-     * 
-     * @param token the token to blacklist
-     * @throws TokenBlacklistException if token blacklisting fails
-     */
-    private void blacklistToken(String token) {
-        try {
-            SignedJWT jwt = SignedJWT.parse(token);
-            long expirationMs = jwt.getJWTClaimsSet().getExpirationTime().getTime() - System.currentTimeMillis();
-            
-            if (expirationMs > 0) {
-                stringRedisTemplate.opsForValue().set(
-                    BLACKLIST_PREFIX + token,
-                    "blacklisted",
-                    expirationMs,
-                    TimeUnit.MILLISECONDS
-                );
-            }
-        } catch (Exception e) {
-            log.error("Failed to blacklist token", e);
-            throw new TokenBlacklistException("Failed to blacklist token");
-        }
-    }
-
-    /**
-     * Checks if a token is blacklisted.
-     * 
-     * @param token the token to check
-     * @return boolean indicating if the token is blacklisted
-     */
-    private boolean isTokenBlacklisted(String token) {
-        return stringRedisTemplate.hasKey(BLACKLIST_PREFIX + token);
     }
 
     /**

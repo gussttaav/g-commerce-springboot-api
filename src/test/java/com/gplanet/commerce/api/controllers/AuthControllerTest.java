@@ -7,10 +7,12 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOG
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
@@ -26,8 +28,8 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.test.context.support.WithAnonymousUser;
-import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -320,20 +322,20 @@ class AuthControllerTest {
     class LogoutTests {
 
         @Test
-        @WithMockUser(username = TEST_USER_EMAIL)
-        @DisplayName("Should logout successfully with valid request")
+        @DisplayName("Should logout the session of the authenticating access token")
         void logoutValidRequestReturnsOk() throws Exception {
             // Arrange
             LogoutRequestDTO logoutRequest = new LogoutRequestDTO(REFRESH_TOKEN);
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_AUTH_LOGOUT)
-                    .header(AUTH_HEADER, AUTH_ACCESS_TOKEN)
+                    .with(jwt().jwt(token -> token.subject(TEST_USER_EMAIL)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(logoutRequest)))
                 .andExpect(status().isOk());
 
-            verify(authService).logout(any(LogoutRequestDTO.class), eq(AUTH_ACCESS_TOKEN));
+            verify(authService).logout(eq(logoutRequest),
+                argThat((Jwt accessToken) -> TEST_USER_EMAIL.equals(accessToken.getSubject())));
         }
 
         @Test
@@ -353,7 +355,6 @@ class AuthControllerTest {
         }
 
         @Test
-        @WithMockUser(username = TEST_USER_EMAIL)
         @DisplayName("Should return 400 when refresh token is missing")
         void logoutMissingRefreshTokenReturnsBadRequest() throws Exception {
             // Arrange
@@ -361,7 +362,7 @@ class AuthControllerTest {
 
             // Act & Assert
             mockMvc.perform(post(ENDPOINT_AUTH_LOGOUT)
-                    .header(AUTH_HEADER, AUTH_ACCESS_TOKEN)
+                    .with(jwt().jwt(token -> token.subject(TEST_USER_EMAIL)))
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(logoutRequest)))
                 .andExpect(status().isBadRequest());

@@ -14,13 +14,6 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 |----|----------|-------|
 | KEY-3 | Medium | **Private-key encryption gives no protection.** The AES key that encrypts each RSA private key is stored in the same Redis instance right next to the ciphertext (`oauth2:encryption:{kid}`), and the cipher uses ECB mode (`AES/ECB/PKCS5Padding`). |
 
-### Token lifecycle and authentication
-
-| ID | Severity | Issue |
-|----|----------|-------|
-| SEC-5 | High | **Anonymous requests share one global rate-limit bucket.** Spring Security gives anonymous requests an `AnonymousAuthenticationToken`, whose `isAuthenticated()` is true, so `RateLimitingConfig.resolveBucket()` puts all of them in a single bucket keyed `anonymousUser` with the user limits; the `unauthenticated` limits are never used. One client can exhaust it and block login, registration, product listing, token refresh and token validation for everyone, and there is no per-client limit on login attempts. Related: the bucket map is never evicted, and a user's tier is fixed at their first request (a role change is not applied until restart). |
-| SEC-6 | Medium | **User enumeration on login.** Unknown email → 401 "No user found with email …"; wrong password → 401 "Contraseña incorrecta.". The different messages reveal which emails are registered. |
-
 ### Functional bugs
 
 | ID | Severity | Issue |
@@ -36,7 +29,7 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 | ID | Severity | Issue |
 |----|----------|-------|
 | OPS-1 | Low | **`SslProfileDetector` overrides `SPRING_PROFILES_ACTIVE`** (which the README tells users to set), and its classpath check uses `ClassPathResource.getFile()`, which throws inside a packaged jar. |
-| OPS-2 | Low | **Mixed-language API output.** Several error messages are in Spanish ("Contraseña incorrecta.", "Ha ocurrido un error inesperado", "Error de validación", "Usuario no encontrado"), plus leftover Spanish identifiers (`toProductoResponseDTO`, test helpers) and `spring.application.name: gestion-tienda`. |
+| OPS-2 | Low | **Mixed-language API output.** Several error messages are in Spanish ("Ha ocurrido un error inesperado", "Error de validación", "Usuario no encontrado"), plus leftover Spanish identifiers (`toProductoResponseDTO`, test helpers) and `spring.application.name: gestion-tienda`. |
 | OPS-3 | Low | **README is out of date.** Wrong Spring Boot version, login response shows `usuario` (now `user`), single-test example uses `UsuarioControllerTest`, and the HTTPS instructions don't match OPS-1. |
 | OPS-4 | Low | **CI only runs on pushes to `main`.** Pull requests get no Checkstyle/PMD/test feedback before merging. |
 | OPS-5 | Low | **`mvnw` is not executable.** It is committed with mode `100644`, so `./mvnw` fails with "Permission denied" on Linux/macOS (the Dockerfile works around it with `chmod +x`). |
@@ -51,11 +44,8 @@ The decoder looks keys up by `kid` in Redis, the active key never expires, a rot
 ### Phase 2 — Token lifecycle (SEC-1, SEC-2, SEC-3, SEC-4) — done
 The resource server decodes access tokens with validators that reject refresh tokens and tokens whose `jti` is blacklisted or missing; logout blacklists the access token's `jti` and deletes the refresh token. Refresh tokens are stored by `jti` and are single-use: the entry is deleted atomically before a new pair is issued, so a replayed token gets 401 even under concurrent requests. `/api/auth/refresh` and `/api/auth/validate` bypass the bearer token filter and decode the token themselves (refresh tokens with a decoder that only accepts refresh tokens), and `/api/auth/validate` reports an invalid token as `valid: false` with the reason.
 
-### Phase 3 — Abuse protection (SEC-5, SEC-6)
-1. Treat `AnonymousAuthenticationToken` as unauthenticated, key anonymous buckets by client IP (honor `X-Forwarded-For` only behind the trusted reverse proxy) and store buckets in an expiring cache (Caffeine) or the Bucket4j Redis backend.
-2. Add a stricter dedicated limit for `POST /api/auth/login`.
-3. Resolve the tier on every request rather than at bucket creation.
-4. Return one generic 401 "Invalid email or password" for both unknown email and wrong password (SEC-6).
+### Phase 3 — Abuse protection (SEC-5, SEC-6) — done
+Anonymous requests (`AnonymousAuthenticationToken` included) are limited per client IP address with the `unauthenticated` limits, and login attempts have a stricter bucket of their own per client IP address (`rate-limit.login`). Users get the limits of the role in their current token, since buckets are keyed by type and client. Buckets live in a size-bounded Caffeine cache that evicts a bucket once it has been unused long enough to refill, so eviction never resets a limit; they are per application instance (several instances would need the Bucket4j Redis backend). The client IP address is the request's remote address; behind a reverse proxy, `server.forward-headers-strategy=native` takes it from the `X-Forwarded-For` header of trusted proxies only. Login answers an unknown email and a wrong password with the same 401 "Invalid email or password", through Spring Security's `DaoAuthenticationProvider`, which also checks a dummy password hash for unknown emails so the response time doesn't reveal them. Registration still answers 409 for a registered email, now rate-limited per IP address; hiding that would need an email verification flow.
 
 ### Phase 4 — Functional correctness (FUN-1 … FUN-5)
 1. Default `role` to `USER` in `UserDTO`'s compact constructor; add `@Column(nullable = false)` so H2 matches MySQL (FUN-1).

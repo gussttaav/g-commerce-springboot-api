@@ -53,25 +53,26 @@ public class JwkController {
     private final JwtProperties jwtProperties;
 
     /**
-     * Exposes the JWKS (JSON Web Key Set) with the current active public RSA key.
-     * 
+     * Exposes the JWKS (JSON Web Key Set) with the public RSA keys that tokens may be signed with.
+     *
      * <p>This endpoint provides the public key information needed by clients and external
      * services to verify JWT signatures. The response follows RFC 7517 (JSON Web Key)
-     * format and includes the current active RSA public key used for token signing.</p>
-     * 
-     * <p>Clients should cache this information but be prepared to refetch it if token
-     * validation fails, as keys may be rotated periodically for security.</p>
+     * format and includes the active signing key first, followed by keys retired by a rotation
+     * that still have unexpired tokens.</p>
      *
-     * @return JwksResponseDTO containing the current public RSA key in JWKS format
+     * <p>Clients should cache this information but be prepared to refetch it when a token
+     * carries an unknown key ID, as keys are rotated periodically for security.</p>
+     *
+     * @return JwksResponseDTO containing the public RSA keys in JWKS format
      * @throws IllegalStateException if key retrieval fails
      */
     @SecurityRequirements
-    @Operation(summary = "Get JSON Web Key Set", 
-               description = "Returns the current public RSA key in JWKS format for JWT signature verification. "
+    @Operation(summary = "Get JSON Web Key Set",
+               description = "Returns the public RSA keys in JWKS format for JWT signature verification. "
                            + "This endpoint follows RFC 7517 standard and is used by external services and clients "
                            + "to validate JWT tokens issued by this authorization server. "
-                           + "The response includes the active public key with its key ID, "
-                           + "algorithm, and RSA parameters.")
+                           + "The active signing key is listed first, followed by recently rotated keys that "
+                           + "still have valid tokens. Each key includes its key ID, algorithm, and RSA parameters.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "JWKS retrieved successfully",
             content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
@@ -81,26 +82,16 @@ public class JwkController {
     @GetMapping(value = "/.well-known/jwks.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public JwksResponseDTO jwks() {
         try {
-            RSAKey rsaKey = keyStoreService.getOrCreateActiveKeyPair();
-            if (rsaKey == null) {
+            List<JwkDTO> keys = keyStoreService.getPublicKeys().stream()
+                .map(this::toJwkDto)
+                .toList();
+            if (keys.isEmpty()) {
                 log.warn("No RSA key available for JWKS");
-                return new JwksResponseDTO(List.of());
             }
-            
-            RSAKey publicKey = rsaKey.toPublicJWK();
-            
-            JwkDTO jwkDto = new JwkDTO(
-                publicKey.getKeyType().getValue(),    // kty
-                resolveKeyUse(publicKey),             // use
-                publicKey.getKeyID(),                 // kid  
-                resolveAlgorithm(publicKey),          // alg
-                publicKey.getModulus().toString(),    // n
-                publicKey.getPublicExponent().toString() // e
-            );
-            
-            log.debug("Serving JWKS with key ID: {}", publicKey.getKeyID());
-            return new JwksResponseDTO(List.of(jwkDto));
-            
+
+            log.debug("Serving JWKS with {} key(s)", keys.size());
+            return new JwksResponseDTO(keys);
+
         } catch (Exception e) {
             log.error("Failed to generate JWKS response", e);
             throw new IllegalStateException("Failed to retrieve JWKS", e);
@@ -145,6 +136,24 @@ public class JwkController {
             "/api/auth/login",
             new String[] {"password", "refresh_token"},
             new String[] {"RS256"}
+        );
+    }
+
+    /**
+     * Converts an RSA key to its public JWK representation.
+     *
+     * @param rsaKey the RSA key; only its public parameters are exposed
+     * @return the JWK DTO
+     */
+    private JwkDTO toJwkDto(RSAKey rsaKey) {
+        RSAKey publicKey = rsaKey.toPublicJWK();
+        return new JwkDTO(
+            publicKey.getKeyType().getValue(),    // kty
+            resolveKeyUse(publicKey),             // use
+            publicKey.getKeyID(),                 // kid
+            resolveAlgorithm(publicKey),          // alg
+            publicKey.getModulus().toString(),    // n
+            publicKey.getPublicExponent().toString() // e
         );
     }
 

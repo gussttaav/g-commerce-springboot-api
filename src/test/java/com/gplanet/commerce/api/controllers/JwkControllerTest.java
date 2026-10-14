@@ -11,6 +11,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
+import java.util.List;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -56,12 +57,16 @@ class JwkControllerTest {
     }
 
     private RSAKey createTestRSAKey() {
+        return createTestRSAKey(TEST_KEY_ID);
+    }
+
+    private RSAKey createTestRSAKey(String keyId) {
         try {
             // Create a proper RSAKey with all required fields
             return new RSAKey.Builder(createTestRSAPublicKey())
                 .keyUse(KeyUse.SIGNATURE) // This is the missing field causing NPE
                 .algorithm(Algorithm.parse(RSA_KEY_GENERATION_ALG))
-                .keyID(TEST_KEY_ID)
+                .keyID(keyId)
                 .build();
         } catch (Exception e) {
             throw new RuntimeException("Failed to create test RSA key", e);
@@ -89,7 +94,7 @@ class JwkControllerTest {
         void jwksReturnsValidJwksResponse() throws Exception {
             // Arrange
             RSAKey rsaKey = createTestRSAKey();
-            when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of(rsaKey));
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_JWKS))
@@ -105,10 +110,27 @@ class JwkControllerTest {
 
         @Test
         @WithAnonymousUser
+        @DisplayName("Should publish every key returned by the key store, in order")
+        void jwksReturnsActiveAndRetiredKeys() throws Exception {
+            // Arrange
+            RSAKey activeKey = createTestRSAKey("active-key-id");
+            RSAKey retiredKey = createTestRSAKey("retired-key-id");
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of(activeKey, retiredKey));
+
+            // Act & Assert
+            mockMvc.perform(get(ENDPOINT_JWKS))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.keys.length()").value(2))
+                .andExpect(jsonPath("$.keys[0].kid").value("active-key-id"))
+                .andExpect(jsonPath("$.keys[1].kid").value("retired-key-id"));
+        }
+
+        @Test
+        @WithAnonymousUser
         @DisplayName("Should return empty keys array when no keys available")
         void jwksNoKeysAvailableReturnsEmptyKeys() throws Exception {
             // Arrange
-            when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(null);
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of());
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_JWKS))
@@ -123,7 +145,7 @@ class JwkControllerTest {
         @DisplayName("Should handle service exception gracefully")
         void jwksServiceExceptionReturnsInternalServerError() throws Exception {
             // Arrange
-            when(keyStoreService.getOrCreateActiveKeyPair())
+            when(keyStoreService.getPublicKeys())
                 .thenThrow(new RuntimeException("Key service unavailable"));
 
             // Act & Assert
@@ -138,7 +160,7 @@ class JwkControllerTest {
         void jwksAccessibleWithoutAuthentication() throws Exception {
             // Arrange
             RSAKey rsaKey = createTestRSAKey();
-            when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of(rsaKey));
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_JWKS))
@@ -204,7 +226,7 @@ class JwkControllerTest {
                 .algorithm(Algorithm.parse(RSA_KEY_GENERATION_ALG))
                 .build();
             
-            when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of(rsaKey));
 
             // Act & Assert - The controller should handle this gracefully
             mockMvc.perform(get(ENDPOINT_JWKS))
@@ -219,7 +241,7 @@ class JwkControllerTest {
         void jwksReturnsCorrectContentType() throws Exception {
             // Arrange
             RSAKey rsaKey = createTestRSAKey();
-            when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+            when(keyStoreService.getPublicKeys()).thenReturn(List.of(rsaKey));
 
             // Act & Assert
             mockMvc.perform(get(ENDPOINT_JWKS))

@@ -1,8 +1,5 @@
 package com.gplanet.commerce.api.configs.security;
 
-import java.security.interfaces.RSAPublicKey;
-import java.util.List;
-
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -18,9 +15,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
-import org.springframework.security.oauth2.jwt.JwtEncoder;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
-import org.springframework.security.oauth2.jwt.NimbusJwtEncoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
 import org.springframework.security.web.SecurityFilterChain;
@@ -31,11 +26,12 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import com.gplanet.commerce.api.configs.app.props.CorsProperties;
 import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.KeyStoreService;
-import com.nimbusds.jose.jwk.JWK;
-import com.nimbusds.jose.jwk.JWKSet;
-import com.nimbusds.jose.jwk.RSAKey;
+import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.source.JWKSource;
+import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
+import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
+import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 
 import lombok.RequiredArgsConstructor;
 
@@ -43,13 +39,13 @@ import lombok.RequiredArgsConstructor;
  * Security configuration class that sets up Spring Security for the application.
  * <p>
  * This class configures authentication, authorization, JWT handling, CORS, and exception handling
- * for the API. It integrates with a custom user details service, key store service for JWT signing,
+ * for the API. It integrates with a custom user details service, key store service for JWT verification,
  * and custom handlers for authentication and access denied events.
  * </p>
  * <ul>
  *   <li>Configures stateless session management</li>
  *   <li>Defines public, user, and admin endpoints</li>
- *   <li>Sets up JWT encoder/decoder and authority mapping</li>
+ *   <li>Sets up JWT decoding and authority mapping</li>
  *   <li>Configures CORS for API endpoints</li>
  * </ul>
  * 
@@ -168,50 +164,38 @@ public class SecurityConfig {
     }
 
     /**
-     * Provides a JWK source for JWT signing and verification.
+     * Provides the source of public keys used to verify JWT signatures.
      * <p>
-     * Uses the active RSA key pair from the key store service.
+     * Contains the active key and every retired key that may still have valid tokens. The key set is cached,
+     * and reloaded as soon as a token carries an unknown key ID, so a key rotated by any instance is picked up
+     * without a restart. Refreshes are not rate limited because the keys come from our own Redis rather than
+     * a remote JWKS endpoint, and a rate-limited refresh could reject tokens signed with a just-rotated key.
      * </p>
      *
-     * @return a {@link JWKSource} for JWT operations
+     * @return a {@link JWKSource} for JWT verification
      */
     @Bean
     JWKSource<SecurityContext> jwkSource() {
-        return (jwkSelector, securityContext) -> {
-            RSAKey rsaKey = keyStoreService.getOrCreateActiveKeyPair();
-            JWKSet set = new JWKSet(List.of((JWK) rsaKey));
-            return jwkSelector.select(set);
-        };
+        return JWKSourceBuilder.create(new KeyStoreJwkSetSource(keyStoreService))
+                .rateLimited(false)
+                .build();
     }
 
     /**
-     * Provides a JWT encoder bean using the configured JWK source.
+     * Provides a JWT decoder that selects the verification key by the token's key ID and validates
+     * its timestamps.
      *
      * @param jwkSource the JWK source bean
-     * @return a {@link JwtEncoder} instance
-     */
-    @Bean
-    JwtEncoder jwtEncoder(JWKSource<SecurityContext> jwkSource) {
-        return new NimbusJwtEncoder(jwkSource);
-    }
-
-    /**
-     * Provides a JWT decoder bean using the current RSA public key.
-     *
      * @return a {@link JwtDecoder} instance
-     * @throws IllegalStateException if the RSA public key cannot be extracted
      */
     @Bean
-    JwtDecoder jwtDecoder() {
-        // Build decoder from current RSA public key
-        RSAKey rsaKey = keyStoreService.getOrCreateActiveKeyPair();
-        RSAPublicKey publicKey;
-        try {
-            publicKey = rsaKey.toRSAPublicKey();
-        } catch (Exception ex) {
-            throw new IllegalStateException("Failed to extract RSA public key from JWK", ex);
-        }
-        return NimbusJwtDecoder.withPublicKey(publicKey).build();
+    JwtDecoder jwtDecoder(JWKSource<SecurityContext> jwkSource) {
+        DefaultJWTProcessor<SecurityContext> jwtProcessor = new DefaultJWTProcessor<>();
+        jwtProcessor.setJWSKeySelector(new JWSVerificationKeySelector<>(JWSAlgorithm.RS256, jwkSource));
+        // Claims are checked by Spring's JWT validators instead
+        jwtProcessor.setJWTClaimsSetVerifier((claims, context) -> { });
+
+        return new NimbusJwtDecoder(jwtProcessor);
     }
 
     /**

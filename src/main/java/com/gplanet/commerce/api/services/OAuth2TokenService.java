@@ -33,6 +33,16 @@ import lombok.extern.slf4j.Slf4j;
 @RequiredArgsConstructor
 public class OAuth2TokenService {
 
+    /**
+     * Claim that marks refresh tokens. Access tokens don't carry it.
+     */
+    public static final String TOKEN_TYPE_CLAIM = "token_type";
+
+    /**
+     * Value of {@link #TOKEN_TYPE_CLAIM} in refresh tokens.
+     */
+    public static final String REFRESH_TOKEN_TYPE = "refresh";
+
     private final KeyStoreService keyStoreService;
     private final JwtProperties jwtProperties;
 
@@ -106,7 +116,7 @@ public class OAuth2TokenService {
                     .notBeforeTime(Date.from(now))
                     .issueTime(Date.from(now))
                     .jwtID(UUID.randomUUID().toString())
-                    .claim("token_type", "refresh")
+                    .claim(TOKEN_TYPE_CLAIM, REFRESH_TOKEN_TYPE)
                     .build();
 
             SignedJWT signedJWT = new SignedJWT(

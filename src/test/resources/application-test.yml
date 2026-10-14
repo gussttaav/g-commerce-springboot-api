@@ -51,6 +51,19 @@ oauth2:
   key-rotation:
     enabled: false
 
+# Rate-limit buckets are kept for the lifetime of the application context, which test classes share, so
+# the limits are high enough that no test depends on the requests made by earlier tests
+rate-limit:
+  unauthenticated:
+    capacity: 10000
+    refill: 10000
+  user:
+    capacity: 10000
+    refill: 10000
+  admin:
+    capacity: 10000
+    refill: 10000
+
 logging:
   level:
     org:

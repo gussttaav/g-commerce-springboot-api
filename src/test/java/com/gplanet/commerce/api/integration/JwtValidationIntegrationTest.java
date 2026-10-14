@@ -30,7 +30,7 @@ import com.nimbusds.jwt.SignedJWT;
 
 /**
  * Integration tests for the checks the resource server applies to incoming access tokens:
- * signature key, issuer and audience (SEC-7).
+ * signature key, issuer and audience (SEC-7), and token type (SEC-2).
  */
 class JwtValidationIntegrationTest extends AbstractIntegrationTest {
 
@@ -88,6 +88,15 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     void tokenSignedWithUnknownKeyIsRejected() throws Exception {
         RSAKey unknownKey = new RSAKeyGenerator(RSA_KEY_SIZE).keyID(UUID.randomUUID().toString()).generate();
         String token = sign(validClaims().build(), unknownKey);
+
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void refreshTokenIsRejected() throws Exception {
+        JWTClaimsSet claims = validClaims().claim("token_type", "refresh").build();
+        String token = sign(claims, keyStoreService.getOrCreateActiveKeyPair());
 
         mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(status().isUnauthorized());

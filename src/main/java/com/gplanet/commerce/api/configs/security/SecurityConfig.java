@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.configs.security;
 
+import java.util.Objects;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -15,13 +17,18 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
+import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
 import org.springframework.security.oauth2.jwt.JwtValidators;
 import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationConverter;
 import org.springframework.security.oauth2.server.resource.authentication.JwtGrantedAuthoritiesConverter;
+import org.springframework.security.oauth2.server.resource.web.BearerTokenResolver;
+import org.springframework.security.oauth2.server.resource.web.DefaultBearerTokenResolver;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
+import org.springframework.security.web.util.matcher.RequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
@@ -30,6 +37,7 @@ import com.gplanet.commerce.api.configs.app.props.CorsProperties;
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.services.CustomUserDetailsService;
 import com.gplanet.commerce.api.services.KeyStoreService;
+import com.gplanet.commerce.api.services.OAuth2TokenService;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.source.JWKSource;
 import com.nimbusds.jose.jwk.source.JWKSourceBuilder;
@@ -104,6 +112,7 @@ public class SecurityConfig {
 
             // Resource Server with JWT
             .oauth2ResourceServer(oauth2 -> oauth2
+                .bearerTokenResolver(bearerTokenResolver())
                 .jwt(jwt -> jwt.jwtAuthenticationConverter(jwtAuthenticationConverter()))
                 .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                 .accessDeniedHandler(jwtAccessDeniedHandler)
@@ -187,8 +196,8 @@ public class SecurityConfig {
     }
 
     /**
-     * Provides a JWT decoder that selects the verification key by the token's key ID and validates
-     * its timestamps, issuer and audience.
+     * Provides a JWT decoder that selects the verification key by the token's key ID, validates
+     * its timestamps, issuer and audience, and rejects refresh tokens.
      *
      * @param jwkSource the JWK source bean
      * @return a {@link JwtDecoder} instance
@@ -203,8 +212,26 @@ public class SecurityConfig {
         NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);
         decoder.setJwtValidator(JwtValidators.createDefaultWithValidators(
                 new JwtIssuerValidator(jwtProperties.getIssuer()),
-                new JwtAudienceValidator(jwtProperties.getAudience())));
+                new JwtAudienceValidator(jwtProperties.getAudience()),
+                // Access tokens carry no token type; refresh tokens do
+                new JwtClaimValidator<String>(OAuth2TokenService.TOKEN_TYPE_CLAIM, Objects::isNull)));
         return decoder;
+    }
+
+    /**
+     * Provides the resolver of the bearer token that authenticates a request.
+     * <p>
+     * {@code /api/auth/refresh} receives a refresh token, which the decoder rejects. The token is not resolved
+     * there, so the request reaches the endpoint, which only accepts refresh tokens it has stored.
+     * </p>
+     *
+     * @return a {@link BearerTokenResolver} for the resource server
+     */
+    @Bean
+    BearerTokenResolver bearerTokenResolver() {
+        DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
+        RequestMatcher refreshEndpoint = PathPatternRequestMatcher.withDefaults().matcher("/api/auth/refresh");
+        return request -> refreshEndpoint.matches(request) ? null : resolver.resolve(request);
     }
 
     /**

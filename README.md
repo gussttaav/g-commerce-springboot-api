@@ -33,17 +33,16 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 - **JWT Authentication & Authorization**
   - OAuth2 Resource Server with RSA-signed JWT tokens
-  - Access and refresh token system with automatic token rotation
-  - Token blacklisting and secure logout functionality
-  - RSA key pair generation, storage, and scheduled rotation
+  - Access tokens and single-use refresh tokens
+  - Token revocation on logout
+  - RSA key pair generation, encrypted storage, and scheduled rotation without downtime
   - OpenID Connect discovery endpoints and JWKS support
 
 - **Security & SSL Support**
   - Rate limiting with token bucket algorithm
-  - Role-based rate limits (Admin/User/Unauthenticated)
-  - Automatic profile detection based on available SSL certificate
+  - Role-based rate limits for users, and per IP address limits for anonymous requests and login attempts
+  - HTTPS profile selected automatically when a keystore is available, unless a profile is set explicitly
   - HTTPS configuration with SSL keystore
-  - Environment-based profile activation
   - RSA-based JWT token signing and validation
   - Redis-based token storage and blacklisting
 
@@ -56,13 +55,14 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
   - Unit tests for all layers
   - Security tests
   - Mock MVC tests for controllers
-  - In-memory H2 database for testing
+  - Integration tests with an in-memory H2 database and an embedded Redis server
 
 - **Continuous Integration via GitHub Actions**
+  - Code quality checks and tests on every pull request and push to `main`
   - Automated Docker image build and publish to Docker Hub
   - Environment-based configuration management
   - Automated deploy to an AWS EC2 instance pulling the created images
-  - Automated availabality monitoring after deployed
+  - Automated availability monitoring after deployment
 
 - **Monitoring & Management**
   - Spring Boot Actuator integration for application monitoring
@@ -74,7 +74,7 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 ## 🛠️ Technologies
 
 - Java 21
-- Spring Boot 3.4.9
+- Spring Boot 3.5.9
 - Spring Security (OAuth2 Resource Server)
 - NimbusDS JOSE+JWT library
 - Redis (for token storage and blacklisting)
@@ -98,8 +98,9 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
 
 - Java 21 or higher
 - Docker and Docker Compose
-- Maven
 - Git
+
+Maven is optional: the repository includes the Maven Wrapper (`./mvnw`).
 
 ## 🔧 Installation
 
@@ -133,29 +134,33 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
    
    # OAuth2 Key Rotation (optional)
    OAUTH2_KEY_ROTATION_ENABLED=true
-   OAUTH2_KEY_ROTATION_CRON=0 0 2 1 * ?
+   OAUTH2_KEY_ROTATION_CRON="0 0 2 1 * ?"
+
+   # Allowed CORS origins (optional, defaults to http://localhost:3000)
+   CORS_ALLOWED_ORIGINS=http://localhost:3000
    ```
 
    #### HTTPS support (optional)
-   **If you need the application to run with HTTPS**, you must add the following environment variables in your `.env` file and provide a valid SSL certificate in the `src/main/resources` directory.
+   Unless a profile is set explicitly, the application chooses it on startup: `https` (port 8443) if it finds a PKCS12 keystore at `/certs/keystore.p12` or on the classpath (e.g. `src/main/resources/keystore.p12`), and `http` (port 8080) otherwise. The keystore must contain the certificate under the alias `springboot`, and its password goes in your `.env` file:
 
-    ```env
-    SPRING_PROFILES_ACTIVE=https
-    SSL_PASSWORD=your_ssl_password
-    ```
+   ```env
+   SSL_PASSWORD=your_keystore_password
+   ```
+
+   Set `SPRING_PROFILES_ACTIVE=http` or `SPRING_PROFILES_ACTIVE=https` to choose the profile yourself, and `SSL_KEY_STORE` (e.g. `file:/path/to/keystore.p12`) to use a keystore stored elsewhere.
 
 3. Start the MySQL database and Redis using Docker Compose:
    ```bash
-   docker-compose -f docker-compose.db.yml up -d
+   docker compose -f docker-compose.db.yml up -d
    ```
 
-4. Build and run the application:
+4. Build and run the application. Maven does not read the `.env` file, so export its variables first:
    ```bash
-   mvn clean install
-   mvn spring-boot:run
+   set -a; source .env; set +a
+   ./mvnw spring-boot:run
    ```
 
-The application will be available at `http://localhost:8080` (default) or `https://localhost:8443` (if SSL is enabled).
+The application will be available at `http://localhost:8080`, or at `https://localhost:8443` with the `https` profile.
 
 ## 🐳 Docker Images
 
@@ -234,7 +239,7 @@ Spring Boot Actuator provides several monitoring endpoints:
 ## 🧪 Testing
 
 ### Test Configuration
-The project uses H2 in-memory database for testing.
+The tests need no external services: they use an H2 in-memory database and an embedded Redis server on port 6379, so stop any local Redis bound to that port before running them.
 
 ### Test Categories
 - **Controller Tests**: Using MockMvc to test HTTP endpoints
@@ -246,13 +251,13 @@ The project uses H2 in-memory database for testing.
 ### Running Tests
 ```bash
 # Run all tests
-mvn test
+./mvnw test
 
 # Run specific test class
-mvn test -Dtest=UsuarioControllerTest
+./mvnw test -Dtest=UserControllerTest
 
-# Run tests with coverage report
-mvn verify
+# Run the tests and the PMD and CPD checks
+./mvnw clean verify
 ```
 
 ## ✅ Code Quality
@@ -262,17 +267,18 @@ The project uses Checkstyle and PMD for code quality analysis:
 - **Checkstyle**: Enforces coding standards (`checkstyle-rules.xml`)
 - **PMD**: Static code analysis for best practices (`pmd-ruleset.xml`)
 
-Run the checks with:
+Checkstyle runs on every build, and PMD and CPD run in the `verify` phase. Run them on their own with:
 ```bash
 # Checkstyle only
-mvn checkstyle:check
+./mvnw checkstyle:check
 
 # PMD only
-mvn pmd:check
-
-# Both (also runs during normal build)
-mvn clean verify
+./mvnw pmd:check
 ```
+
+## 🐞 Known Issues
+
+The defects found in a code review, and the phased plan that fixed them, are tracked in [docs/KNOWN_ISSUES.md](docs/KNOWN_ISSUES.md).
 
 ## 🔑 API Endpoints
 
@@ -328,11 +334,14 @@ GET  /actuator/prometheus          # Prometheus-formatted metrics
 
 ## 🔒 Security
 
-- JWT authentication using OAuth2 Resource Server with RSA-signed tokens
-- Access and refresh token system with secure token rotation
-- RSA key pair generation, storage, and scheduled rotation in Redis
-- Token blacklisting for secure logout functionality
-- Rate limiting implemented using token bucket algorithm
+- JWT authentication using OAuth2 Resource Server with RSA-signed tokens, validated against issuer and audience
+- Tokens identify users by ID, so a session survives an email change
+- Single-use refresh tokens: each refresh issues a new pair and invalidates the token used
+- Logout revokes the access token and the refresh token
+- RSA key pairs stored in Redis with their private keys encrypted with AES-256-GCM, under a key derived from `OAUTH2_KEY_ENCRYPTION_SECRET` that is never stored
+- Scheduled key rotation: retired keys stay published in the JWKS until the tokens they signed expire
+- Rate limiting implemented using token bucket algorithm, with a stricter limit on login attempts
+- Login answers unknown emails and wrong passwords in the same way, to avoid revealing registered emails
 - HTTPS support to encrypt communication between clients and the server
 - Passwords are encrypted using BCrypt
 - Role-based access control for different endpoints
@@ -355,11 +364,12 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-    "usuario": {
+    "user": {
         "id": 1,
         "name": "John Doe",
         "email": "user@example.com",
-        "role": "USER"
+        "role": "USER",
+        "creationDate": "2026-10-15T10:30:00"
     },
     "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
     "tokenType": "Bearer",
@@ -435,53 +445,54 @@ Content-Type: application/json
 ## 📁 Project Structure
 
 ```
-src/
-├── main/
-│   ├── java/
-│   │   └── com/gplanet/commerce/api
-│   │       ├── configs/
-│   │       │   ├── app/
-│   │       │   │   ├── data/
-│   │       │   │   ├── docs/
-│   │       │   │   ├── health/
-│   │       │   │   └── props/
-│   │       │   ├── security/
-│   │       │   │   └── ratelimiting/
-│   │       │   └── web/
-│   │       ├── controllers/
-│   │       ├── dtos/
-│   │       │   ├── api/
-│   │       │   ├── auth/
-│   │       │   ├── jwks/
-│   │       │   ├── product/
-│   │       │   ├── purchase/
-│   │       │   └── user/
-│   │       ├── entities/
-│   │       ├── exceptions/
-│   │       ├── repositories/
-│   │       ├── services/
-│   │       └── utilities/
-│   └── resources/
-│       └── application.yml
-├── test/
-│   ├── java/
-│   │   └── com/gplanet/commerce/api/
-│   │       ├── configs/
-│   │       ├── integration/
-│   │       ├── controllers/
-│   │       ├── repositories/
-│   │       ├── security/
-│   │       ├── services/
-│   │       └── testutils/
-│   └── resources/
-│       └── application-test.yml
-├── docker-compose.yml
-├── docker-compose.db.yml
+├── .github/workflows/          # CI (quality checks, tests, images), deployment and health check
+├── docs/
+│   └── KNOWN_ISSUES.md         # Defects found in a code review and the plan that fixed them
+├── mysql-init/
+│   └── shopping_db.sql         # Database schema and seed data
+├── src/
+│   ├── main/
+│   │   ├── java/com/gplanet/commerce/api/
+│   │   │   ├── configs/
+│   │   │   │   ├── app/
+│   │   │   │   │   ├── data/
+│   │   │   │   │   ├── docs/
+│   │   │   │   │   ├── health/
+│   │   │   │   │   └── props/
+│   │   │   │   └── security/
+│   │   │   │       └── ratelimiting/
+│   │   │   ├── controllers/
+│   │   │   ├── dtos/
+│   │   │   │   ├── api/
+│   │   │   │   ├── auth/
+│   │   │   │   ├── jwks/
+│   │   │   │   ├── product/
+│   │   │   │   ├── purchase/
+│   │   │   │   └── user/
+│   │   │   ├── entities/
+│   │   │   ├── exceptions/
+│   │   │   ├── repositories/
+│   │   │   ├── services/
+│   │   │   └── utilities/
+│   │   └── resources/
+│   │       └── application.yml
+│   └── test/
+│       ├── java/com/gplanet/commerce/api/
+│       │   ├── configs/
+│       │   ├── controllers/
+│       │   ├── exceptions/
+│       │   ├── integration/
+│       │   ├── repositories/
+│       │   ├── security/
+│       │   ├── services/
+│       │   └── testutils/
+│       └── resources/
+│           └── application-test.yml
+├── docker-compose.yml          # Full stack with the published images
+├── docker-compose.db.yml       # MySQL and Redis for local development
 ├── docker-entry.sh
 ├── Dockerfile
 ├── Dockerfile.db
-├── mysql-init/
-│   └── shopping_db.sql
 └── pom.xml
 ```
 

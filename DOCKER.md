@@ -28,16 +28,15 @@ A robust e-commerce REST API built with Spring Boot that provides comprehensive 
 
 - **JWT Authentication & Authorization**
   - OAuth2 Resource Server with RSA-signed JWT tokens
-  - Access and refresh token system with automatic token rotation
-  - Token blacklisting and secure logout functionality
-  - RSA key pair generation, storage, and scheduled rotation
+  - Access tokens and single-use refresh tokens
+  - Token revocation on logout
+  - RSA key pair generation, encrypted storage, and scheduled rotation without downtime
   - OpenID Connect discovery endpoints and JWKS support
 
 - **Advanced Security & Rate Limiting**
   - Rate limiting with token bucket algorithm
-  - Role-based rate limits (Admin/User/Unauthenticated)
+  - Role-based rate limits for users, and per IP address limits for anonymous requests and login attempts
   - Redis-based token storage and blacklisting
-  - Automatic profile detection based on available SSL certificate
   - HTTPS configuration with SSL keystore
   - Environment-based profile activation
   - RSA-based JWT token signing and validation
@@ -88,7 +87,7 @@ OAUTH2_KEY_ENCRYPTION_SECRET=your_key_encryption_secret
 
 # OAuth2 Key Rotation (optional)
 OAUTH2_KEY_ROTATION_ENABLED=true
-OAUTH2_KEY_ROTATION_CRON=0 0 2 1 * ?
+OAUTH2_KEY_ROTATION_CRON="0 0 2 1 * ?"
 ```
 
 #### HTTPS support (optional)
@@ -276,11 +275,12 @@ Content-Type: application/json
 **Response:**
 ```json
 {
-    "usuario": {
+    "user": {
         "id": 1,
         "name": "John Doe",
         "email": "user@example.com",
-        "role": "USER"
+        "role": "USER",
+        "creationDate": "2026-10-15T10:30:00"
     },
     "token": "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...",
     "tokenType": "Bearer",
@@ -382,7 +382,7 @@ docker compose up -d --scale redis=1
 
 ## 🛠️ Technologies
 
-- **Backend Framework**: Spring Boot 3.4.9
+- **Backend Framework**: Spring Boot 3.5.9
 - **Language**: Java 21
 - **Security**: Spring Security with OAuth2 Resource Server
 - **Authentication**: JWT with RSA signing (NimbusDS JOSE+JWT)
@@ -399,7 +399,7 @@ docker compose up -d --scale redis=1
 ## 🔒 Security Features
 
 - **JWT Authentication**: OAuth2 Resource Server with RSA-signed tokens
-- **Token Management**: Access and refresh token system with automatic rotation
+- **Token Management**: Access tokens and single-use refresh tokens, revoked on logout
 - **Rate Limiting**: Role-based rate limits using token bucket algorithm
 - **Token Blacklisting**: Redis-based secure logout functionality
 - **Key Rotation**: Scheduled RSA key pair rotation for enhanced security

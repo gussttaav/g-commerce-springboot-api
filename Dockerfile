@@ -12,9 +12,6 @@ COPY checkstyle-rules.xml .
 COPY suppressions.xml .
 COPY pmd-ruleset.xml .
 
-# Make the mvnw script executable
-RUN chmod +x mvnw
-
 # Copy the source code
 COPY src ./src
 

@@ -40,10 +40,10 @@ jobs:
           cache: maven
 
       - name: Run Checkstyle
-        run: mvn checkstyle:check
+        run: ./mvnw -B checkstyle:check
 
       - name: Run PMD
-        run: mvn pmd:check
+        run: ./mvnw -B pmd:check
 
   test:
     runs-on: ubuntu-latest
@@ -61,11 +61,11 @@ jobs:
           cache: maven
 
       - name: Run tests
-        run: mvn test
+        run: ./mvnw -B test
 
       - name: Generate test report
         if: always()
-        run: mvn surefire-report:report-only
+        run: ./mvnw -B surefire-report:report-only
 
       - name: Upload test results
         if: always()

@@ -9,7 +9,12 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
+
+import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
+import javax.crypto.SecretKey;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,10 +24,11 @@ import org.springframework.http.HttpHeaders;
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.services.KeyStoreService;
+import com.nimbusds.jose.jwk.RSAKey;
 
 /**
  * Integration tests for signing key rotation: tokens must keep validating across a rotation
- * without restarting the application (KEY-1).
+ * without restarting the application (KEY-1). Also covers how private keys are stored (KEY-3).
  */
 class KeyRotationIntegrationTest extends AbstractIntegrationTest {
 
@@ -100,7 +106,7 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
         // Recreate what earlier versions left in Redis: an unregistered active key with a 30-day TTL
         String keyId = keyStoreService.rotateKeyPair().getKeyID();
         List<String> keyEntries = List.of(ACTIVE_KEY_ID_ENTRY, PUBLIC_KEY_ENTRY.formatted(keyId),
-                PRIVATE_KEY_ENTRY.formatted(keyId), ENCRYPTION_KEY_ENTRY.formatted(keyId));
+                PRIVATE_KEY_ENTRY.formatted(keyId));
         keyEntries.forEach(entry -> stringRedisTemplate.expire(entry, Duration.ofDays(30)));
         stringRedisTemplate.opsForSet().remove(KEY_IDS_ENTRY, keyId);
         String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
@@ -118,5 +124,38 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(status().isOk());
         mockMvc.perform(get(ENDPOINT_JWKS))
                 .andExpect(jsonPath("$.keys[0].kid").value(keyId));
+    }
+
+    @Test
+    void privateKeyIsStoredWithoutItsEncryptionKey() {
+        String keyId = keyStoreService.rotateKeyPair().getKeyID();
+
+        assertThat(stringRedisTemplate.opsForValue().get(PRIVATE_KEY_ENTRY.formatted(keyId))).isNotBlank();
+        assertThat(stringRedisTemplate.hasKey(ENCRYPTION_KEY_ENTRY.formatted(keyId))).isFalse();
+    }
+
+    @Test
+    void keyEncryptedByPreviousVersionIsReplacedOnStartup() throws Exception {
+        // Recreate what earlier versions stored: the private key encrypted with AES/ECB, next to its AES key
+        RSAKey legacyKey = keyStoreService.rotateKeyPair();
+        String legacyKeyId = legacyKey.getKeyID();
+        String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
+        SecretKey legacyEncryptionKey = KeyGenerator.getInstance("AES").generateKey();
+        Cipher legacyCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        legacyCipher.init(Cipher.ENCRYPT_MODE, legacyEncryptionKey);
+        String encodedPrivateKey = Base64.getEncoder().encodeToString(legacyKey.toRSAPrivateKey().getEncoded());
+        stringRedisTemplate.opsForValue().set(PRIVATE_KEY_ENTRY.formatted(legacyKeyId),
+                Base64.getEncoder().encodeToString(legacyCipher.doFinal(encodedPrivateKey.getBytes())));
+        stringRedisTemplate.opsForValue().set(ENCRYPTION_KEY_ENTRY.formatted(legacyKeyId),
+                Base64.getEncoder().encodeToString(legacyEncryptionKey.getEncoded()));
+
+        keyStoreService.initializeActiveKey();
+
+        // The exposed key no longer signs tokens and its AES key is gone from Redis
+        assertThat(keyStoreService.getOrCreateActiveKeyPair().getKeyID()).isNotEqualTo(legacyKeyId);
+        assertThat(stringRedisTemplate.hasKey(ENCRYPTION_KEY_ENTRY.formatted(legacyKeyId))).isFalse();
+        // Tokens it signed remain valid until they expire
+        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+                .andExpect(status().isOk());
     }
 }

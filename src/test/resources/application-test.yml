@@ -48,6 +48,8 @@ management:
 
 # Disable key rotation in tests
 oauth2:
+  key-encryption:
+    secret: test-secret-for-the-private-key-encryption
   key-rotation:
     enabled: false
 

@@ -16,11 +16,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.crypto.Cipher;
-import javax.crypto.KeyGenerator;
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -42,6 +37,9 @@ import lombok.extern.slf4j.Slf4j;
  * is no longer used for signing, but it remains available for verification (and is published in the JWKS)
  * until every token it signed has expired.
  * </p>
+ * <p>
+ * Private keys are stored encrypted by {@link PrivateKeyCipher}, whose key is not stored in Redis.
+ * </p>
  *
  * @author Gustavo
  * @version 1.0
@@ -52,18 +50,17 @@ import lombok.extern.slf4j.Slf4j;
 public class KeyStoreService {
 
     private static final String KEY_PAIR_PREFIX = "oauth2:keypair:";
-    private static final String ENCRYPTION_KEY_PREFIX = "oauth2:encryption:";
+    /** Earlier versions stored the AES key of each private key here, next to the encrypted private key. */
+    private static final String LEGACY_ENCRYPTION_KEY_PREFIX = "oauth2:encryption:";
     private static final String ACTIVE_KEY_ID = "oauth2:active_key_id";
     private static final String KEY_IDS = "oauth2:key_ids";
     private static final Duration RETIRED_KEY_GRACE_PERIOD = Duration.ofHours(1);
-    private static final String ENCRYPTION_ALGORITHM = "AES";
-    private static final String CIPHER_TRANSFORMATION = "AES/ECB/PKCS5Padding";
     private static final String RSA_ALGORITHM = "RSA";
     private static final int RSA_KEY_SIZE = 2048;
-    private static final int AES_KEY_SIZE = 256;
 
     private final StringRedisTemplate stringRedisTemplate;
     private final JwtProperties jwtProperties;
+    private final PrivateKeyCipher privateKeyCipher;
 
     /**
      * Ensures an active key pair exists when the application starts and that it never expires.
@@ -86,6 +83,10 @@ public class KeyStoreService {
 
     /**
      * Retrieves the active RSA key pair or creates a new one if none exists.
+     * <p>
+     * An active key that cannot be read is replaced by a new one, e.g. a key stored by an earlier version, which
+     * kept the AES key of the private key in Redis, or a key encrypted with a different secret.
+     * </p>
      *
      * @return RSAKey the active RSA key pair, including its private key
      */
@@ -96,7 +97,8 @@ public class KeyStoreService {
         }
         RSAKey activeKey = getKeyPair(activeKeyId);
         if (activeKey == null) {
-            log.warn("Key material for active key {} is missing, rotating to a new key pair", activeKeyId);
+            log.warn("Key material for active key {} is missing or unreadable, rotating to a new key pair",
+                    activeKeyId);
             return rotateKeyPair();
         }
         return activeKey;
@@ -126,7 +128,7 @@ public class KeyStoreService {
      * Retrieves a specific RSA key pair by its ID.
      *
      * @param keyId the key pair identifier
-     * @return RSAKey the retrieved RSA key pair, or null if it is missing or cannot be decoded
+     * @return RSAKey the retrieved RSA key pair, or null if it is missing or cannot be decrypted or decoded
      * @throws org.springframework.dao.DataAccessException if Redis cannot be read
      */
     public RSAKey getKeyPair(String keyId) {
@@ -136,14 +138,13 @@ public class KeyStoreService {
             if (encryptedPrivateKey == null || publicKey == null) {
                 return null;
             }
-            String decryptedPrivateKey = decryptPrivateKey(keyId, encryptedPrivateKey);
-            byte[] privBytes = Base64.getDecoder().decode(decryptedPrivateKey);
+            byte[] privBytes = privateKeyCipher.decrypt(keyId, encryptedPrivateKey);
             RSAPrivateKey priv = (RSAPrivateKey) KeyFactory.getInstance(RSA_ALGORITHM)
                     .generatePrivate(new PKCS8EncodedKeySpec(privBytes));
             return rsaKeyBuilder(keyId, decodePublicKey(publicKey)).privateKey(priv).build();
-        } catch (GeneralSecurityException | IllegalArgumentException | IllegalStateException ex) {
+        } catch (GeneralSecurityException | IllegalArgumentException ex) {
             // Unreadable key material. Redis errors propagate: they must not be mistaken for a missing key.
-            log.error("Failed to retrieve key pair for ID: {}", keyId, ex);
+            log.error("Failed to decrypt or decode key pair for ID: {}", keyId, ex);
             return null;
         }
     }
@@ -249,7 +250,8 @@ public class KeyStoreService {
      * Schedules a key pair for deletion once no token signed with it can still be valid.
      * <p>
      * The private key is kept for the same period: an instance that read it just before the rotation may
-     * still sign one last token with it, and that token remains verifiable.
+     * still sign one last token with it, and that token remains verifiable. The AES key that an earlier version
+     * may have stored for it is deleted right away.
      * </p>
      *
      * @param keyId the key pair identifier
@@ -259,6 +261,7 @@ public class KeyStoreService {
                 jwtProperties.getAccessExpirationMs(), jwtProperties.getRefreshExpirationMs());
         Duration retention = Duration.ofMillis(longestTokenLifetimeMs).plus(RETIRED_KEY_GRACE_PERIOD);
         keyPairEntries(keyId).forEach(entry -> stringRedisTemplate.expire(entry, retention));
+        stringRedisTemplate.delete(LEGACY_ENCRYPTION_KEY_PREFIX + keyId);
     }
 
     /**
@@ -274,73 +277,18 @@ public class KeyStoreService {
     }
 
     /**
-     * Stores an RSA key pair securely with encryption.
+     * Stores an RSA key pair, with its private key encrypted.
      *
      * @param keyId the key pair identifier
      * @param rsaKey the RSA key to store
      * @throws Exception if key storage operations fail
      */
     private void storeKeyPairSecurely(String keyId, RSAKey rsaKey) throws Exception {
-        SecretKey encryptionKey = generateEncryptionKey();
-        String encryptionKeyEncoded = Base64.getEncoder().encodeToString(encryptionKey.getEncoded());
-        stringRedisTemplate.opsForValue().set(encryptionKeyEntry(keyId), encryptionKeyEncoded);
-
-        String privateKeyEncoded = Base64.getEncoder().encodeToString(rsaKey.toRSAPrivateKey().getEncoded());
-        String encryptedPrivateKey = encryptPrivateKey(encryptionKey, privateKeyEncoded);
+        String encryptedPrivateKey = privateKeyCipher.encrypt(keyId, rsaKey.toRSAPrivateKey().getEncoded());
         stringRedisTemplate.opsForValue().set(privateKeyEntry(keyId), encryptedPrivateKey);
 
         String publicKeyEncoded = Base64.getEncoder().encodeToString(rsaKey.toRSAPublicKey().getEncoded());
         stringRedisTemplate.opsForValue().set(publicKeyEntry(keyId), publicKeyEncoded);
-    }
-
-    /**
-     * Generates an AES encryption key for securing private keys.
-     *
-     * @return SecretKey the generated AES encryption key
-     * @throws NoSuchAlgorithmException if AES algorithm is not available
-     */
-    private SecretKey generateEncryptionKey() throws NoSuchAlgorithmException {
-        KeyGenerator keyGenerator = KeyGenerator.getInstance(ENCRYPTION_ALGORITHM);
-        keyGenerator.init(AES_KEY_SIZE);
-        return keyGenerator.generateKey();
-    }
-
-    /**
-     * Encrypts a private key using AES encryption.
-     *
-     * @param encryptionKey the AES encryption key
-     * @param privateKey the private key to encrypt
-     * @return String the Base64-encoded encrypted private key
-     * @throws Exception if encryption operations fail
-     */
-    private String encryptPrivateKey(SecretKey encryptionKey, String privateKey) throws Exception {
-        Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-        cipher.init(Cipher.ENCRYPT_MODE, encryptionKey);
-        byte[] encryptedBytes = cipher.doFinal(privateKey.getBytes());
-        return Base64.getEncoder().encodeToString(encryptedBytes);
-    }
-
-    /**
-     * Decrypts a private key using the corresponding encryption key.
-     *
-     * @param keyId the key pair identifier
-     * @param encryptedPrivateKey the encrypted private key
-     * @return String the decrypted private key
-     * @throws GeneralSecurityException if decryption operations fail
-     * @throws IllegalStateException if the encryption key is missing
-     */
-    private String decryptPrivateKey(String keyId, String encryptedPrivateKey) throws GeneralSecurityException {
-        String encryptionKeyEncoded = stringRedisTemplate.opsForValue().get(encryptionKeyEntry(keyId));
-        if (encryptionKeyEncoded == null) {
-            throw new IllegalStateException("Encryption key not found for key ID: " + keyId);
-        }
-        byte[] encryptionKeyBytes = Base64.getDecoder().decode(encryptionKeyEncoded);
-        SecretKey encryptionKey = new SecretKeySpec(encryptionKeyBytes, ENCRYPTION_ALGORITHM);
-        Cipher cipher = Cipher.getInstance(CIPHER_TRANSFORMATION);
-        cipher.init(Cipher.DECRYPT_MODE, encryptionKey);
-        byte[] encryptedBytes = Base64.getDecoder().decode(encryptedPrivateKey);
-        byte[] decryptedBytes = cipher.doFinal(encryptedBytes);
-        return new String(decryptedBytes);
     }
 
     /**
@@ -371,7 +319,7 @@ public class KeyStoreService {
     }
 
     private static List<String> keyPairEntries(String keyId) {
-        return List.of(publicKeyEntry(keyId), privateKeyEntry(keyId), encryptionKeyEntry(keyId));
+        return List.of(publicKeyEntry(keyId), privateKeyEntry(keyId));
     }
 
     private static String publicKeyEntry(String keyId) {
@@ -380,9 +328,5 @@ public class KeyStoreService {
 
     private static String privateKeyEntry(String keyId) {
         return KEY_PAIR_PREFIX + keyId + ":private";
-    }
-
-    private static String encryptionKeyEntry(String keyId) {
-        return ENCRYPTION_KEY_PREFIX + keyId;
     }
 }

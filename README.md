@@ -128,6 +128,9 @@ The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce 
    JWT_ACCESS_EXPIRATION_MS=3600000
    JWT_REFRESH_EXPIRATION_MS=86400000
    
+   # Encryption of the JWT signing keys stored in Redis (required, e.g. `openssl rand -base64 32`)
+   OAUTH2_KEY_ENCRYPTION_SECRET=your_key_encryption_secret
+   
    # OAuth2 Key Rotation (optional)
    OAUTH2_KEY_ROTATION_ENABLED=true
    OAUTH2_KEY_ROTATION_CRON=0 0 2 1 * ?

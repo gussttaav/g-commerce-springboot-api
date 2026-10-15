@@ -37,6 +37,10 @@ jwt:
 
 # OAuth2 Configuration
 oauth2:
+  key-encryption:
+    # Required. The key that encrypts the RSA private keys stored in Redis is derived from this secret, which every
+    # instance must share. Generate it with: openssl rand -base64 32
+    secret: ${OAUTH2_KEY_ENCRYPTION_SECRET:}
   key-rotation:
     enabled: ${OAUTH2_KEY_ROTATION_ENABLED:true}
     cron: ${OAUTH2_KEY_ROTATION_CRON:0 0 2 1 * ?}

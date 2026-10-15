@@ -8,6 +8,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.startsWith;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
@@ -33,7 +34,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Captor;
-import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.RedisConnectionFailureException;
@@ -42,6 +42,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
+import com.gplanet.commerce.api.configs.app.props.KeyEncryptionProperties;
 import com.nimbusds.jose.jwk.JWK;
 import com.nimbusds.jose.jwk.RSAKey;
 
@@ -52,7 +53,6 @@ class KeyStoreServiceTest {
     private static final String RETIRED_KEY_ID = "retired-key-id";
     private static final String EXPIRED_KEY_ID = "expired-key-id";
     private static final int RSA_KEY_SIZE = 2048;
-    private static final int AES_KEY_SIZE = 256;
     private static final Duration ACCESS_TOKEN_LIFETIME = Duration.ofHours(1);
     private static final Duration REFRESH_TOKEN_LIFETIME = Duration.ofHours(24);
     private static final Duration RETIRED_KEY_RETENTION = Duration.ofHours(25);
@@ -61,7 +61,12 @@ class KeyStoreServiceTest {
     private static final String KEY_IDS_KEY = "oauth2:key_ids";
     private static final String KEYPAR_PRIVATE_PATTERN = "oauth2:keypair:%s:private";
     private static final String KEYPAR_PUBLIC_PATTERN = "oauth2:keypair:%s:public";
-    private static final String ENCRYPTION_PATTERN = "oauth2:encryption:%s";
+    private static final String LEGACY_ENCRYPTION_PATTERN = "oauth2:encryption:%s";
+    private static final String LEGACY_ENCRYPTION_PREFIX = "oauth2:encryption:";
+
+    // Deriving the encryption key is deliberately slow, so the tests share these ciphers
+    private static final PrivateKeyCipher PRIVATE_KEY_CIPHER = privateKeyCipher("test-secret-of-the-key-store-service");
+    private static final PrivateKeyCipher OTHER_SECRET_CIPHER = privateKeyCipher("another-secret-of-the-key-store");
 
     @Mock
     private StringRedisTemplate stringRedisTemplate;
@@ -78,13 +83,14 @@ class KeyStoreServiceTest {
     @Captor
     private ArgumentCaptor<Collection<String>> deletedKeysCaptor;
 
-    @InjectMocks
+    @Captor
+    private ArgumentCaptor<String> storedPrivateKeyCaptor;
+
     private KeyStoreService keyStoreService;
 
     private RSAKey testRsaKey;
     private String encryptedPrivateKey;
     private String publicKeyEncoded;
-    private String encryptionKeyEncoded;
 
     @BeforeEach
     void setUp() throws Exception {
@@ -92,6 +98,7 @@ class KeyStoreServiceTest {
         lenient().when(stringRedisTemplate.opsForSet()).thenReturn(setOperations);
         lenient().when(jwtProperties.getAccessExpirationMs()).thenReturn(ACCESS_TOKEN_LIFETIME.toMillis());
         lenient().when(jwtProperties.getRefreshExpirationMs()).thenReturn(REFRESH_TOKEN_LIFETIME.toMillis());
+        keyStoreService = new KeyStoreService(stringRedisTemplate, jwtProperties, PRIVATE_KEY_CIPHER);
 
         // Create a proper RSA key for testing
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -103,33 +110,27 @@ class KeyStoreServiceTest {
                 .keyID(TEST_KEY_ID)
                 .build();
 
-        // Create a proper AES encryption key
-        KeyGenerator keyGenerator = KeyGenerator.getInstance("AES");
-        keyGenerator.init(AES_KEY_SIZE);
-        SecretKey aesKey = keyGenerator.generateKey();
-        encryptionKeyEncoded = Base64.getEncoder().encodeToString(aesKey.getEncoded());
-
-        // Encrypt the private key using AES (simulating what the service does)
-        String privateKeyEncoded = Base64.getEncoder().encodeToString(
-            testRsaKey.toRSAPrivateKey().getEncoded());
-        encryptedPrivateKey = encryptWithAES(privateKeyEncoded, aesKey);
+        // Encrypt the private key as the service does
+        encryptedPrivateKey = PRIVATE_KEY_CIPHER.encrypt(TEST_KEY_ID, testRsaKey.toRSAPrivateKey().getEncoded());
 
         // Encode the public key
         publicKeyEncoded = Base64.getEncoder().encodeToString(
             testRsaKey.toRSAPublicKey().getEncoded());
     }
 
-    private String encryptWithAES(String data, SecretKey key) throws Exception {
-        Cipher cipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
-        cipher.init(Cipher.ENCRYPT_MODE, key);
-        byte[] encryptedBytes = cipher.doFinal(data.getBytes());
-        return Base64.getEncoder().encodeToString(encryptedBytes);
+    private static PrivateKeyCipher privateKeyCipher(String secret) {
+        KeyEncryptionProperties properties = new KeyEncryptionProperties();
+        properties.setSecret(secret);
+        return new PrivateKeyCipher(properties);
     }
 
     private void stubStoredKeyPair(String keyId) {
-        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, keyId))).thenReturn(encryptedPrivateKey);
+        stubStoredKeyPair(keyId, encryptedPrivateKey);
+    }
+
+    private void stubStoredKeyPair(String keyId, String storedPrivateKey) {
+        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, keyId))).thenReturn(storedPrivateKey);
         when(valueOperations.get(String.format(KEYPAR_PUBLIC_PATTERN, keyId))).thenReturn(publicKeyEncoded);
-        when(valueOperations.get(String.format(ENCRYPTION_PATTERN, keyId))).thenReturn(encryptionKeyEncoded);
     }
 
     @Test
@@ -176,7 +177,7 @@ class KeyStoreServiceTest {
         assertThat(result.getKeyID()).isEqualTo(TEST_KEY_ID);
         verify(stringRedisTemplate).delete(deletedKeysCaptor.capture());
         assertThat(deletedKeysCaptor.getValue())
-            .hasSize(3)
+            .hasSize(2)
             .noneMatch(key -> key.contains(TEST_KEY_ID));
     }
 
@@ -222,7 +223,46 @@ class KeyStoreServiceTest {
         // Assert - Previous key outlives the longest token lifetime (24h) plus a grace period
         verify(stringRedisTemplate).expire(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID), RETIRED_KEY_RETENTION);
         verify(stringRedisTemplate).expire(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID), RETIRED_KEY_RETENTION);
-        verify(stringRedisTemplate).expire(String.format(ENCRYPTION_PATTERN, TEST_KEY_ID), RETIRED_KEY_RETENTION);
+    }
+
+    @Test
+    void rotateKeyPairStoresPrivateKeyEncryptedWithoutItsEncryptionKey() throws Exception {
+        // Arrange
+        when(valueOperations.get(ACTIVE_KEY_ID_KEY)).thenReturn(null);
+
+        // Act
+        RSAKey result = keyStoreService.rotateKeyPair();
+
+        // Assert - Only the configured secret decrypts the stored private key, and no AES key is stored
+        verify(valueOperations).set(
+            eq(String.format(KEYPAR_PRIVATE_PATTERN, result.getKeyID())), storedPrivateKeyCaptor.capture());
+        assertThat(PRIVATE_KEY_CIPHER.decrypt(result.getKeyID(), storedPrivateKeyCaptor.getValue()))
+            .isEqualTo(result.toRSAPrivateKey().getEncoded());
+        verify(valueOperations, never()).set(startsWith(LEGACY_ENCRYPTION_PREFIX), anyString());
+    }
+
+    @Test
+    void getOrCreateActiveKeyPairReplacesKeyEncryptedByPreviousVersion() throws Exception {
+        // Arrange - Earlier versions encrypted private keys with AES/ECB and stored the AES key in Redis
+        SecretKey legacyEncryptionKey = KeyGenerator.getInstance("AES").generateKey();
+        Cipher legacyCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        legacyCipher.init(Cipher.ENCRYPT_MODE, legacyEncryptionKey);
+        String encodedPrivateKey = Base64.getEncoder().encodeToString(testRsaKey.toRSAPrivateKey().getEncoded());
+        String legacyPrivateKey = Base64.getEncoder().encodeToString(
+            legacyCipher.doFinal(encodedPrivateKey.getBytes()));
+        when(valueOperations.get(ACTIVE_KEY_ID_KEY)).thenReturn(TEST_KEY_ID);
+        stubStoredKeyPair(TEST_KEY_ID, legacyPrivateKey);
+        lenient().when(valueOperations.get(String.format(LEGACY_ENCRYPTION_PATTERN, TEST_KEY_ID)))
+            .thenReturn(Base64.getEncoder().encodeToString(legacyEncryptionKey.getEncoded()));
+
+        // Act
+        RSAKey result = keyStoreService.getOrCreateActiveKeyPair();
+
+        // Assert - The exposed key is retired and its AES key deleted
+        assertThat(result.getKeyID()).isNotEqualTo(TEST_KEY_ID);
+        verify(valueOperations).set(ACTIVE_KEY_ID_KEY, result.getKeyID());
+        verify(stringRedisTemplate).expire(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID), RETIRED_KEY_RETENTION);
+        verify(stringRedisTemplate).delete(String.format(LEGACY_ENCRYPTION_PATTERN, TEST_KEY_ID));
     }
 
     @Test
@@ -308,7 +348,6 @@ class KeyStoreServiceTest {
         verify(stringRedisTemplate).persist(ACTIVE_KEY_ID_KEY);
         verify(stringRedisTemplate).persist(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID));
         verify(stringRedisTemplate).persist(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID));
-        verify(stringRedisTemplate).persist(String.format(ENCRYPTION_PATTERN, TEST_KEY_ID));
         verify(setOperations).add(KEY_IDS_KEY, TEST_KEY_ID);
     }
 
@@ -353,12 +392,7 @@ class KeyStoreServiceTest {
     @Test
     void getKeyPairInvalidBase64ReturnsNull() {
         // Arrange - Provide invalid Base64 string
-        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID)))
-            .thenReturn("invalid-base64-with-hyphens-like-this");
-        when(valueOperations.get(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID)))
-            .thenReturn(publicKeyEncoded);
-        when(valueOperations.get(String.format(ENCRYPTION_PATTERN, TEST_KEY_ID)))
-            .thenReturn(encryptionKeyEncoded);
+        stubStoredKeyPair(TEST_KEY_ID, "invalid-base64-with-hyphens-like-this");
 
         // Act
         RSAKey result = keyStoreService.getKeyPair(TEST_KEY_ID);
@@ -368,35 +402,27 @@ class KeyStoreServiceTest {
     }
 
     @Test
-    void getKeyPairMissingEncryptionKeyReturnsNull() {
+    void getKeyPairEncryptedWithAnotherSecretReturnsNull() throws Exception {
         // Arrange
-        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID)))
-            .thenReturn(encryptedPrivateKey);
-        when(valueOperations.get(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID)))
-            .thenReturn(publicKeyEncoded);
-        when(valueOperations.get(String.format(ENCRYPTION_PATTERN, TEST_KEY_ID))).thenReturn(null);
+        stubStoredKeyPair(TEST_KEY_ID,
+            OTHER_SECRET_CIPHER.encrypt(TEST_KEY_ID, testRsaKey.toRSAPrivateKey().getEncoded()));
 
         // Act
         RSAKey result = keyStoreService.getKeyPair(TEST_KEY_ID);
 
-        // Assert - Should return null when encryption key is missing
+        // Assert
         assertNull(result);
     }
 
     @Test
-    void getKeyPairInvalidEncryptionKeyReturnsNull() {
-        // Arrange - Provide invalid Base64 for encryption key
-        when(valueOperations.get(String.format(KEYPAR_PRIVATE_PATTERN, TEST_KEY_ID)))
-            .thenReturn(encryptedPrivateKey);
-        when(valueOperations.get(String.format(KEYPAR_PUBLIC_PATTERN, TEST_KEY_ID)))
-            .thenReturn(publicKeyEncoded);
-        when(valueOperations.get(String.format(ENCRYPTION_PATTERN, TEST_KEY_ID)))
-            .thenReturn("invalid-base64-encryption-key");
+    void getKeyPairWithPrivateKeyOfAnotherKeyIdReturnsNull() {
+        // Arrange - The private key encrypted for TEST_KEY_ID is stored under another key ID
+        stubStoredKeyPair(RETIRED_KEY_ID);
 
         // Act
-        RSAKey result = keyStoreService.getKeyPair(TEST_KEY_ID);
+        RSAKey result = keyStoreService.getKeyPair(RETIRED_KEY_ID);
 
-        // Assert - Should return null when encryption key is invalid
+        // Assert
         assertNull(result);
     }
 }

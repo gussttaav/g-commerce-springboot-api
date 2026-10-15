@@ -83,6 +83,9 @@ JWT_AUDIENCE=g-commerce-api
 JWT_ACCESS_EXPIRATION_MS=3600000
 JWT_REFRESH_EXPIRATION_MS=86400000
 
+# Encryption of the JWT signing keys stored in Redis (required, e.g. `openssl rand -base64 32`)
+OAUTH2_KEY_ENCRYPTION_SECRET=your_key_encryption_secret
+
 # OAuth2 Key Rotation (optional)
 OAUTH2_KEY_ROTATION_ENABLED=true
 OAUTH2_KEY_ROTATION_CRON=0 0 2 1 * ?
@@ -249,6 +252,7 @@ GET  /actuator/prometheus          # Prometheus-formatted metrics
 | `JWT_AUDIENCE` | JWT token audience (required on incoming tokens) | g-commerce-api | No |
 | `JWT_ACCESS_EXPIRATION_MS` | Access token expiration (ms) | 3600000 | No |
 | `JWT_REFRESH_EXPIRATION_MS` | Refresh token expiration (ms) | 86400000 | No |
+| `OAUTH2_KEY_ENCRYPTION_SECRET` | Secret (at least 32 characters) from which the key that encrypts the JWT signing keys in Redis is derived; changing it rotates the signing key | - | Yes |
 | `OAUTH2_KEY_ROTATION_ENABLED` | Enable automatic key rotation | true | No |
 | `OAUTH2_KEY_ROTATION_CRON` | Key rotation schedule | 0 0 2 1 * ? | No |
 | `SPRING_PROFILES_ACTIVE` | Set "https" to enable SSL, "http" to disable | http | No |
@@ -399,6 +403,7 @@ docker compose up -d --scale redis=1
 - **Rate Limiting**: Role-based rate limits using token bucket algorithm
 - **Token Blacklisting**: Redis-based secure logout functionality
 - **Key Rotation**: Scheduled RSA key pair rotation for enhanced security
+- **Key Encryption**: RSA private keys are stored in Redis encrypted with AES-256-GCM, under a key derived from a secret that is never stored
 - **HTTPS Support**: SSL/TLS encryption for secure communication
 - **Password Encryption**: BCrypt hashing for user passwords
 - **Role-based Access Control**: Granular permissions for different user roles

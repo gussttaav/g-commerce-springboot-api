@@ -8,21 +8,7 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 
 ## Issues
 
-### JWT key management
-
-| ID | Severity | Issue |
-|----|----------|-------|
-| KEY-3 | Medium | **Private-key encryption gives no protection.** The AES key that encrypts each RSA private key is stored in the same Redis instance right next to the ciphertext (`oauth2:encryption:{kid}`), and the cipher uses ECB mode (`AES/ECB/PKCS5Padding`). |
-
-### Configuration and polish
-
-| ID | Severity | Issue |
-|----|----------|-------|
-| OPS-1 | Low | **`SslProfileDetector` overrides `SPRING_PROFILES_ACTIVE`** (which the README tells users to set), and its classpath check uses `ClassPathResource.getFile()`, which throws inside a packaged jar. |
-| OPS-2 | Low | **Mixed-language API output.** Several error messages are in Spanish ("Ha ocurrido un error inesperado", "Error de validación"), plus leftover Spanish identifiers (`toProductoResponseDTO`, test helpers) and `spring.application.name: gestion-tienda`. |
-| OPS-3 | Low | **README is out of date.** Wrong Spring Boot version, login response shows `usuario` (now `user`), single-test example uses `UsuarioControllerTest`, and the HTTPS instructions don't match OPS-1. |
-| OPS-4 | Low | **CI only runs on pushes to `main`.** Pull requests get no Checkstyle/PMD/test feedback before merging. |
-| OPS-5 | Low | **`mvnw` is not executable.** It is committed with mode `100644`, so `./mvnw` fails with "Permission denied" on Linux/macOS (the Dockerfile works around it with `chmod +x`). |
+All the issues found in the review are fixed. The fix plan below summarizes how, and the commits that fixed each issue reference its ID.
 
 ## Fix plan
 
@@ -40,13 +26,8 @@ Anonymous requests (`AnonymousAuthenticationToken` included) are limited per cli
 ### Phase 4 — Functional correctness (FUN-1 … FUN-5) — done
 A registration without a role gets the `USER` role, and the entities declare the `NOT NULL` columns of `mysql-init/shopping_db.sql`, so the H2 test schema rejects the same nulls as MySQL. Purchases only find active products: an inactive (removed) product is reported as not found, with its ID in the message. Purchase items require `productId` and `quantity`, and a null item is rejected. The listings validate their paging parameters: `sort` must be one of the fields the listing documents (products `name`, `price`; users `email`, `name`, `creationDate`; purchases `date`, `total`), `page` must not be negative and `size` must be between 1 and 100 (`PaginatedResponse.MAX_PAGE_SIZE`); invalid values get a 400 whose details name the parameter. Tokens identify the user by ID in `sub`, with the email as an informative `email` claim, so a session survives an email change, and a refresh token can no longer issue tokens to whoever registers its user's old email. Tokens with an email as subject, issued before this change, are rejected with 401, so their users have to sign in again.
 
-### Phase 5 — Hardening and polish (KEY-3, OPS-1 … OPS-5)
-1. Encrypt private keys with AES-GCM using a key derived from an environment secret (e.g. `OAUTH2_KEY_ENCRYPTION_SECRET`), never stored in Redis (KEY-3).
-2. Only force the `https` profile when no profile is set explicitly; use `Resource.exists()` (OPS-1).
-3. Translate remaining Spanish messages/identifiers; rename the application (OPS-2).
-4. Add a `pull_request` trigger for the quality and test jobs (OPS-4).
-5. `git update-index --chmod=+x mvnw` and drop the `chmod` from the Dockerfile (OPS-5).
-5. Refresh the README (OPS-3) last, so it describes the fixed behavior.
+### Phase 5 — Hardening and polish (KEY-3, OPS-1 … OPS-5) — done
+RSA private keys are encrypted with AES-256-GCM under a key derived with PBKDF2 from `OAUTH2_KEY_ENCRYPTION_SECRET`, which is required (at least 32 characters) and never stored; each encryption uses a random IV and binds the key ID as associated data. A key stored by an earlier version cannot be decrypted, so it is rotated out on startup: it stops signing, its public key stays published until the tokens it signed expire, and its AES key is deleted from Redis. `SslProfileDetector` runs before the configuration files are loaded and only sets the default profile, `https` when a keystore exists at `/certs/keystore.p12` or on the classpath (checked with `Resource.exists()`) and `http` otherwise, so a profile set explicitly always wins; the keystore found becomes the default key store of the `https` profile (`SSL_KEY_STORE`). Error and validation messages, identifiers and test names are in English, and the application is named `g-commerce-api`; the database keeps its Spanish table and column names. Pull requests run the quality checks and the tests, while images are only built and deployed from pushes to `main`. `mvnw` is executable, and CI and the Dockerfile use it as is. The README describes the current behavior.
 
 ### Beyond bug fixes (portfolio improvements to consider)
 - **Flyway migrations** instead of `mysql-init/shopping_db.sql`, so schema and entities can't drift apart silently.

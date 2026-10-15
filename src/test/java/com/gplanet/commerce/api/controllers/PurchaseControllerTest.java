@@ -2,7 +2,7 @@ package com.gplanet.commerce.api.controllers;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PURCHASES;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
@@ -59,8 +59,8 @@ class PurchaseControllerTest {
     
     public static final BigDecimal PRODUCT_PRICE_50 = new BigDecimal("50.00");
     public static final BigDecimal PRODUCT_PRICE_75 = new BigDecimal("75.00");
-    public static final BigDecimal COMPRA_TOTAL_100 = new BigDecimal("100.00");
-    public static final BigDecimal COMPRA_TOTAL_150 = new BigDecimal("150.00");
+    public static final BigDecimal PURCHASE_TOTAL_100 = new BigDecimal("100.00");
+    public static final BigDecimal PURCHASE_TOTAL_150 = new BigDecimal("150.00");
     private static final Long TEST_USER_ID = 1L;
     private static final Long TEST_ADMIN_ID = 2L;
     // Access tokens identify the user by ID, which is the name of the authentication
@@ -101,7 +101,7 @@ class PurchaseControllerTest {
             .thenReturn(responseDTO);
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_COMPRAS)
+        mockMvc.perform(post(ENDPOINT_PURCHASES)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(requestDTO)))
             .andExpect(status().isOk())
@@ -123,7 +123,7 @@ class PurchaseControllerTest {
     @DisplayName("Should return 400 when a product of the purchase is incomplete")
     void createPurchaseIncompleteProductReturnsBadRequest(String request) throws Exception {
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_COMPRAS)
+        mockMvc.perform(post(ENDPOINT_PURCHASES)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(request))
             .andExpect(status().isBadRequest())
@@ -139,7 +139,7 @@ class PurchaseControllerTest {
         PurchaseDTO validPurchaseDTO = createValidPurchaseDTO();
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_COMPRAS)
+        mockMvc.perform(post(ENDPOINT_PURCHASES)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(validPurchaseDTO)))
             .andExpect(status().isUnauthorized());
@@ -167,7 +167,7 @@ class PurchaseControllerTest {
             .thenReturn(page);
 
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", SORT_FIELD_DATE)
@@ -204,7 +204,7 @@ class PurchaseControllerTest {
             .thenReturn(page);
 
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .param("page", "0")
                 .param("size", "10")
                 .param("sort", SORT_FIELD_DATE)
@@ -226,7 +226,7 @@ class PurchaseControllerTest {
     @DisplayName("Should return 400 when a paging parameter is invalid")
     void listPurchasesInvalidPagingParameterReturnsBadRequest(String parameter, String value) throws Exception {
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .param(parameter, value))
             .andExpect(status().isBadRequest())
             .andExpect(errorDetailContains(parameter));
@@ -236,33 +236,33 @@ class PurchaseControllerTest {
 
     // Helper methods
     private PurchaseDTO createValidPurchaseDTO() {
-        List<PurchaseProductDTO> productos = new ArrayList<>();
+        List<PurchaseProductDTO> products = new ArrayList<>();
         
-        PurchaseProductDTO producto1 = new PurchaseProductDTO(1L, 2);
-        PurchaseProductDTO producto2 = new PurchaseProductDTO(2L, 1);
+        PurchaseProductDTO product1 = new PurchaseProductDTO(1L, 2);
+        PurchaseProductDTO product2 = new PurchaseProductDTO(2L, 1);
         
-        productos.add(producto1);
-        productos.add(producto2);
+        products.add(product1);
+        products.add(product2);
         
-        return new PurchaseDTO(productos);
+        return new PurchaseDTO(products);
     }
 
     private PurchaseResponseDTO createMockPurchaseResponseDTO() {
-        List<PurchaseProductResponseDTO> productos = new ArrayList<>();
+        List<PurchaseProductResponseDTO> products = new ArrayList<>();
         
-        PurchaseProductResponseDTO producto1 = new PurchaseProductResponseDTO(
-            1L, "Producto 1", PRODUCT_PRICE_50, 2, COMPRA_TOTAL_100
+        PurchaseProductResponseDTO product1 = new PurchaseProductResponseDTO(
+            1L, "Product 1", PRODUCT_PRICE_50, 2, PURCHASE_TOTAL_100
         );
         
-        PurchaseProductResponseDTO producto2 = new PurchaseProductResponseDTO(
-            2L, "Producto 2", PRODUCT_PRICE_50, 1, PRODUCT_PRICE_50
+        PurchaseProductResponseDTO product2 = new PurchaseProductResponseDTO(
+            2L, "Product 2", PRODUCT_PRICE_50, 1, PRODUCT_PRICE_50
         );
         
-        productos.add(producto1);
-        productos.add(producto2);
+        products.add(product1);
+        products.add(product2);
         
         return new PurchaseResponseDTO(
-            1L, "Test User", LocalDateTime.now(), COMPRA_TOTAL_150, productos
+            1L, "Test User", LocalDateTime.now(), PURCHASE_TOTAL_150, products
         );
     }
 
@@ -273,14 +273,14 @@ class PurchaseControllerTest {
         PurchaseResponseDTO purchase1 = createMockPurchaseResponseDTO();
         
         // Second purchase with different data
-        List<PurchaseProductResponseDTO> productos2 = new ArrayList<>();
-        PurchaseProductResponseDTO producto = new PurchaseProductResponseDTO(
-            3L, "Producto 3", PRODUCT_PRICE_75, 1, PRODUCT_PRICE_75
+        List<PurchaseProductResponseDTO> secondPurchaseProducts = new ArrayList<>();
+        PurchaseProductResponseDTO product = new PurchaseProductResponseDTO(
+            3L, "Product 3", PRODUCT_PRICE_75, 1, PRODUCT_PRICE_75
         );
-        productos2.add(producto);
+        secondPurchaseProducts.add(product);
         
         PurchaseResponseDTO purchase2 = new PurchaseResponseDTO(
-            2L, "Test User", LocalDateTime.now().minusDays(1), PRODUCT_PRICE_75, productos2
+            2L, "Test User", LocalDateTime.now().minusDays(1), PRODUCT_PRICE_75, secondPurchaseProducts
         );
         
         purchases.add(purchase1);

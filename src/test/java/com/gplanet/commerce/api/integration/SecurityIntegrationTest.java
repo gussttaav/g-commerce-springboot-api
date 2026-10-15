@@ -1,7 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PURCHASES;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -23,30 +23,30 @@ import com.gplanet.commerce.api.entities.User;
 class SecurityIntegrationTest extends AbstractIntegrationTest {
     
     @Test
-    void accederEndpointPublicoSinAutenticacionPermitido() throws Exception {
-        UserDTO usuarioDTO = new UserDTO("New User", "new@example.com", "password123");
+    void publicEndpointWithoutAuthenticationIsAllowed() throws Exception {
+        UserDTO userDTO = new UserDTO("New User", "new@example.com", "password123");
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(usuarioDTO)))
+                .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
     }
     
     @Test
-    void accederEndpointProtegidoSinAutenticacionDenegado() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS))
+    void protectedEndpointWithoutAuthenticationIsDenied() throws Exception {
+        mockMvc.perform(get(ENDPOINT_PURCHASES))
                 .andExpect(status().isUnauthorized());
     }
     
     @Test
-    void accederEndpointAdminUsuarioNormalForbidden() throws Exception {
+    void adminEndpointWithRegularUserIsForbidden() throws Exception {
         // Create regular user using the helper method which properly handles password encoding
-        crearUsuario("Regular User", "user@example.com", "Password123!", User.Role.USER);
+        createUser("Regular User", "user@example.com", "Password123!", User.Role.USER);
         
         // Use the JWT token obtained through proper authentication flow
-        String jwtToken = obtenerJwtToken("user@example.com", "Password123!");
+        String jwtToken = obtainJwtToken("user@example.com", "Password123!");
         
-        mockMvc.perform(patch(String.format("%s/1/role", ENDPOINT_USUARIOS))
+        mockMvc.perform(patch(String.format("%s/1/role", ENDPOINT_USERS))
                 .header(HttpHeaders.AUTHORIZATION, jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))

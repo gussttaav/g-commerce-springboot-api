@@ -1,8 +1,8 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static org.hamcrest.Matchers.hasItems;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -41,7 +41,7 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     private static final String ADMIN_ROLE = "ADMIN";
 
     private String createChangeRoleRequest(Long userId) {
-        return String.format("%s/%d/role", ENDPOINT_USUARIOS, userId);
+        return String.format("%s/%d/role", ENDPOINT_USERS, userId);
     }
 
     public static ResultMatcher userName(String name) throws Exception {
@@ -57,12 +57,12 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void registroUsuarioDatosValidosRetornaUsuarioCreado() throws Exception {
+    void registerUserValidDataReturnsCreatedUser() throws Exception {
         // Arrange
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk())
@@ -71,10 +71,10 @@ class UserIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(userName(TEST_USER_NAME));
         
         // Verify database
-        User usuarioGuardado = userRepository.findByEmail(TEST_EMAIL)
-            .orElseThrow(() -> new AssertionError("Usuario no encontrado en la base de datos"));
-        assertEquals(User.Role.USER, usuarioGuardado.getRole());
-        assertTrue(passwordEncoder.matches(TEST_PASSWORD, usuarioGuardado.getPassword()));
+        User savedUser = userRepository.findByEmail(TEST_EMAIL)
+            .orElseThrow(() -> new AssertionError("User not found in the database"));
+        assertEquals(User.Role.USER, savedUser.getRole());
+        assertTrue(passwordEncoder.matches(TEST_PASSWORD, savedUser.getPassword()));
     }
     
     @Test
@@ -85,7 +85,7 @@ class UserIntegrationTest extends AbstractIntegrationTest {
             """.formatted(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(request))
                 .andExpect(status().isOk())
@@ -96,19 +96,19 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void registroAdminDatosValidosRetornaAdminCreado() throws Exception {
+    void registerAdminValidDataReturnsCreatedAdmin() throws Exception {
         // Arrange
         final String newEmail = "new.admin@example.com";
         UserDTO adminDTO = new UserDTO(
                 "New Admin", 
                 newEmail, 
                 "admin123", User.Role.ADMIN);
-        crearUsuarioAdmin();
+        createAdminUser();
 
-        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(adminDTO)))
@@ -118,16 +118,16 @@ class UserIntegrationTest extends AbstractIntegrationTest {
                 
         // Verify database
         User savedAdmin = userRepository.findByEmail(newEmail)
-            .orElseThrow(() -> new AssertionError("Admin no encontrado en la base de datos"));
+            .orElseThrow(() -> new AssertionError("Admin not found in the database"));
         assertEquals(User.Role.ADMIN, savedAdmin.getRole());
     }
     
     @Test
-    void registroUsuarioEmailDuplicadoRetornaError() throws Exception {
+    void registerUserDuplicateEmailReturnsError() throws Exception {
         // Arrange - Create first user
         UserDTO firstUser = new UserDTO("First User", TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(firstUser)))
                 .andExpect(status().isOk());
@@ -136,19 +136,19 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         UserDTO duplicatedUser = new UserDTO("Duplicate User", TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(duplicatedUser)))
                 .andExpect(status().isConflict());
     }
     
     @Test
-    void actualizarPerfilUsuarioAutenticadoActualizaCorrectamente() throws Exception {
+    void updateProfileAuthenticatedUserUpdatesProfile() throws Exception {
         // Arrange - Create user first
         final String updatedEmail = "updated@example.com";
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -157,10 +157,10 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         UserUpdateDTO updatedUserDTO = new UserUpdateDTO(
             "Updated Name", updatedEmail);
         
-        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(updatedUserDTO)))
@@ -176,12 +176,12 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
     
     @Test
-    void cambiarContrasenaValidDataChangesSuccessfully() throws Exception {
+    void changePasswordValidDataChangesSuccessfully() throws Exception {
         // Arrange - Create user first
         final String newPassword = "newPassword123";
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -189,10 +189,10 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Prepare password change data
         UserUpdateDTO changeDTO = new UserUpdateDTO(TEST_PASSWORD, newPassword, newPassword);
         
-        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(changeDTO)))
@@ -200,17 +200,17 @@ class UserIntegrationTest extends AbstractIntegrationTest {
                 
         // Verify password change
         User user = userRepository.findByEmail(TEST_EMAIL)
-            .orElseThrow(() -> new AssertionError("Usuario no encontrado"));
+            .orElseThrow(() -> new AssertionError("User not found"));
         assertTrue(passwordEncoder.matches(newPassword, user.getPassword()), 
             "Password should be updated in database");
     }
     
     @Test
-    void cambiarContrasenaIncorrectCurrentPasswordReturnsError() throws Exception {
+    void changePasswordIncorrectCurrentPasswordReturnsError() throws Exception {
         // Arrange - Create user first
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -218,10 +218,10 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Prepare invalid password change data
         UserUpdateDTO changeDTO = new UserUpdateDTO("wrongPassword", "newPassword", "newPassword");
         
-        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(changeDTO)))
@@ -230,19 +230,19 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void obtenerPerfilUsuarioAutenticadoRetornaDatosCorrectos() throws Exception {
+    void getProfileAuthenticatedUserReturnsProfile() throws Exception {
         // Arrange - Create user first
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
-        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(get(ENDPOINT_USERS_ME)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(userName(TEST_USER_NAME))
@@ -251,28 +251,28 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void obtenerPerfilSinAutenticacionRetornaUnauthorized() throws Exception {
+    void getProfileWithoutAuthenticationReturnsUnauthorized() throws Exception {
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME))
+        mockMvc.perform(get(ENDPOINT_USERS_ME))
                 .andExpect(status().isUnauthorized());
     }
 
     @Test
-    void listarUsuariosUsuarioAdminRetornaListaCompleta() throws Exception {
+    void listUsersAsAdminReturnsAllUsers() throws Exception {
         // Arrange - Create regular user
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
         // Create admin user
-        crearUsuarioAdmin();
-        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        createAdminUser();
+        String authHeader = obtainJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS)
+        mockMvc.perform(get(ENDPOINT_USERS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.content").isArray())
@@ -286,29 +286,29 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void listarUsuariosUsuarioRegularRetornaForbidden() throws Exception {
+    void listUsersAsRegularUserReturnsForbidden() throws Exception {
         // Arrange - Create regular user
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
 
-        String authHeader = obtenerJwtToken(TEST_EMAIL, TEST_PASSWORD);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
         
         // Act & Assert
-        mockMvc.perform(get(ENDPOINT_USUARIOS)
+        mockMvc.perform(get(ENDPOINT_USERS)
                 .header(HttpHeaders.AUTHORIZATION, authHeader))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void cambiarRolUsuarioAdminCambiaRolCorrectamente() throws Exception {
+    void changeRoleAsAdminChangesRole() throws Exception {
         // Arrange - Create regular user
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS)
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk())
@@ -320,8 +320,8 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         Long userId = userIdNumber.longValue();
 
         // Create admin user
-        crearUsuarioAdmin();
-        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        createAdminUser();
+        String authHeader = obtainJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(User.Role.ADMIN);
         
         // Act & Assert - Change role to ADMIN
@@ -333,16 +333,16 @@ class UserIntegrationTest extends AbstractIntegrationTest {
                 
         // Verify role change in database
         User user = userRepository.findByEmail(TEST_EMAIL)
-                .orElseThrow(() -> new AssertionError("Usuario no encontrado"));
+                .orElseThrow(() -> new AssertionError("User not found"));
         assertEquals(User.Role.ADMIN, user.getRole());
     }
 
     @Test
-    void cambiarRolUsuarioRegularRetornaForbidden() throws Exception {
+    void changeRoleAsRegularUserReturnsForbidden() throws Exception {
         // Arrange - Create first regular user
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        MvcResult result = mockMvc.perform(post(ENDPOINT_USUARIOS)
+        MvcResult result = mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk())
@@ -356,12 +356,12 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         // Create second regular user
         UserDTO user2DTO = new UserDTO("Test User 2", "test2@example.com", TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(user2DTO)))
                 .andExpect(status().isOk());
 
-        String authHeader = obtenerJwtToken("test2@example.com", TEST_PASSWORD);
+        String authHeader = obtainJwtToken("test2@example.com", TEST_PASSWORD);
         UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(User.Role.ADMIN);
         
         // Act & Assert - Try to change role
@@ -373,10 +373,10 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void cambiarRolUsuarioInexistenteRetornaNotFound() throws Exception {
+    void changeRoleNonExistentUserReturnsNotFound() throws Exception {
         // Arrange - Create admin user
-        crearUsuarioAdmin();
-        String authHeader = obtenerJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
+        createAdminUser();
+        String authHeader = obtainJwtToken(TEST_ADMIN_EMAIL, TEST_ADMIN_PASSWORD);
         UserRoleUpdateDTO newRoleDTO = new UserRoleUpdateDTO(User.Role.ADMIN);
         final Long userId = 999999L;
         

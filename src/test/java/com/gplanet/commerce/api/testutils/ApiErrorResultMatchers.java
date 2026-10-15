@@ -28,7 +28,7 @@ import org.springframework.test.web.servlet.ResultMatcher;
  * 
  * <p>Usage example:
  * <pre>
- * mockMvc.perform(post("/api/usuarios/registro"))
+ * mockMvc.perform(post("/api/users"))
  *        .andExpect(status().isBadRequest())
  *        .andExpect(ApiErrorResultMatchers.validationError())
  *        .andExpect(ApiErrorResultMatchers.errorDetailsIsNotEmpty());

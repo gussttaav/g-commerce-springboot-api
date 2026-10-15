@@ -34,7 +34,7 @@ public record ApiErrorDTO(
     @Schema(description = "Error message", example = "Invalid input")
     String message,
 
-    @Schema(description = "Request path", example = "/api/productos/crear")
+    @Schema(description = "Request path", example = "/api/products")
     String path,
 
     @Schema(description = "Detailed error messages")

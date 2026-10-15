@@ -47,7 +47,7 @@ public class ProductService {
      * @param size The page size
      * @param sort The field to sort by
      * @param direction The sort direction (ASC or DESC)
-     * @return Page of ProductoResponseDTO containing filtered and searched paginated products
+     * @return Page of ProductResponseDTO containing filtered and searched paginated products
      */
     public Page<ProductResponseDTO> listProducts(
             ProductStatus status, 
@@ -93,7 +93,7 @@ public class ProductService {
         }
         
         // Map to DTOs
-        return productsPage.map(productMapper::toProductoResponseDTO);
+        return productsPage.map(productMapper::toProductResponseDTO);
     }
 
     /**
@@ -105,14 +105,14 @@ public class ProductService {
     @Transactional
     public ProductResponseDTO createProduct(ProductDTO productDTO) {
         log.info("Creating new product: {}", productDTO.name());
-        Product product = productMapper.toProducto(productDTO);
+        Product product = productMapper.toProduct(productDTO);
         product.setCreationDate(LocalDateTime.now());
         
-        Product savedProducto = DatabaseOperationHandler.executeOperation(() -> 
+        Product savedProduct = DatabaseOperationHandler.executeOperation(() -> 
             productRepository.save(product)
         );
-        log.info("Product created with ID: {}", savedProducto.getId());
-        return productMapper.toProductoResponseDTO(savedProducto);
+        log.info("Product created with ID: {}", savedProduct.getId());
+        return productMapper.toProductResponseDTO(savedProduct);
     }
 
     /**
@@ -129,13 +129,13 @@ public class ProductService {
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
         
-        productMapper.updateProductoFromDTO(productDTO, product);
+        productMapper.updateProductFromDTO(productDTO, product);
         
-        Product updatedProducto = DatabaseOperationHandler.executeOperation(() -> 
+        Product updatedProduct = DatabaseOperationHandler.executeOperation(() -> 
             productRepository.save(product)
         );
-        log.info("Product successfully updated - ID: {}", updatedProducto.getId());
-        return productMapper.toProductoResponseDTO(updatedProducto);
+        log.info("Product successfully updated - ID: {}", updatedProduct.getId());
+        return productMapper.toProductResponseDTO(updatedProduct);
     }
 
     /**

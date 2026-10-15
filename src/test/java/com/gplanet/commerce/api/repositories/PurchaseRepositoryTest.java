@@ -85,7 +85,7 @@ class PurchaseRepositoryTest {
     }
     
     @Test
-    void findByUsuarioIdExistingUserReturnsPurchases() {
+    void findByUserIdExistingUserReturnsPurchases() {
         // Arrange
         Purchase purchase1 = new Purchase();
         purchase1.setUser(user);
@@ -112,7 +112,7 @@ class PurchaseRepositoryTest {
     }
 
     @Test
-    void findByUsuarioExistingUserReturnsPurchases() {
+    void findByUserExistingUserReturnsPurchases() {
         // Arrange
         Purchase purchase1 = new Purchase();
         purchase1.setUser(user);
@@ -139,7 +139,7 @@ class PurchaseRepositoryTest {
     }
 
     @Test
-    void findByFechaBetweenDateRangeReturnsCorrectPurchases() {
+    void findByDateBetweenDateRangeReturnsCorrectPurchases() {
         // Arrange
         Purchase purchase = new Purchase();
         purchase.setUser(user);

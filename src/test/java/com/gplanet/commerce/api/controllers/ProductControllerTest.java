@@ -3,7 +3,7 @@ package com.gplanet.commerce.api.controllers;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTS;
 import static org.hamcrest.Matchers.hasSize;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -59,7 +59,7 @@ import com.gplanet.commerce.api.services.ProductService;
 @WebMvcTest(ProductController.class)
 @Import(TestSecurityConfig.class)
 @ActiveProfiles("test")
-@DisplayName("Producto Controller Tests")
+@DisplayName("Product Controller Tests")
 class ProductControllerTest {
 
     private static final String TEST_USER_EMAIL = "test@example.com";
@@ -69,7 +69,7 @@ class ProductControllerTest {
     private static final String TEST_PRODUCT_NAME = "Test Product";
     private static final String TEST_PRODUCT_DESC = "Test Description";
     private static final String TEST_PRODUCT_PRICE = "99.99";
-    private static final String SORT_FIELD_NOMBRE = "name";
+    private static final String SORT_FIELD_NAME = "name";
     private static final String SORT_DIRECTION_ASC = "ASC";
     private static final String PARAM_STATUS = "status";
 
@@ -83,7 +83,7 @@ class ProductControllerTest {
     private ProductService productService;
 
     @MockitoBean
-    private CustomUserDetailsService usuarioDetallesService;
+    private CustomUserDetailsService userDetailsService;
 
     @BeforeEach
     void setUp() {
@@ -93,13 +93,13 @@ class ProductControllerTest {
     }
 
     // Helper methods
-    private ProductDTO createValidProductoDTO() {
+    private ProductDTO createValidProductDTO() {
         return new ProductDTO(TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, new BigDecimal(TEST_PRODUCT_PRICE), true);
     }
 
-    private ProductResponseDTO createProductoResponseDTO(Long id, boolean activo) {
+    private ProductResponseDTO createProductResponseDTO(Long id, boolean active) {
         return new ProductResponseDTO(id, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC, 
-                new BigDecimal(TEST_PRODUCT_PRICE), LocalDateTime.now(), activo);
+                new BigDecimal(TEST_PRODUCT_PRICE), LocalDateTime.now(), active);
     }
 
     public static ResultMatcher productsCount(int size) throws Exception {
@@ -119,7 +119,7 @@ class ProductControllerTest {
     }
 
     @Nested
-    @DisplayName("GET " + ENDPOINT_PRODUCTOS)
+    @DisplayName("GET " + ENDPOINT_PRODUCTS)
     class ListProducts {
         
         @Test
@@ -127,16 +127,16 @@ class ProductControllerTest {
         @DisplayName("Should return active products when user is not authenticated")
         void listProductsUnauthenticatedUserReturnsActiveProducts() throws Exception {
             // Arrange
-            ProductResponseDTO product1 = createProductoResponseDTO(1L, true);
-            ProductResponseDTO product2 = createProductoResponseDTO(2L, true);
+            ProductResponseDTO product1 = createProductResponseDTO(1L, true);
+            ProductResponseDTO product2 = createProductResponseDTO(2L, true);
             Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(product1, product2));
             
             when(productService.listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
+            mockMvc.perform(get(ENDPOINT_PRODUCTS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(2))
@@ -145,7 +145,7 @@ class ProductControllerTest {
                 .andExpect(totalElements(2));
 
             verify(productService).listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
 
         @Test
@@ -153,16 +153,16 @@ class ProductControllerTest {
         @DisplayName("Should return active products for USER role")
         void listProductsUserRoleReturnsActiveProducts() throws Exception {
             // Arrange
-            ProductResponseDTO product1 = createProductoResponseDTO(1L, true);
-            ProductResponseDTO product2 = createProductoResponseDTO(2L, true);
+            ProductResponseDTO product1 = createProductResponseDTO(1L, true);
+            ProductResponseDTO product2 = createProductResponseDTO(2L, true);
             Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(product1, product2));
             
             when(productService.listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
+            mockMvc.perform(get(ENDPOINT_PRODUCTS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(2))
@@ -171,7 +171,7 @@ class ProductControllerTest {
                 .andExpect(totalElements(2));
 
             verify(productService).listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
 
         @ParameterizedTest
@@ -180,7 +180,7 @@ class ProductControllerTest {
         @DisplayName("Should return 400 when a paging parameter is invalid")
         void listProductsInvalidPagingParameterReturns400(String parameter, String value) throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(get(ENDPOINT_PRODUCTS)
                     .param(parameter, value))
                 .andExpect(status().isBadRequest())
                 .andExpect(errorDetailContains(parameter));
@@ -193,7 +193,7 @@ class ProductControllerTest {
         @DisplayName("Should return 403 when USER role tries to access inactive products")
         void listProductsUserRoleAccessInactiveProductsReturns403() throws Exception {
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(get(ENDPOINT_PRODUCTS)
                     .param(PARAM_STATUS, "INACTIVE"))
                 .andExpect(status().isForbidden());
 
@@ -205,15 +205,15 @@ class ProductControllerTest {
         @DisplayName("Should return inactive products for ADMIN role when requested")
         void listProductsAdminRoleReturnsInactiveProducts() throws Exception {
             // Arrange
-            ProductResponseDTO product = createProductoResponseDTO(1L, false);
+            ProductResponseDTO product = createProductResponseDTO(1L, false);
             Page<ProductResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
             
             when(productService.listProducts(
-                eq(ProductStatus.INACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.INACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(get(ENDPOINT_PRODUCTS)
                     .param(PARAM_STATUS, "INACTIVE"))
                 .andExpect(status().isOk())
                 .andExpect(productsCount(1))
@@ -221,7 +221,7 @@ class ProductControllerTest {
                 .andExpect(totalElements(1));
 
             verify(productService).listProducts(
-                eq(ProductStatus.INACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.INACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
 
         @Test
@@ -229,16 +229,16 @@ class ProductControllerTest {
         @DisplayName("Should return all products for ADMIN role when requested")
         void listProductsAdminRoleReturnsAllProducts() throws Exception {
             // Arrange
-            ProductResponseDTO activeProduct = createProductoResponseDTO(1L, true);
-            ProductResponseDTO inactiveProduct = createProductoResponseDTO(2L, false);
+            ProductResponseDTO activeProduct = createProductResponseDTO(1L, true);
+            ProductResponseDTO inactiveProduct = createProductResponseDTO(2L, false);
             Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(activeProduct, inactiveProduct));
             
             when(productService.listProducts(
-                eq(ProductStatus.ALL), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.ALL), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(get(ENDPOINT_PRODUCTS)
                     .param(PARAM_STATUS, "ALL"))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -248,7 +248,7 @@ class ProductControllerTest {
                 .andExpect(totalElements(2));
 
             verify(productService).listProducts(
-                eq(ProductStatus.ALL), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.ALL), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
 
         @Test
@@ -257,15 +257,15 @@ class ProductControllerTest {
         void listProductsUserRoleWithSearchTermReturnsMatchingProducts() throws Exception {
             // Arrange
             String searchTest = "Test";
-            ProductResponseDTO product = createProductoResponseDTO(1L, true);
+            ProductResponseDTO product = createProductResponseDTO(1L, true);
             Page<ProductResponseDTO> productPage = new PageImpl<>(Collections.singletonList(product));
             
             when(productService.listProducts(
-                eq(ProductStatus.ACTIVE), eq(searchTest), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.ACTIVE), eq(searchTest), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(productPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(get(ENDPOINT_PRODUCTS)
                     .param("searchText", searchTest))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -274,7 +274,7 @@ class ProductControllerTest {
                 .andExpect(totalElements(1));
 
             verify(productService).listProducts(
-                eq(ProductStatus.ACTIVE), eq(searchTest), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.ACTIVE), eq(searchTest), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
 
         @Test
@@ -285,18 +285,18 @@ class ProductControllerTest {
             Page<ProductResponseDTO> emptyPage = new PageImpl<>(Collections.emptyList());
             
             when(productService.listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC)))
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC)))
                 .thenReturn(emptyPage);
 
             // Act & Assert
-            mockMvc.perform(get(ENDPOINT_PRODUCTOS))
+            mockMvc.perform(get(ENDPOINT_PRODUCTS))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                 .andExpect(productsCount(0))
                 .andExpect(totalElements(0));
 
             verify(productService).listProducts(
-                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+                eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NAME), eq(SORT_DIRECTION_ASC));
         }
     }
 
@@ -309,10 +309,10 @@ class ProductControllerTest {
         @DisplayName("Should return 401 when user is not authenticated")
         void createProductUnauthenticatedUserReturns401() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
+            ProductDTO productDTO = createValidProductDTO();
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(post(ENDPOINT_PRODUCTS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isUnauthorized());
@@ -325,10 +325,10 @@ class ProductControllerTest {
         @DisplayName("Should return 403 when user is not admin")
         void createProductNonAdminUserReturns403() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
+            ProductDTO productDTO = createValidProductDTO();
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(post(ENDPOINT_PRODUCTS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
@@ -341,14 +341,14 @@ class ProductControllerTest {
         @DisplayName("Should create product when data is valid")
         void createProductValidDataReturnsCreatedProduct() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
-            ProductResponseDTO responseDTO = createProductoResponseDTO(1L, true);
+            ProductDTO productDTO = createValidProductDTO();
+            ProductResponseDTO responseDTO = createProductResponseDTO(1L, true);
 
             when(productService.createProduct(any(ProductDTO.class)))
                 .thenReturn(responseDTO);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(post(ENDPOINT_PRODUCTS)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isOk())
@@ -365,12 +365,12 @@ class ProductControllerTest {
         @DisplayName("Should return 400 when product data is invalid")
         void createProductInvalidDataReturns400() throws Exception {
             // Arrange
-            ProductDTO invalidProducto = new ProductDTO("", "", new BigDecimal("-10.00"), false);
+            ProductDTO invalidProduct = new ProductDTO("", "", new BigDecimal("-10.00"), false);
 
             // Act & Assert
-            mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+            mockMvc.perform(post(ENDPOINT_PRODUCTS)
                     .contentType(MediaType.APPLICATION_JSON)
-                    .content(objectMapper.writeValueAsString(invalidProducto)))
+                    .content(objectMapper.writeValueAsString(invalidProduct)))
                 .andExpect(status().isBadRequest())
                 .andExpect(validationError());
             
@@ -387,10 +387,10 @@ class ProductControllerTest {
         @DisplayName("Should return 401 when user is not authenticated")
         void updateProductUnauthenticatedUserReturns401() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
+            ProductDTO productDTO = createValidProductDTO();
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1)
+            mockMvc.perform(put(ENDPOINT_PRODUCTS + PATH_PRODUCT_ID_1)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isUnauthorized());
@@ -403,10 +403,10 @@ class ProductControllerTest {
         @DisplayName("Should return 403 when user is not admin")
         void updateProductNonAdminUserReturns403() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
+            ProductDTO productDTO = createValidProductDTO();
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1)
+            mockMvc.perform(put(ENDPOINT_PRODUCTS + PATH_PRODUCT_ID_1)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
@@ -420,14 +420,14 @@ class ProductControllerTest {
         void updateProductValidDataReturnsUpdatedProduct() throws Exception {
             // Arrange
             Long productId = 1L;
-            ProductDTO productDTO = createValidProductoDTO();
-            ProductResponseDTO responseDTO = createProductoResponseDTO(productId, true);
+            ProductDTO productDTO = createValidProductDTO();
+            ProductResponseDTO responseDTO = createProductResponseDTO(productId, true);
 
             when(productService.updateProduct(eq(productId), any(ProductDTO.class)))
                 .thenReturn(responseDTO);
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS + "/" + productId)
+            mockMvc.perform(put(ENDPOINT_PRODUCTS + "/" + productId)
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isOk())
@@ -444,17 +444,17 @@ class ProductControllerTest {
         @DisplayName("Should return 404 when product doesn't exist")
         void updateProductNonExistentProductReturns404() throws Exception {
             // Arrange
-            ProductDTO productDTO = createValidProductoDTO();
+            ProductDTO productDTO = createValidProductDTO();
 
             when(productService.updateProduct(eq(TEST_PRODUCT_ID), any(ProductDTO.class)))
-                .thenThrow(new ResourceNotFoundException("El producto no existe"));
+                .thenThrow(new ResourceNotFoundException("Product not found"));
 
             // Act & Assert
-            mockMvc.perform(put(ENDPOINT_PRODUCTOS + "/999")
+            mockMvc.perform(put(ENDPOINT_PRODUCTS + "/999")
                     .contentType(MediaType.APPLICATION_JSON)
                     .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isNotFound())
-                .andExpect(errorMessage("El producto no existe"));
+                .andExpect(errorMessage("Product not found"));
 
             verify(productService).updateProduct(eq(TEST_PRODUCT_ID), any(ProductDTO.class));
         }
@@ -469,7 +469,7 @@ class ProductControllerTest {
         @DisplayName("Should return 401 when user is not authenticated")
         void removeProductUnauthenticatedUserReturns401() throws Exception {
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isUnauthorized());
             
             verifyNoInteractions(productService);
@@ -480,7 +480,7 @@ class ProductControllerTest {
         @DisplayName("Should return 403 when user is not admin")
         void removeProductNonAdminUserReturns403() throws Exception {
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isForbidden());
             
             verifyNoInteractions(productService);
@@ -494,7 +494,7 @@ class ProductControllerTest {
             doNothing().when(productService).removeProduct(anyLong());
 
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + PATH_PRODUCT_ID_1))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTS + PATH_PRODUCT_ID_1))
                 .andExpect(status().isOk());
 
             verify(productService).removeProduct(1L);
@@ -505,13 +505,13 @@ class ProductControllerTest {
         @DisplayName("Should return 404 when product doesn't exist")
         void removeProductNonExistentProductReturns404() throws Exception {
             // Arrange
-            doThrow(new ResourceNotFoundException("Producto no encontrado"))
+            doThrow(new ResourceNotFoundException("Product not found"))
                 .when(productService).removeProduct(anyLong());
 
             // Act & Assert
-            mockMvc.perform(delete(ENDPOINT_PRODUCTOS + "/999"))
+            mockMvc.perform(delete(ENDPOINT_PRODUCTS + "/999"))
                 .andExpect(status().isNotFound())
-                .andExpect(errorMessage("Producto no encontrado"));
+                .andExpect(errorMessage("Product not found"));
 
             verify(productService).removeProduct(TEST_PRODUCT_ID);
         }

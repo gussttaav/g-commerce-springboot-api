@@ -81,7 +81,7 @@ public class UserController {
      *
      * @param authentication the current authentication object; may be null for unauthenticated requests
      * @param userDTO the user registration data containing email, password, and personal information
-     * @return UsuarioResponseDTO containing the created user's information
+     * @return UserResponseDTO containing the created user's information
      * @throws ApiException if the user could not be registered due to a constraint violation
      * @throws AccessDeniedException if a non-admin user attempts to create an ADMIN user
      */
@@ -120,7 +120,7 @@ public class UserController {
      * Retrieves the profile information of the authenticated user.
      * 
      * @param authentication the current user's authentication object
-     * @return UsuarioResponseDTO containing the user's information
+     * @return UserResponseDTO containing the user's information
      * @throws UsernameNotFoundException if the user is not found
      */
     @Operation(summary = "Get user profile", description = "Retrieves the authenticated user's profile information")
@@ -142,7 +142,7 @@ public class UserController {
      * 
      * @param authentication the current user's authentication object
      * @param profileDTO the profile information to be updated
-     * @return UsuarioResponseDTO containing the updated user information
+     * @return UserResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if the user is not found
      * @throws PasswordMismatchException if the new password is not confirmed correctly
      * @throws ApiException if the user could not be updated due to a constraint violation
@@ -172,7 +172,7 @@ public class UserController {
      * @param size The page size, at most {@value PaginatedResponse#MAX_PAGE_SIZE}
      * @param sort The field to sort by: email, name or creationDate
      * @param direction The sort direction (ASC or DESC)
-     * @return PaginatedResponse of UsuarioResponseDTO containing paginated users' information
+     * @return PaginatedResponse of UserResponseDTO containing paginated users' information
      * @throws AccessDeniedException if the current user is not an administrator
      */
     @Operation(summary = "List all users with pagination", 

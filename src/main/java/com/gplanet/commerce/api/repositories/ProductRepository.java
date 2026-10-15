@@ -21,21 +21,21 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     /**
      * Finds a product by ID if it is active.
      * @param id the ID of the product
-     * @return an Optional containing the product if it exists and its 'activo' flag is true
+     * @return an Optional containing the product if it exists and its 'active' flag is true
      */
     Optional<Product> findByIdAndActiveTrue(Long id);
 
     /**
      * Finds all active products in the system with pagination support.
      * @param pageable pagination information
-     * @return a page of products where the 'activo' flag is true
+     * @return a page of products where the 'active' flag is true
      */
     Page<Product> findByActiveTrue(Pageable pageable);
 
     /**
      * Finds all non-active products in the system with pagination support.
      * @param pageable pagination information
-     * @return a page of products where the 'activo' flag is false
+     * @return a page of products where the 'active' flag is false
      */
     Page<Product> findByActiveFalse(Pageable pageable);
 
@@ -44,7 +44,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * 
      * @param searchTerm The search term to match against name or description (should include % wildcards)
      * @param pageable Pagination information
-     * @return Page of Producto entities matching the criteria
+     * @return Page of Product entities matching the criteria
      */
     @Query("SELECT p FROM Product p"
         + " WHERE p.active = true AND (LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm)")
@@ -55,7 +55,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * 
      * @param searchTerm The search term to match against name or description (should include % wildcards)
      * @param pageable Pagination information
-     * @return Page of Producto entities matching the criteria
+     * @return Page of Product entities matching the criteria
      */
     @Query("SELECT p FROM Product p"
         + " WHERE p.active = false AND (LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm)")
@@ -66,7 +66,7 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
      * 
      * @param searchTerm The search term to match against name or description (should include % wildcards)
      * @param pageable Pagination information
-     * @return Page of Producto entities matching the criteria
+     * @return Page of Product entities matching the criteria
      */
     @Query("SELECT p FROM Product p"
         + " WHERE LOWER(p.name) LIKE :searchTerm OR LOWER(p.description) LIKE :searchTerm")

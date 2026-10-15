@@ -38,7 +38,7 @@ import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.ProductRepository;
 
 /**
- * Unit tests for ProductoService.
+ * Unit tests for ProductService.
  * Tests product management operations.
  */
 @ExtendWith(MockitoExtension.class)
@@ -123,11 +123,11 @@ class ProductServiceTest {
      * Verifies that products are correctly listed by status without search.
      */
     @Test
-    void listarProductosConEstadoActivoDebeRetornarSoloProductosActivos() {
+    void listProductsActiveStatusReturnsOnlyActiveProducts() {
         // Arrange
         Page<Product> mockPage = new PageImpl<>(List.of(product));
         when(productRepository.findByActiveTrue(any(Pageable.class))).thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
 
         // Act - now with null searchText
         Page<ProductResponseDTO> resultado = listOnePageProductsSortedAscByName(ProductStatus.ACTIVE);
@@ -137,18 +137,18 @@ class ProductServiceTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals(productResponseDTO, resultado.getContent().get(0));
         verify(productRepository).findByActiveTrue(any(Pageable.class));
-        verify(productMapper).toProductoResponseDTO(product);
+        verify(productMapper).toProductResponseDTO(product);
     }
 
     /**
      * Verifies that products are correctly listed by status without search.
      */
     @Test
-    void listarProductosConEstadoInactivoDebeRetornarSoloProductosInactivos() {
+    void listProductsInactiveStatusReturnsOnlyInactiveProducts() {
         // Arrange
         Page<Product> mockPage = new PageImpl<>(List.of(inactiveProduct));
         when(productRepository.findByActiveFalse(any(Pageable.class))).thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(inactiveProduct))
+        when(productMapper.toProductResponseDTO(inactiveProduct))
             .thenReturn(inactiveProductResponseDTO);
 
         // Act - now with null searchText
@@ -159,20 +159,20 @@ class ProductServiceTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals(inactiveProductResponseDTO, resultado.getContent().get(0));
         verify(productRepository).findByActiveFalse(any(Pageable.class));
-        verify(productMapper).toProductoResponseDTO(inactiveProduct);
+        verify(productMapper).toProductResponseDTO(inactiveProduct);
     }
 
     /**
      * Verifies that products are correctly listed by status without search.
      */
     @Test
-    void listarProductosConEstadoAllDebeRetornarTodosLosProductos() {
+    void listProductsAllStatusReturnsAllProducts() {
         // Arrange
-        List<Product> todosLosProductos = List.of(product, inactiveProduct);
-        Page<Product> mockPage = new PageImpl<>(todosLosProductos);
+        List<Product> allProducts = List.of(product, inactiveProduct);
+        Page<Product> mockPage = new PageImpl<>(allProducts);
         when(productRepository.findAll(any(Pageable.class))).thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
-        when(productMapper.toProductoResponseDTO(inactiveProduct))
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(inactiveProduct))
             .thenReturn(inactiveProductResponseDTO);
 
         // Act - now with null searchText
@@ -184,14 +184,14 @@ class ProductServiceTest {
         assertTrue(resultado.getContent().contains(productResponseDTO));
         assertTrue(resultado.getContent().contains(inactiveProductResponseDTO));
         verify(productRepository).findAll(any(Pageable.class));
-        verify(productMapper, times(2)).toProductoResponseDTO(any(Product.class));
+        verify(productMapper, times(2)).toProductResponseDTO(any(Product.class));
     }
     
     /**
      * Verifies that search works correctly for active products.
      */
     @Test
-    void listarProductosConEstadoActivoYBusquedaDebeRetornarProductosActivosConCoincidencia() {
+    void listProductsActiveStatusAndSearchReturnsMatchingActiveProducts() {
         // Arrange
         String searchTerm = "Test";
         String searchTermWithWildcards = "%test%";
@@ -199,7 +199,7 @@ class ProductServiceTest {
         
         when(productRepository.findByActiveTrueAndSearch(eq(searchTermWithWildcards), any(Pageable.class)))
             .thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
 
         // Act
         Page<ProductResponseDTO> resultado = searchProductsOnePageResultSorteAscByName(
@@ -210,14 +210,14 @@ class ProductServiceTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals(productResponseDTO, resultado.getContent().get(0));
         verify(productRepository).findByActiveTrueAndSearch(eq(searchTermWithWildcards), any(Pageable.class));
-        verify(productMapper).toProductoResponseDTO(product);
+        verify(productMapper).toProductResponseDTO(product);
     }
     
     /**
      * Verifies that search works correctly for inactive products.
      */
     @Test
-    void listarProductosConEstadoInactivoYBusquedaDebeRetornarProductosInactivosConCoincidencia() {
+    void listProductsInactiveStatusAndSearchReturnsMatchingInactiveProducts() {
         // Arrange
         String searchTerm = "Inactive";
         String searchTermWithWildcards = "%inactive%";
@@ -225,7 +225,7 @@ class ProductServiceTest {
         
         when(productRepository.findByActiveFalseAndSearch(eq(searchTermWithWildcards), any(Pageable.class)))
             .thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(inactiveProduct))
+        when(productMapper.toProductResponseDTO(inactiveProduct))
             .thenReturn(inactiveProductResponseDTO);
 
         // Act
@@ -237,24 +237,24 @@ class ProductServiceTest {
         assertEquals(1, resultado.getTotalElements());
         assertEquals(inactiveProductResponseDTO, resultado.getContent().get(0));
         verify(productRepository).findByActiveFalseAndSearch(eq(searchTermWithWildcards), any(Pageable.class));
-        verify(productMapper).toProductoResponseDTO(inactiveProduct);
+        verify(productMapper).toProductResponseDTO(inactiveProduct);
     }
     
     /**
      * Verifies that search works correctly for all products.
      */
     @Test
-    void listarProductosConEstadoAllYBusquedaDebeRetornarTodosLosProductosConCoincidencia() {
+    void listProductsAllStatusAndSearchReturnsAllMatchingProducts() {
         // Arrange
         String searchTerm = "Product";
         String searchTermWithWildcards = "%product%";
-        List<Product> todosLosProductos = List.of(product, inactiveProduct);
-        Page<Product> mockPage = new PageImpl<>(todosLosProductos);
+        List<Product> allProducts = List.of(product, inactiveProduct);
+        Page<Product> mockPage = new PageImpl<>(allProducts);
         
         when(productRepository.findBySearch(eq(searchTermWithWildcards), any(Pageable.class)))
             .thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
-        when(productMapper.toProductoResponseDTO(inactiveProduct))
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(inactiveProduct))
             .thenReturn(inactiveProductResponseDTO);
 
         // Act
@@ -266,19 +266,19 @@ class ProductServiceTest {
         assertTrue(resultado.getContent().contains(productResponseDTO));
         assertTrue(resultado.getContent().contains(inactiveProductResponseDTO));
         verify(productRepository).findBySearch(eq(searchTermWithWildcards), any(Pageable.class));
-        verify(productMapper, times(2)).toProductoResponseDTO(any(Product.class));
+        verify(productMapper, times(2)).toProductResponseDTO(any(Product.class));
     }
     
     /**
      * Verifies that empty search text is handled correctly.
      */
     @Test
-    void listarProductosConBusquedaVaciaDebeIgnorarBusqueda() {
+    void listProductsEmptySearchIgnoresSearch() {
         // Arrange
         String searchTerm = "";  // Empty search
         Page<Product> mockPage = new PageImpl<>(List.of(product));
         when(productRepository.findByActiveTrue(any(Pageable.class))).thenReturn(mockPage);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
 
         // Act
         Page<ProductResponseDTO> resultado = searchProductsOnePageResultSorteAscByName(
@@ -296,11 +296,11 @@ class ProductServiceTest {
      * Verifies successful product creation.
      */
     @Test
-    void crearProductoDebeCrearYRetornarNuevoProducto() {
+    void createProductCreatesAndReturnsNewProduct() {
         // Arrange
-        when(productMapper.toProducto(productDTO)).thenReturn(product);
+        when(productMapper.toProduct(productDTO)).thenReturn(product);
         when(productRepository.save(any(Product.class))).thenReturn(product);
-        when(productMapper.toProductoResponseDTO(product)).thenReturn(productResponseDTO);
+        when(productMapper.toProductResponseDTO(product)).thenReturn(productResponseDTO);
 
         // Act
         ProductResponseDTO resultado = productService.createProduct(productDTO);
@@ -310,16 +310,16 @@ class ProductServiceTest {
         assertEquals(productResponseDTO.id(), resultado.id());
         assertEquals(productResponseDTO.name(), resultado.name());
         assertNotNull(resultado.creationDate());
-        verify(productMapper).toProducto(productDTO);
+        verify(productMapper).toProduct(productDTO);
         verify(productRepository).save(any(Product.class));
-        verify(productMapper).toProductoResponseDTO(product);
+        verify(productMapper).toProductResponseDTO(product);
     }
 
     /**
      * Verifies product deactivation.
      */
     @Test
-    void eliminarProductoDebeDesactivarProductoExistente() {
+    void removeProductDeactivatesExistingProduct() {
         // Arrange
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
 
@@ -333,7 +333,7 @@ class ProductServiceTest {
     }
 
     @Test
-    void eliminarProductoDebeLanzarExcepcionCuandoProductoNoExiste() {
+    void removeProductThrowsExceptionWhenProductDoesNotExist() {
         // Arrange
         when(productRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -346,17 +346,17 @@ class ProductServiceTest {
     }
 
     @Test
-    void crearProductoDebeManipularErroresDeBD() {
+    void createProductHandlesDatabaseErrors() {
         // Arrange
-        when(productMapper.toProducto(productDTO)).thenReturn(product);
+        when(productMapper.toProduct(productDTO)).thenReturn(product);
         when(productRepository.save(any(Product.class)))
-            .thenThrow(new RuntimeException("Error de BD"));
+            .thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
         assertThrows(RuntimeException.class, () ->
             productService.createProduct(productDTO)
         );
-        verify(productMapper).toProducto(productDTO);
+        verify(productMapper).toProduct(productDTO);
         verify(productRepository).save(any(Product.class));
     }
 
@@ -364,7 +364,7 @@ class ProductServiceTest {
      * Verifies successful product update.
      */
     @Test
-    void actualizarProductoDebeActualizarYRetornarProductoExistente() {
+    void updateProductUpdatesAndReturnsExistingProduct() {
         // Arrange
         Product updatedProduct = new Product();
         updatedProduct.setId(1L);
@@ -391,9 +391,9 @@ class ProductServiceTest {
         );
 
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        doNothing().when(productMapper).updateProductoFromDTO(updatedProductDTO, product);
+        doNothing().when(productMapper).updateProductFromDTO(updatedProductDTO, product);
         when(productRepository.save(any(Product.class))).thenReturn(updatedProduct);
-        when(productMapper.toProductoResponseDTO(updatedProduct))
+        when(productMapper.toProductResponseDTO(updatedProduct))
             .thenReturn(updatedProductResponseDTO);
 
         // Act
@@ -406,16 +406,16 @@ class ProductServiceTest {
         assertEquals(updatedProductResponseDTO.description(), resultado.description());
         assertEquals(updatedProductResponseDTO.price(), resultado.price());
         verify(productRepository).findById(1L);
-        verify(productMapper).updateProductoFromDTO(updatedProductDTO, product);
+        verify(productMapper).updateProductFromDTO(updatedProductDTO, product);
         verify(productRepository).save(any(Product.class));
-        verify(productMapper).toProductoResponseDTO(updatedProduct);
+        verify(productMapper).toProductResponseDTO(updatedProduct);
     }
 
     /**
      * Verifies that updating a non-existent product throws ResourceNotFoundException.
      */
     @Test
-    void actualizarProductoDebeLanzarExcepcionCuandoProductoNoExiste() {
+    void updateProductThrowsExceptionWhenProductDoesNotExist() {
         // Arrange
         when(productRepository.findById(1L)).thenReturn(Optional.empty());
 
@@ -424,7 +424,7 @@ class ProductServiceTest {
             productService.updateProduct(1L, productDTO)
         );
         verify(productRepository).findById(1L);
-        verify(productMapper, never()).updateProductoFromDTO(any(), any());
+        verify(productMapper, never()).updateProductFromDTO(any(), any());
         verify(productRepository, never()).save(any());
     }
 
@@ -432,19 +432,19 @@ class ProductServiceTest {
      * Verifies that database errors during update are properly handled.
      */
     @Test
-    void actualizarProductoDebeManipularErroresDeBD() {
+    void updateProductHandlesDatabaseErrors() {
         // Arrange
         when(productRepository.findById(1L)).thenReturn(Optional.of(product));
-        doNothing().when(productMapper).updateProductoFromDTO(productDTO, product);
+        doNothing().when(productMapper).updateProductFromDTO(productDTO, product);
         when(productRepository.save(any(Product.class)))
-            .thenThrow(new RuntimeException("Error de BD"));
+            .thenThrow(new RuntimeException("Database error"));
 
         // Act & Assert
         assertThrows(RuntimeException.class, () ->
             productService.updateProduct(1L, productDTO)
         );
         verify(productRepository).findById(1L);
-        verify(productMapper).updateProductoFromDTO(productDTO, product);
+        verify(productMapper).updateProductFromDTO(productDTO, product);
         verify(productRepository).save(any(Product.class));
     }
 }

@@ -5,7 +5,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOG
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -34,11 +34,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     private static final String INVALID_CREDENTIALS = "Invalid email or password";
 
     @Test
-    void loginCredencialesValidasRetornaTokens() throws Exception {
+    void loginValidCredentialsReturnsTokens() throws Exception {
         // Arrange - Create user first
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -58,7 +58,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void loginCredencialesInvalidasRetornaError() throws Exception {
+    void loginInvalidCredentialsReturnsError() throws Exception {
         // Arrange
         LoginDTO loginDTO = new LoginDTO("nonexistent@example.com", "wrongpassword");
 
@@ -72,7 +72,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     @Test
     void loginWithUnknownEmailOrWrongPasswordReturnsTheSameError() throws Exception {
         // Arrange
-        crearUsuario(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD, User.Role.USER);
+        createUser(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD, User.Role.USER);
 
         // Act & Assert - The response doesn't reveal whether the email is registered
         mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
@@ -91,11 +91,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void refreshTokenValidoRetornaNuevosTokens() throws Exception {
+    void refreshValidTokenReturnsNewTokens() throws Exception {
         // Arrange - Login first to get token
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
 
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -121,11 +121,11 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
-    void validateTokenValidoRetornaValidationSuccess() throws Exception {
+    void validateValidTokenReturnsValidationSuccess() throws Exception {
         // Arrange - Login first to get token
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());
@@ -154,7 +154,7 @@ class AuthIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Login first to get tokens
         UserDTO userDTO = new UserDTO(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
         
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(userDTO)))
                 .andExpect(status().isOk());

@@ -26,18 +26,18 @@ public final class TestConstants {
     // ========================
     // User Management Endpoints
     // ========================
-    public static final String ENDPOINT_USUARIOS = BASE_URL + "/users";
-    public static final String ENDPOINT_USUARIOS_ME = ENDPOINT_USUARIOS + "/me";
+    public static final String ENDPOINT_USERS = BASE_URL + "/users";
+    public static final String ENDPOINT_USERS_ME = ENDPOINT_USERS + "/me";
 
     // ========================
     // Product Management Endpoints
     // ========================
-    public static final String ENDPOINT_PRODUCTOS = BASE_URL + "/products";
+    public static final String ENDPOINT_PRODUCTS = BASE_URL + "/products";
 
     // ========================
     // Purchase Management Endpoints
     // ========================
-    public static final String ENDPOINT_COMPRAS = BASE_URL + "/purchases";
+    public static final String ENDPOINT_PURCHASES = BASE_URL + "/purchases";
 
 
     // ========================

@@ -41,12 +41,12 @@ class ProductRepositoryTest {
         product.setCreationDate(LocalDateTime.now());
         
         // Act
-        Product savedProducto = productRepository.save(product);
+        Product savedProduct = productRepository.save(product);
         
         // Assert
-        assertNotNull(savedProducto.getId());
-        assertEquals(TEST_PRODUCT_NAME, savedProducto.getName());
-        assertEquals(PRICE_99, savedProducto.getPrice());
+        assertNotNull(savedProduct.getId());
+        assertEquals(TEST_PRODUCT_NAME, savedProduct.getName());
+        assertEquals(PRICE_99, savedProduct.getPrice());
     }
     
     @Test
@@ -71,7 +71,7 @@ class ProductRepositoryTest {
     }
     
     @Test
-    void findByActivoActiveProductsReturnsOnlyActive() {
+    void findByActiveTrueReturnsOnlyActiveProducts() {
         // Arrange
         Product activeProduct = new Product();
         activeProduct.setName(TEST_PRODUCT_NAME);

@@ -40,7 +40,7 @@ public record ProductDTO(
     boolean active
 ) {
     /**
-     * Creates a ProductoDTO with default active status.
+     * Creates a ProductDTO with default active status.
      */
     public ProductDTO(String name, String description, BigDecimal price) {
         this(name, description, price, true);

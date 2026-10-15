@@ -11,13 +11,13 @@ package com.gplanet.commerce.api.dtos.product;
 public enum ProductStatus {
     /**
      * Represents products that are currently active in the system.
-     * Active products are those with their 'activo' flag set to true.
+     * Active products are those with their 'active' flag set to true.
      */
     ACTIVE,
 
     /**
      * Represents products that are currently inactive in the system.
-     * Inactive products are those with their 'activo' flag set to false.
+     * Inactive products are those with their 'active' flag set to false.
      */
     INACTIVE,
 

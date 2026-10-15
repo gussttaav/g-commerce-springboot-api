@@ -3,14 +3,14 @@ package com.gplanet.commerce.api.security;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_HEALTH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_ACTUATOR_INFO;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGIN;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PURCHASES;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_JWKS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_OPENID_CONFIG;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_UI;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -141,7 +141,7 @@ class SecurityConfigTest {
         
         when(userService.registerUser(any(UserDTO.class))).thenReturn(responseDto);
 
-        mockMvc.perform(post(ENDPOINT_USUARIOS)
+        mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(userDto)))
                 .andExpect(status().isOk());
@@ -156,13 +156,13 @@ class SecurityConfigTest {
             eq(0), eq(10), eq("name"), eq("ASC")))
             .thenReturn(productPage);
 
-        mockMvc.perform(get(ENDPOINT_PRODUCTOS))
+        mockMvc.perform(get(ENDPOINT_PRODUCTS))
                 .andExpect(status().isOk());
     }
 
     @Test
     void whenUnauthenticatedAccessToProtectedEndpointThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS))
+        mockMvc.perform(get(ENDPOINT_PURCHASES))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -189,17 +189,17 @@ class SecurityConfigTest {
         ));
         
         when(productService.listProducts(eq(ProductStatus.ACTIVE), eq(null), 
-            eq(0), eq(10), eq("nombre"), eq("ASC")))
+            eq(0), eq(10), eq("name"), eq("ASC")))
             .thenReturn(productPage);
 
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk());
     }
 
     @Test
     void whenJwtAuthWithInvalidTokenThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .header(AUTHORIZATION_HEADER, "Bearer invalid.token"))
                 .andExpect(status().isUnauthorized());
     }
@@ -221,7 +221,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - User tries to access admin endpoint
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
@@ -252,7 +252,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(productDto)))
@@ -261,7 +261,7 @@ class SecurityConfigTest {
 
     @Test
     void whenNoAuthenticationHeaderThenReturns401() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS))
+        mockMvc.perform(get(ENDPOINT_PURCHASES))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -289,7 +289,7 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - No CSRF token required
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(OBJECT_MAPPER.writeValueAsString(productDto)))
@@ -301,7 +301,7 @@ class SecurityConfigTest {
         // Arrange
         LoginDTO loginDto = new LoginDTO(USER_EMAIL, USER_PASSWORD);
         
-        UserUpdateDTO actualizacionDto = new UserUpdateDTO(
+        UserUpdateDTO updateDto = new UserUpdateDTO(
             "Updated Name", "updated@test.com");
         UserResponseDTO responseDto = new UserResponseDTO(1L, "Updated Name", 
             "updated@test.com", User.Role.USER, LocalDateTime.now());
@@ -321,16 +321,16 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert
-        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(OBJECT_MAPPER.writeValueAsString(actualizacionDto)))
+                .content(OBJECT_MAPPER.writeValueAsString(updateDto)))
                 .andExpect(status().isOk());
     }
 
     @Test
     void whenAccessingProtectedEndpointThenAuthenticationHeaderIsRequired() throws Exception {
-        mockMvc.perform(get(ENDPOINT_COMPRAS))
+        mockMvc.perform(get(ENDPOINT_PURCHASES))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -351,13 +351,13 @@ class SecurityConfigTest {
         String jwtToken = OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
 
         // Act & Assert - First request
-        MvcResult result1 = mockMvc.perform(get(ENDPOINT_COMPRAS)
+        MvcResult result1 = mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk())
                 .andReturn();
 
         // Second request - Should work with same token (stateless)
-        mockMvc.perform(get(ENDPOINT_COMPRAS)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
                 .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken))
                 .andExpect(status().isOk());
 

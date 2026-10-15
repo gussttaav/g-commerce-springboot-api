@@ -69,7 +69,7 @@ public class UserService {
      * 
      * @param userId ID of the user
      * @param profileDTO Data transfer object containing new profile information
-     * @return UsuarioResponseDTO containing the updated user information
+     * @return UserResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if user is not found
      */
     @Transactional
@@ -87,11 +87,11 @@ public class UserService {
         }
 
         if (profileDTO.name() != null) {
-            String nombre = profileDTO.name().trim();
-            if (nombre.isEmpty()) {
+            String name = profileDTO.name().trim();
+            if (name.isEmpty()) {
                 throw new IllegalArgumentException("The name cannot be empty");
             }
-            user.setName(nombre);
+            user.setName(name);
         }
 
         // If any password field is present, attempt password change flow
@@ -150,7 +150,7 @@ public class UserService {
      * Retrieves a user's profile information.
      * 
      * @param userId ID of the user
-     * @return UsuarioResponseDTO containing the user's information
+     * @return UserResponseDTO containing the user's information
      * @throws UsernameNotFoundException if user is not found
      */
     public UserResponseDTO getProfile(Long userId) {
@@ -168,7 +168,7 @@ public class UserService {
      * @param size The page size
      * @param sort The field to sort by
      * @param direction The sort direction (ASC or DESC)
-     * @return Page of UsuarioResponseDTO containing paginated users' information
+     * @return Page of UserResponseDTO containing paginated users' information
      */
     public Page<UserResponseDTO> listUsers(int page, int size, String sort, String direction) {
         log.debug("Listing users with pagination - page: {}, size: {}, sort: {}, direction: {}", 

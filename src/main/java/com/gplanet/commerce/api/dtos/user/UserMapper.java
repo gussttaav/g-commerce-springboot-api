@@ -5,9 +5,9 @@ import org.mapstruct.Mapper;
 import com.gplanet.commerce.api.entities.User;
 
 /**
- * Mapper interface for converting between Usuario entity and DTOs.
+ * Mapper interface for converting between the User entity and DTOs.
  * This interface uses MapStruct to generate the implementation for
- * converting Usuario entities to UsuarioResponseDTO objects.
+ * converting User entities to UserResponseDTO objects.
  *
  * @author Gustavo
  * @version 1.0
@@ -16,10 +16,10 @@ import com.gplanet.commerce.api.entities.User;
 @SuppressWarnings("PMD.ImplicitFunctionalInterface")
 public interface UserMapper {
     /**
-     * Converts a Usuario entity to a UsuarioResponseDTO.
+     * Converts a User entity to a UserResponseDTO.
      *
      * @param user the User entity to convert
-     * @return the corresponding UsuarioResponseDTO
+     * @return the corresponding UserResponseDTO
      */
     UserResponseDTO toUserResponseDTO(User user);
 }

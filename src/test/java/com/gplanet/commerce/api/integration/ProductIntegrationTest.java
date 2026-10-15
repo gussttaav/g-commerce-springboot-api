@@ -1,7 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
@@ -31,38 +31,38 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
     private static final String ADMIN_PASSWORD = "admin123";
     private static final String USER_EMAIL = "user@example.com";
     private static final String USER_PASSWORD = "user123";
-    private static final String ENDPOINT_ACTUALIZAR = ENDPOINT_PRODUCTOS + "/";
+    private static final String ENDPOINT_PRODUCT = ENDPOINT_PRODUCTS + "/";
     
     @Test
-    void crearProductoAdminCreaCorrectamente() throws Exception {
+    void createProductAsAdminCreatesProduct() throws Exception {
         // Arrange
-        crearUsuarioAdmin();
+        createAdminUser();
         ProductDTO productDTO = new ProductDTO(
-            "Nuevo Producto", 
-            "Descripción del producto", 
+            "New Product", 
+            "Product description", 
             new BigDecimal("99.99"), true);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Nuevo Producto"))
+                .andExpect(jsonPath("$.name").value("New Product"))
                 .andExpect(jsonPath("$.price").value("99.99"));
     }
     
     @Test
     void listProductsUnknownSortFieldReturnsBadRequest() throws Exception {
         // Act & Assert - The sort field was passed to the database query, which failed with a 500
-        mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+        mockMvc.perform(get(ENDPOINT_PRODUCTS)
                 .param("sort", "unknown"))
                 .andExpect(status().isBadRequest())
                 .andExpect(errorDetailContains("sort: must be one of name|price"));
     }
 
     @Test
-    void crearProductoUsuarioRetornaForbidden() throws Exception {
+    void createProductAsUserReturnsForbidden() throws Exception {
         // Create regular user
         User user = new User();
         user.setName("User");
@@ -74,108 +74,108 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
 
         // Arrange
         ProductDTO productDTO = new ProductDTO(
-            "Producto No Autorizado", 
-            "Descripción", 
+            "Unauthorized Product", 
+            "Description", 
             new BigDecimal("50.00"), true);
         
         // Act & Assert
-        mockMvc.perform(post(ENDPOINT_PRODUCTOS)
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(productDTO)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void actualizarProductoAdminActualizaCorrectamente() throws Exception {
+    void updateProductAsAdminUpdatesProduct() throws Exception {
         // Arrange
-        crearUsuarioAdmin();
+        createAdminUser();
         
         // First create a product
-        ProductDTO originalProducto = new ProductDTO(
-            "Producto Original", 
-            "Descripción original", 
+        ProductDTO originalProduct = new ProductDTO(
+            "Original Product", 
+            "Original description", 
             new BigDecimal("49.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS)
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(originalProducto)))
+                .content(objectMapper.writeValueAsString(originalProduct)))
                 .andReturn();
         
-        ProductResponseDTO createdProducto = objectMapper.readValue(
+        ProductResponseDTO createdProduct = objectMapper.readValue(
             createResult.getResponse().getContentAsString(),
             ProductResponseDTO.class
         );
         
         // Prepare update data
-        ProductDTO updateProducto = new ProductDTO(
-            "Producto Actualizado", 
-            "Nueva descripción", 
+        ProductDTO productUpdate = new ProductDTO(
+            "Updated Product", 
+            "New description", 
             new BigDecimal("149.99"), true);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + createdProducto.id())
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_PRODUCT + createdProduct.id())
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updateProducto)))
+                .content(objectMapper.writeValueAsString(productUpdate)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Producto Actualizado"))
-                .andExpect(jsonPath("$.description").value("Nueva descripción"))
+                .andExpect(jsonPath("$.name").value("Updated Product"))
+                .andExpect(jsonPath("$.description").value("New description"))
                 .andExpect(jsonPath("$.price").value("149.99"));
     }
 
     @Test
-    void actualizarProductoUsuarioRetornaForbidden() throws Exception {
+    void updateProductAsUserReturnsForbidden() throws Exception {
         // Arrange
-        crearUsuarioAdmin();
-        crearUsuario("Regular user", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+        createAdminUser();
+        createUser("Regular user", USER_EMAIL, USER_PASSWORD, User.Role.USER);
         
         // First create a product as admin
-        ProductDTO originalProducto = new ProductDTO(
-            "Producto Original", 
-            "Descripción original", 
+        ProductDTO originalProduct = new ProductDTO(
+            "Original Product", 
+            "Original description", 
             new BigDecimal("17.99"), true);
         
-        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTOS)
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+        MvcResult createResult = mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(originalProducto)))
+                .content(objectMapper.writeValueAsString(originalProduct)))
                 .andReturn();
         
-        ProductResponseDTO createdProducto = objectMapper.readValue(
+        ProductResponseDTO createdProduct = objectMapper.readValue(
             createResult.getResponse().getContentAsString(),
             ProductResponseDTO.class
         );
         
         // Attempt to update as regular user
-        ProductDTO updateProducto = new ProductDTO(
-            "Intento Actualización", 
-            "Descripción", 
+        ProductDTO productUpdate = new ProductDTO(
+            "Update Attempt", 
+            "Description", 
             new BigDecimal("50.00"), true);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + createdProducto.id())
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_PRODUCT + createdProduct.id())
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(USER_EMAIL, USER_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updateProducto)))
+                .content(objectMapper.writeValueAsString(productUpdate)))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    void actualizarProductoProductoNoExistenteRetornaNotFound() throws Exception {
+    void updateNonExistentProductReturnsNotFound() throws Exception {
         // Arrange
-        crearUsuarioAdmin();
-        ProductDTO updateProducto = new ProductDTO(
-            "Producto Inexistente", 
-            "Descripción de Producto Inexistente", 
+        createAdminUser();
+        ProductDTO productUpdate = new ProductDTO(
+            "Nonexistent Product", 
+            "Description of a nonexistent product", 
             new BigDecimal("19.99"), true);
         
         // Act & Assert
-        mockMvc.perform(put(ENDPOINT_ACTUALIZAR + "999")
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+        mockMvc.perform(put(ENDPOINT_PRODUCT + "999")
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(updateProducto)))
+                .content(objectMapper.writeValueAsString(productUpdate)))
                 .andExpect(status().isNotFound());
     }
 }

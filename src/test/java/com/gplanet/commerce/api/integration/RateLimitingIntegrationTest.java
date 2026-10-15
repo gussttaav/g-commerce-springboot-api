@@ -1,8 +1,8 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGIN;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTS;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
@@ -89,8 +89,8 @@ class RateLimitingIntegrationTest extends AbstractIntegrationTest {
     @Test
     void usersHaveTheLimitOfTheirCurrentRole() throws Exception {
         String email = "promoted@example.com";
-        User user = crearUsuario("Promoted User", email, PASSWORD, User.Role.USER);
-        String userToken = obtenerJwtToken(email, PASSWORD);
+        User user = createUser("Promoted User", email, PASSWORD, User.Role.USER);
+        String userToken = obtainJwtToken(email, PASSWORD);
         for (int i = 0; i < USER_CAPACITY; i++) {
             getProfile(userToken).andExpect(status().isOk());
         }
@@ -98,14 +98,14 @@ class RateLimitingIntegrationTest extends AbstractIntegrationTest {
 
         user.setRole(User.Role.ADMIN);
         userRepository.save(user);
-        String adminToken = obtenerJwtToken(email, PASSWORD);
+        String adminToken = obtainJwtToken(email, PASSWORD);
 
         getProfile(adminToken).andExpect(status().isOk())
                 .andExpect(header().string(REMAINING_HEADER, String.valueOf(ADMIN_CAPACITY - 1)));
     }
 
     private ResultActions listProducts(String clientAddress) throws Exception {
-        return mockMvc.perform(get(ENDPOINT_PRODUCTOS).with(from(clientAddress)));
+        return mockMvc.perform(get(ENDPOINT_PRODUCTS).with(from(clientAddress)));
     }
 
     private ResultActions login(String clientAddress, String email) throws Exception {
@@ -116,7 +116,7 @@ class RateLimitingIntegrationTest extends AbstractIntegrationTest {
     }
 
     private ResultActions getProfile(String authorization) throws Exception {
-        return mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, authorization));
+        return mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, authorization));
     }
 
     private static RequestPostProcessor from(String clientAddress) {

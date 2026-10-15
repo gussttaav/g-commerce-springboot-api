@@ -1,7 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,7 +51,7 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void createUser() {
-        userId = crearUsuario("Claims User", USER_EMAIL, USER_PASSWORD, User.Role.USER).getId();
+        userId = createUser("Claims User", USER_EMAIL, USER_PASSWORD, User.Role.USER).getId();
     }
 
     @Test
@@ -136,7 +136,7 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void assertAccepted(String token) throws Exception {
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk());
         mockMvc.perform(get(ENDPOINT_AUTH_VALIDATE).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())
@@ -144,7 +144,7 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void assertRejected(String token) throws Exception {
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(get(ENDPOINT_AUTH_VALIDATE).header(HttpHeaders.AUTHORIZATION, "Bearer " + token))
                 .andExpect(status().isOk())

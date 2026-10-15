@@ -154,7 +154,7 @@ public class ProductController {
      * <p>This operation is restricted to administrators only.</p>
      *
      * @param productDTO the product data containing name, price, and other details
-     * @return ProductoResponseDTO containing the created product's information
+     * @return ProductResponseDTO containing the created product's information
      * @throws ApiException if the product could not be saved due to a constraint violation
      */
     @Operation(summary = "Create a new product", description = "Creates a new product with the provided data")
@@ -183,7 +183,7 @@ public class ProductController {
      *
      * @param id the unique identifier of the product to update
      * @param productDTO the updated product data
-     * @return ProductoResponseDTO containing the updated product's information
+     * @return ProductResponseDTO containing the updated product's information
      * @throws ResourceNotFoundException if the product with the given ID doesn't exist
      * @throws ApiException if the product could not be updated due to a constraint violation
      */

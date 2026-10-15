@@ -19,30 +19,30 @@ import com.gplanet.commerce.api.entities.Product;
 public interface ProductMapper {
     
     /**
-     * Converts a Product entity to a ProductoResponseDTO.
+     * Converts a Product entity to a ProductResponseDTO.
      *
      * @param product the product entity to convert
-     * @return the corresponding ProductoResponseDTO
+     * @return the corresponding ProductResponseDTO
      */
-    ProductResponseDTO toProductoResponseDTO(Product product);
+    ProductResponseDTO toProductResponseDTO(Product product);
 
     /**
-     * Converts a ProductoDTO to a Product entity.
-     * The id and fechaCreacion fields are ignored during the mapping.
+     * Converts a ProductDTO to a Product entity.
+     * The id and creationDate fields are ignored during the mapping.
      *
      * @param productDTO the product DTO to convert
      * @return the corresponding Product entity
      */
     @Mapping(target = "id", ignore = true)
-    Product toProducto(ProductDTO productDTO);
+    Product toProduct(ProductDTO productDTO);
 
     /**
-     * Updates an existing Product entity with data from a ProductoDTO.
-     * Preserves the id and fechaCreacion fields of the existing entity.
+     * Updates an existing Product entity with data from a ProductDTO.
+     * Preserves the id and creationDate fields of the existing entity.
      *
      * @param productDTO the source DTO containing updated data
      * @param product the target Product entity to update
      */
     @Mapping(target = "id", ignore = true)
-    void updateProductoFromDTO(ProductDTO productDTO, @MappingTarget Product product);
+    void updateProductFromDTO(ProductDTO productDTO, @MappingTarget Product product);
 }

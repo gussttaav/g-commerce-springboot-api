@@ -40,12 +40,12 @@ class UserRepositoryTest {
         user.setCreationDate(LocalDateTime.now());
         
         // Act
-        User savedUsuario = userRepository.save(user);
+        User savedUser = userRepository.save(user);
         
         // Assert
-        assertNotNull(savedUsuario.getId());
-        assertEquals(TEST_USERNAME, savedUsuario.getEmail());
-        assertEquals(User.Role.USER, savedUsuario.getRole());
+        assertNotNull(savedUser.getId());
+        assertEquals(TEST_USERNAME, savedUser.getEmail());
+        assertEquals(User.Role.USER, savedUser.getRole());
     }
     
     @Test

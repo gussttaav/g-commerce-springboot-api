@@ -1,7 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_JWKS;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.hamcrest.Matchers.hasItem;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -49,30 +49,30 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void createUser() {
-        crearUsuario("Rotation User", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+        createUser("Rotation User", USER_EMAIL, USER_PASSWORD, User.Role.USER);
     }
 
     @Test
     void tokenIssuedBeforeRotationIsStillAccepted() throws Exception {
-        String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
+        String token = obtainJwtToken(USER_EMAIL, USER_PASSWORD);
 
         keyStoreService.rotateKeyPair();
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(status().isOk());
     }
 
     @Test
     void tokenIssuedAfterRotationIsAcceptedWithoutRestart() throws Exception {
         // Let the decoder load the current key before it is rotated
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME)
-                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD)))
+        mockMvc.perform(get(ENDPOINT_USERS_ME)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(USER_EMAIL, USER_PASSWORD)))
                 .andExpect(status().isOk());
 
         keyStoreService.rotateKeyPair();
-        String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
+        String token = obtainJwtToken(USER_EMAIL, USER_PASSWORD);
 
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(status().isOk());
     }
 
@@ -109,7 +109,7 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
                 PRIVATE_KEY_ENTRY.formatted(keyId));
         keyEntries.forEach(entry -> stringRedisTemplate.expire(entry, Duration.ofDays(30)));
         stringRedisTemplate.opsForSet().remove(KEY_IDS_ENTRY, keyId);
-        String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
+        String token = obtainJwtToken(USER_EMAIL, USER_PASSWORD);
 
         // Requests served before the startup adoption must still see the active key
         mockMvc.perform(get(ENDPOINT_JWKS))
@@ -120,7 +120,7 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
         assertThat(keyEntries).allSatisfy(entry ->
                 assertThat(stringRedisTemplate.getExpire(entry)).isEqualTo(NO_EXPIRATION));
         assertThat(keyStoreService.getOrCreateActiveKeyPair().getKeyID()).isEqualTo(keyId);
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(status().isOk());
         mockMvc.perform(get(ENDPOINT_JWKS))
                 .andExpect(jsonPath("$.keys[0].kid").value(keyId));
@@ -139,7 +139,7 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
         // Recreate what earlier versions stored: the private key encrypted with AES/ECB, next to its AES key
         RSAKey legacyKey = keyStoreService.rotateKeyPair();
         String legacyKeyId = legacyKey.getKeyID();
-        String token = obtenerJwtToken(USER_EMAIL, USER_PASSWORD);
+        String token = obtainJwtToken(USER_EMAIL, USER_PASSWORD);
         SecretKey legacyEncryptionKey = KeyGenerator.getInstance("AES").generateKey();
         Cipher legacyCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
         legacyCipher.init(Cipher.ENCRYPT_MODE, legacyEncryptionKey);
@@ -155,7 +155,7 @@ class KeyRotationIntegrationTest extends AbstractIntegrationTest {
         assertThat(keyStoreService.getOrCreateActiveKeyPair().getKeyID()).isNotEqualTo(legacyKeyId);
         assertThat(stringRedisTemplate.hasKey(ENCRYPTION_KEY_ENTRY.formatted(legacyKeyId))).isFalse();
         // Tokens it signed remain valid until they expire
-        mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, token))
+        mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, token))
                 .andExpect(status().isOk());
     }
 }

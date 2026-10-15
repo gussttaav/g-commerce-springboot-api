@@ -66,17 +66,17 @@ public abstract class AbstractIntegrationTest {
     protected StringRedisTemplate stringRedisTemplate;
     
     @BeforeEach
-    void limpiarBaseDeDatos() {
+    void cleanDatabase() {
         purchaseRepository.deleteAll();
         productRepository.deleteAll();
         userRepository.deleteAll();
     }
     
-    protected User crearUsuarioAdmin() {
-        return crearUsuario("Admin User", ADMIN_EMAIL, ADMIN_PASSWORD, User.Role.ADMIN);
+    protected User createAdminUser() {
+        return createUser("Admin User", ADMIN_EMAIL, ADMIN_PASSWORD, User.Role.ADMIN);
     }
     
-    protected User crearUsuario(String nombre, String email, String password, User.Role rol) {
+    protected User createUser(String name, String email, String password, User.Role role) {
         // First check if user exists
         Optional<User> existingUser = userRepository.findByEmail(email);
         if (existingUser.isPresent()) {
@@ -84,15 +84,15 @@ public abstract class AbstractIntegrationTest {
         }
         
         User user = new User();
-        user.setName(nombre);
+        user.setName(name);
         user.setEmail(email);
         user.setPassword(passwordEncoder.encode(password));
-        user.setRole(rol);
+        user.setRole(role);
         user.setCreationDate(LocalDateTime.now());
         return userRepository.save(user);
     }
     
-    protected String obtenerJwtToken(String username, String password) {
+    protected String obtainJwtToken(String username, String password) {
         try {
             LoginDTO loginDTO = new LoginDTO(username, password);
             LoginResponseDTO response = authService.login(loginDTO);

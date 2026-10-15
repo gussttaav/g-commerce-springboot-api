@@ -38,7 +38,7 @@ import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 
 @ExtendWith(MockitoExtension.class)
-class UsuarioServiceTest {
+class UserServiceTest {
     public static final String TEST_NAME = "Test User";
     public static final String TEST_USERNAME = "test@example.com";
     public static final String TEST_PASSWD = "testPasswd123!";
@@ -57,7 +57,7 @@ class UsuarioServiceTest {
     @InjectMocks
     private UserService userService;
 
-    private User createTestUsuario() {
+    private User createTestUser() {
         User user = new User();
         user.setId(TEST_USER_ID);
         user.setName(TEST_NAME);
@@ -68,31 +68,31 @@ class UsuarioServiceTest {
         return user;
     }
     
-    private UserDTO createTestUsuarioDTO() {
+    private UserDTO createTestUserDTO() {
         return new UserDTO(TEST_NAME, TEST_USERNAME, "password123");
     }
     
     @Test
     void registerUserValidDataSuccess() {
         // Arrange
-        UserDTO userDTO = createTestUsuarioDTO();
-        User savedUsuario = createTestUsuario();
+        UserDTO userDTO = createTestUserDTO();
+        User savedUser = createTestUser();
         UserResponseDTO expectedResponse = new UserResponseDTO(
             1L, userDTO.name(), userDTO.email(), 
-            User.Role.USER, savedUsuario.getCreationDate());
+            User.Role.USER, savedUser.getCreationDate());
         
         when(passwordEncoder.encode(userDTO.password())).thenReturn(TEST_PASSWD);
-        when(userRepository.save(any(User.class))).thenReturn(savedUsuario);
-        when(userMapper.toUserResponseDTO(savedUsuario)).thenReturn(expectedResponse);
+        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userMapper.toUserResponseDTO(savedUser)).thenReturn(expectedResponse);
         
         // Act
         UserResponseDTO result = userService.registerUser(userDTO);
         
         // Assert
         assertNotNull(result);
-        assertEquals(savedUsuario.getId(), result.id());
-        assertEquals(savedUsuario.getName(), result.name());
-        assertEquals(savedUsuario.getEmail(), result.email());
+        assertEquals(savedUser.getId(), result.id());
+        assertEquals(savedUser.getName(), result.name());
+        assertEquals(savedUser.getEmail(), result.email());
         assertEquals(User.Role.USER, result.role());
         
         verify(passwordEncoder).encode(userDTO.password());
@@ -118,14 +118,14 @@ class UsuarioServiceTest {
     @Test
     void updateProfileValidDataSuccess() {
         // Arrange
-        User existingUser = createTestUsuario();
-        UserUpdateDTO perfilDTO = new UserUpdateDTO(
+        User existingUser = createTestUser();
+        UserUpdateDTO profileDTO = new UserUpdateDTO(
             "Updated Name", "new@example.com");
-        User updatedUser = createTestUsuario();
-        updatedUser.setName(perfilDTO.name());
-        updatedUser.setEmail(perfilDTO.newEmail());
+        User updatedUser = createTestUser();
+        updatedUser.setName(profileDTO.name());
+        updatedUser.setEmail(profileDTO.newEmail());
         UserResponseDTO expectedResponse = new UserResponseDTO(
-            1L, perfilDTO.name(), perfilDTO.newEmail(), 
+            1L, profileDTO.name(), profileDTO.newEmail(), 
             User.Role.USER, LocalDateTime.now());
         
         when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(existingUser));
@@ -133,12 +133,12 @@ class UsuarioServiceTest {
         when(userMapper.toUserResponseDTO(updatedUser)).thenReturn(expectedResponse);
         
         // Act
-        UserResponseDTO result = userService.updateProfile(TEST_USER_ID, perfilDTO);
+        UserResponseDTO result = userService.updateProfile(TEST_USER_ID, profileDTO);
         
         // Assert
         assertNotNull(result);
-        assertEquals(perfilDTO.name(), result.name());
-        assertEquals(perfilDTO.newEmail(), result.email());
+        assertEquals(profileDTO.name(), result.name());
+        assertEquals(profileDTO.newEmail(), result.email());
     }
     
     @Test
@@ -167,7 +167,7 @@ class UsuarioServiceTest {
     @Test
     void getProfileExistingUserSuccess() {
         // Arrange
-        User user = createTestUsuario();
+        User user = createTestUser();
         UserResponseDTO expectedResponse = new UserResponseDTO(
             user.getId(), user.getName(), user.getEmail(), 
             user.getRole(), user.getCreationDate()
@@ -207,8 +207,8 @@ class UsuarioServiceTest {
     void listUsersSuccess() {
         // Arrange
         List<User> users = Arrays.asList(
-            createTestUsuario(),
-            createTestUsuario()
+            createTestUser(),
+            createTestUser()
         );
         Page<User> usersPage = new PageImpl<>(users);
         List<UserResponseDTO> expectedResponses = users.stream()
@@ -236,7 +236,7 @@ class UsuarioServiceTest {
     void changeRoleExistingUserSuccess() {
         // Arrange
         Long userId = 1L;
-        User user = createTestUsuario();
+        User user = createTestUser();
         User.Role newRole = User.Role.ADMIN;
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));
@@ -270,7 +270,7 @@ class UsuarioServiceTest {
     void changeRoleSameRoleSuccess() {
         // Arrange
         Long userId = 1L;
-        User user = createTestUsuario();
+        User user = createTestUser();
         User.Role sameRole = user.getRole();
 
         when(userRepository.findById(userId)).thenReturn(Optional.of(user));

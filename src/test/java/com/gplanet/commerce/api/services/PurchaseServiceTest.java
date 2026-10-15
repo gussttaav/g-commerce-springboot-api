@@ -69,28 +69,28 @@ class PurchaseServiceTest {
     
     @BeforeEach
     void setUp() {
-        // Setup Usuario
+        // Set up the users
         regularUser = new User();
         regularUser.setId(1L);
         regularUser.setEmail("user@example.com");
-        regularUser.setName("Usuario Normal");
+        regularUser.setName("Regular User");
         regularUser.setRole(User.Role.USER);
         
         adminUser = new User();
         adminUser.setId(2L);
         adminUser.setEmail("admin@example.com");
-        adminUser.setName("Usuario Admin");
+        adminUser.setName("Admin User");
         adminUser.setRole(User.Role.ADMIN);
         
-        // Setup Productos
+        // Set up the products
         product1 = new Product();
         product1.setId(1L);
-        product1.setName("Producto 1");
+        product1.setName("Product 1");
         product1.setPrice(new BigDecimal("100.00"));
         
         product2 = new Product();
         product2.setId(2L);
-        product2.setName("Producto 2");
+        product2.setName("Product 2");
         product2.setPrice(new BigDecimal("200.00"));
         
         // Setup PurchaseDTO
@@ -111,7 +111,7 @@ class PurchaseServiceTest {
             regularUser.getName(),
             purchase.getDate(),
             purchase.getTotal(),
-            null // products, no se usan en los asserts
+            null // products, not used by the assertions
         );
     }
 

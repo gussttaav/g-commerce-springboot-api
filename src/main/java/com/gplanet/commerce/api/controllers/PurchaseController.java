@@ -65,7 +65,7 @@ public class PurchaseController {
      *
      * @param authentication the current user's authentication object
      * @param purchaseDTO the purchase details including products and quantities
-     * @return CompraResponseDTO containing the created purchase information
+     * @return PurchaseResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if the user is not found
      * @throws ResourceNotFoundException if any of the products don't exist or are not active
      * @throws ApiException if the purchase could not be added due to a constraint violation
@@ -103,7 +103,7 @@ public class PurchaseController {
      * @param sort The field to sort by: date or total
      * @param direction The sort direction (ASC or DESC)
      * @param authentication the current user's authentication object
-     * @return {@code PaginatedResponse<CompraResponseDTO>} containing paginated purchases
+     * @return {@code PaginatedResponse<PurchaseResponseDTO>} containing paginated purchases
      * @throws UsernameNotFoundException if the user is not found
      */
     @Operation(summary = "Lists user purchases with pagination",

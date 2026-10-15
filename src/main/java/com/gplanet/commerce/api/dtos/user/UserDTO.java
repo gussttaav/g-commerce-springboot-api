@@ -60,7 +60,7 @@ public record UserDTO(
     }
 
     /**
-     * Creates a UsuarioDTO with default USER role.
+     * Creates a UserDTO with default USER role.
      *
      * @param nam The full name of the user.
      * @param email The email address for the user account, used as username.

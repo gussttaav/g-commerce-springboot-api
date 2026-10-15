@@ -3,7 +3,7 @@ package com.gplanet.commerce.api.integration;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_LOGOUT;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_REFRESH;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VALIDATE;
-import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
+import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
@@ -47,7 +47,7 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     @BeforeEach
     void login() {
-        crearUsuario("Lifecycle User", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+        createUser("Lifecycle User", USER_EMAIL, USER_PASSWORD, User.Role.USER);
         session = authService.login(new LoginDTO(USER_EMAIL, USER_PASSWORD));
     }
 
@@ -126,7 +126,7 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
     @Test
     void refreshAfterChangingTheEmailDoesNotIssueTokensToTheNewOwnerOfTheOldEmail() throws Exception {
         changeEmail(session, NEW_EMAIL);
-        User newOwner = crearUsuario("New Owner", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+        User newOwner = createUser("New Owner", USER_EMAIL, USER_PASSWORD, User.Role.USER);
 
         LoginResponseDTO refreshed = readSession(refresh(session.refreshToken()).andExpect(status().isOk()));
 
@@ -177,7 +177,7 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
     }
 
     private void changeEmail(LoginResponseDTO userSession, String newEmail) throws Exception {
-        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
                 .header(HttpHeaders.AUTHORIZATION, bearer(userSession.token()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new UserUpdateDTO(null, newEmail))))
@@ -185,7 +185,7 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
     }
 
     private ResultActions getProfile(String token) throws Exception {
-        return mockMvc.perform(get(ENDPOINT_USUARIOS_ME).header(HttpHeaders.AUTHORIZATION, bearer(token)));
+        return mockMvc.perform(get(ENDPOINT_USERS_ME).header(HttpHeaders.AUTHORIZATION, bearer(token)));
     }
 
     private ResultActions refresh(String token) throws Exception {

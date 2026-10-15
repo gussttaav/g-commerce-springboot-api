@@ -61,8 +61,11 @@ class PurchaseControllerTest {
     public static final BigDecimal PRODUCT_PRICE_75 = new BigDecimal("75.00");
     public static final BigDecimal COMPRA_TOTAL_100 = new BigDecimal("100.00");
     public static final BigDecimal COMPRA_TOTAL_150 = new BigDecimal("150.00");
-    private static final String TEST_USER_EMAIL = "test@example.com";
-    private static final String TEST_ADMIN_EMAIL = "admin@example.com";
+    private static final Long TEST_USER_ID = 1L;
+    private static final Long TEST_ADMIN_ID = 2L;
+    // Access tokens identify the user by ID, which is the name of the authentication
+    private static final String TEST_USER_AUTH_NAME = "1";
+    private static final String TEST_ADMIN_AUTH_NAME = "2";
     private static final String SORT_FIELD_DATE = "date";
     private static final String SORT_DIRECTION_DESC = "DESC";
     
@@ -86,7 +89,7 @@ class PurchaseControllerTest {
     }
 
     @Test
-    @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
+    @WithMockUser(username = TEST_USER_AUTH_NAME, roles = "USER")
     @DisplayName("Should create purchase successfully when valid data is provided")
     void createPurchaseValidDataReturnsCreatedPurchase() throws Exception {
         // Arrange
@@ -94,7 +97,7 @@ class PurchaseControllerTest {
         PurchaseResponseDTO responseDTO = createMockPurchaseResponseDTO();
         float expectedTotal = responseDTO.total().floatValue();
 
-        when(purchaseService.createPurchase(eq(TEST_USER_EMAIL), any(PurchaseDTO.class)))
+        when(purchaseService.createPurchase(eq(TEST_USER_ID), any(PurchaseDTO.class)))
             .thenReturn(responseDTO);
 
         // Act & Assert
@@ -107,11 +110,11 @@ class PurchaseControllerTest {
             .andExpect(jsonPath("$.total").value(expectedTotal))
             .andExpect(jsonPath("$.products", Matchers.hasSize(2)));
 
-        verify(purchaseService).createPurchase(eq(TEST_USER_EMAIL), any(PurchaseDTO.class));
+        verify(purchaseService).createPurchase(eq(TEST_USER_ID), any(PurchaseDTO.class));
     }
 
     @ParameterizedTest
-    @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
+    @WithMockUser(username = TEST_USER_AUTH_NAME, roles = "USER")
     @ValueSource(strings = {
         "{\"products\": [{\"quantity\": 1}]}",
         "{\"products\": [{\"productId\": 1}]}",
@@ -145,7 +148,7 @@ class PurchaseControllerTest {
     }
 
     @Test
-    @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
+    @WithMockUser(username = TEST_USER_AUTH_NAME, roles = "USER")
     @DisplayName("Should return all purchases for authenticated user")
     void listPurchasesAuthenticatedUserReturnsUserPurchases() throws Exception {
         // Arrange
@@ -156,7 +159,7 @@ class PurchaseControllerTest {
         );
         
         when(purchaseService.listPurchases(
-                eq(TEST_USER_EMAIL), 
+                eq(TEST_USER_ID), 
                 eq(0), 
                 eq(10), 
                 eq(SORT_FIELD_DATE), 
@@ -174,7 +177,7 @@ class PurchaseControllerTest {
             .andExpect(jsonPath("$.totalElements").value(2));
 
         verify(purchaseService).listPurchases(
-            eq(TEST_USER_EMAIL), 
+            eq(TEST_USER_ID), 
             eq(0), 
             eq(10), 
             eq(SORT_FIELD_DATE), 
@@ -182,7 +185,7 @@ class PurchaseControllerTest {
     }
 
     @Test
-    @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
+    @WithMockUser(username = TEST_ADMIN_AUTH_NAME, roles = "ADMIN")
     @DisplayName("Should return all purchases for admin user")
     void listPurchasesAdminUserReturnsAllPurchases() throws Exception {
         // Arrange
@@ -193,7 +196,7 @@ class PurchaseControllerTest {
         );
         
         when(purchaseService.listPurchases(
-                eq(TEST_ADMIN_EMAIL), 
+                eq(TEST_ADMIN_ID), 
                 eq(0), 
                 eq(10), 
                 eq(SORT_FIELD_DATE), 
@@ -210,7 +213,7 @@ class PurchaseControllerTest {
             .andExpect(jsonPath("$.content", Matchers.hasSize(2)));
 
         verify(purchaseService).listPurchases(
-            eq(TEST_ADMIN_EMAIL), 
+            eq(TEST_ADMIN_ID), 
             eq(0), 
             eq(10), 
             eq(SORT_FIELD_DATE), 
@@ -218,7 +221,7 @@ class PurchaseControllerTest {
     }
 
     @ParameterizedTest
-    @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
+    @WithMockUser(username = TEST_ADMIN_AUTH_NAME, roles = "ADMIN")
     @CsvSource({"page, -1", "size, 0", "size, 101", "sort, user.password", "sort, unknown"})
     @DisplayName("Should return 400 when a paging parameter is invalid")
     void listPurchasesInvalidPagingParameterReturnsBadRequest(String parameter, String value) throws Exception {

@@ -6,6 +6,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_AUTH_VAL
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS_ME;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -27,15 +28,18 @@ import org.springframework.test.web.servlet.ResultActions;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
+import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
 import com.gplanet.commerce.api.entities.User;
 
 /**
  * Integration tests for the token lifecycle: logout revokes the session's tokens (SEC-1), refresh tokens are not
- * accepted as access tokens (SEC-2), and a refresh token can only be used once (SEC-3).
+ * accepted as access tokens (SEC-2), a refresh token can only be used once (SEC-3), and tokens keep identifying
+ * the same user when the user changes their email (FUN-5).
  */
 class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
 
     private static final String USER_EMAIL = "lifecycle@example.com";
+    private static final String NEW_EMAIL = "renamed@example.com";
     private static final String USER_PASSWORD = "Password123!";
     private static final int CONCURRENT_REFRESHES = 8;
 
@@ -109,6 +113,28 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void sessionKeepsWorkingAfterChangingTheEmail() throws Exception {
+        changeEmail(session, NEW_EMAIL);
+
+        getProfile(session.token())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(NEW_EMAIL));
+        LoginResponseDTO refreshed = readSession(refresh(session.refreshToken()).andExpect(status().isOk()));
+        assertThat(refreshed.user().email()).isEqualTo(NEW_EMAIL);
+    }
+
+    @Test
+    void refreshAfterChangingTheEmailDoesNotIssueTokensToTheNewOwnerOfTheOldEmail() throws Exception {
+        changeEmail(session, NEW_EMAIL);
+        User newOwner = crearUsuario("New Owner", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+
+        LoginResponseDTO refreshed = readSession(refresh(session.refreshToken()).andExpect(status().isOk()));
+
+        assertThat(refreshed.user().id()).isNotEqualTo(newOwner.getId());
+        assertThat(refreshed.user().email()).isEqualTo(NEW_EMAIL);
+    }
+
+    @Test
     void concurrentRefreshesWithTheSameTokenSucceedOnlyOnce() throws Exception {
         String authorization = bearer(session.refreshToken());
         CountDownLatch start = new CountDownLatch(1);
@@ -147,6 +173,14 @@ class TokenLifecycleIntegrationTest extends AbstractIntegrationTest {
                 .header(HttpHeaders.AUTHORIZATION, bearer(loggedOutSession.token()))
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(new LogoutRequestDTO(loggedOutSession.refreshToken()))))
+                .andExpect(status().isOk());
+    }
+
+    private void changeEmail(LoginResponseDTO userSession, String newEmail) throws Exception {
+        mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
+                .header(HttpHeaders.AUTHORIZATION, bearer(userSession.token()))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UserUpdateDTO(null, newEmail))))
                 .andExpect(status().isOk());
     }
 

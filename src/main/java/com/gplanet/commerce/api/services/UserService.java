@@ -67,15 +67,15 @@ public class UserService {
     /**
      * Updates a user's profile information.
      * 
-     * @param email Current email of the user
+     * @param userId ID of the user
      * @param profileDTO Data transfer object containing new profile information
      * @return UsuarioResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if user is not found
      */
     @Transactional
-    public UserResponseDTO updateProfile(String email, UserUpdateDTO profileDTO) {
-        log.info("Updating profile for user: {}", email);
-        User user = userRepository.findByEmail(email)
+    public UserResponseDTO updateProfile(Long userId, UserUpdateDTO profileDTO) {
+        log.info("Updating profile for user ID: {}", userId);
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
         // Update basic profile fields only when provided (partial update semantics)
         if (profileDTO.newEmail() != null) {
@@ -149,13 +149,13 @@ public class UserService {
     /**
      * Retrieves a user's profile information.
      * 
-     * @param email Email of the user
+     * @param userId ID of the user
      * @return UsuarioResponseDTO containing the user's information
      * @throws UsernameNotFoundException if user is not found
      */
-    public UserResponseDTO getProfile(String email) {
-        log.debug("Retrieving profile for user: {}", email);
-        User user = userRepository.findByEmail(email)
+    public UserResponseDTO getProfile(Long userId) {
+        log.debug("Retrieving profile for user ID: {}", userId);
+        User user = userRepository.findById(userId)
             .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
         return userMapper.toUserResponseDTO(user);
     }

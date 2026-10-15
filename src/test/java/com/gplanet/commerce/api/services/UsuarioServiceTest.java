@@ -42,6 +42,7 @@ class UsuarioServiceTest {
     public static final String TEST_NAME = "Test User";
     public static final String TEST_USERNAME = "test@example.com";
     public static final String TEST_PASSWD = "testPasswd123!";
+    private static final Long TEST_USER_ID = 1L;
     private static final Long NON_EXISTENT_USER_ID = 999L;
 
     @Mock
@@ -58,7 +59,7 @@ class UsuarioServiceTest {
 
     private User createTestUsuario() {
         User user = new User();
-        user.setId(1L);
+        user.setId(TEST_USER_ID);
         user.setName(TEST_NAME);
         user.setEmail(TEST_USERNAME);
         user.setPassword(TEST_PASSWD);
@@ -118,7 +119,6 @@ class UsuarioServiceTest {
     void updateProfileValidDataSuccess() {
         // Arrange
         User existingUser = createTestUsuario();
-        String userEmail = existingUser.getEmail();
         UserUpdateDTO perfilDTO = new UserUpdateDTO(
             "Updated Name", "new@example.com");
         User updatedUser = createTestUsuario();
@@ -128,12 +128,12 @@ class UsuarioServiceTest {
             1L, perfilDTO.name(), perfilDTO.newEmail(), 
             User.Role.USER, LocalDateTime.now());
         
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(existingUser));
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(existingUser));
         when(userRepository.save(any(User.class))).thenReturn(updatedUser);
         when(userMapper.toUserResponseDTO(updatedUser)).thenReturn(expectedResponse);
         
         // Act
-        UserResponseDTO result = userService.updateProfile(userEmail, perfilDTO);
+        UserResponseDTO result = userService.updateProfile(TEST_USER_ID, perfilDTO);
         
         // Assert
         assertNotNull(result);
@@ -144,21 +144,20 @@ class UsuarioServiceTest {
     @Test
     void changePasswordValidDataSuccess() {
         // Arrange
-        String userEmail = TEST_USERNAME;
         UserUpdateDTO profileDTO = new UserUpdateDTO(
             "oldPassword", "newPassword", "newPassword");
         
         User user = new User();
         user.setPassword("encodedOldPassword");
         
-        when(userRepository.findByEmail(userEmail)).thenReturn(Optional.of(user));
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
         when(passwordEncoder.matches(profileDTO.currentPassword(), user.getPassword())).thenReturn(true);
         when(passwordEncoder.encode(profileDTO.newPassword())).thenReturn("encodedNewPassword");
         when(userRepository.save(user)).thenReturn(user);
         
         // Act & Assert
         assertDoesNotThrow(() -> 
-            userService.updateProfile(userEmail, profileDTO));
+            userService.updateProfile(TEST_USER_ID, profileDTO));
         
         verify(userRepository).save(user);
         assertEquals("encodedNewPassword", user.getPassword());
@@ -174,11 +173,11 @@ class UsuarioServiceTest {
             user.getRole(), user.getCreationDate()
         );
 
-        when(userRepository.findByEmail(TEST_USERNAME)).thenReturn(Optional.of(user));
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
         when(userMapper.toUserResponseDTO(user)).thenReturn(expectedResponse);
 
         // Act
-        UserResponseDTO result = userService.getProfile(TEST_USERNAME);
+        UserResponseDTO result = userService.getProfile(TEST_USER_ID);
 
         // Assert
         assertNotNull(result);
@@ -187,21 +186,20 @@ class UsuarioServiceTest {
         assertEquals(expectedResponse.email(), result.email());
         assertEquals(expectedResponse.role(), result.role());
         
-        verify(userRepository).findByEmail(TEST_USERNAME);
+        verify(userRepository).findById(TEST_USER_ID);
         verify(userMapper).toUserResponseDTO(user);
     }
 
     @Test
     void getProfileNonExistentUserThrowsException() {
         // Arrange
-        String email = "nonexistent@example.com";
-        when(userRepository.findByEmail(email)).thenReturn(Optional.empty());
+        when(userRepository.findById(NON_EXISTENT_USER_ID)).thenReturn(Optional.empty());
 
         // Act & Assert
         assertThrows(UsernameNotFoundException.class, () -> 
-            userService.getProfile(email));
+            userService.getProfile(NON_EXISTENT_USER_ID));
         
-        verify(userRepository).findByEmail(email);
+        verify(userRepository).findById(NON_EXISTENT_USER_ID);
         verify(userMapper, never()).toUserResponseDTO(any());
     }
 

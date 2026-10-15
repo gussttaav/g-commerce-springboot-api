@@ -68,7 +68,10 @@ import com.nimbusds.jwt.SignedJWT;
 class AuthServiceTest {
 
     private static final String TEST_EMAIL = "test@example.com";
-    private static final String OTHER_EMAIL = "other@example.com";
+    private static final Long TEST_USER_ID = 1L;
+    // Tokens identify the user by ID in their subject
+    private static final String TEST_USER_SUBJECT = "1";
+    private static final String OTHER_USER_SUBJECT = "2";
     private static final String TEST_PASSWORD = "password123";
     private static final String ACCESS_TOKEN = "access.token.123";
     private static final String REFRESH_TOKEN = "refresh.token.123";
@@ -88,9 +91,6 @@ class AuthServiceTest {
 
     @Mock
     private UserMapper userMapper;
-
-    @Mock
-    private CustomUserDetailsService customUserDetailsService;
 
     @Mock
     private OAuth2TokenService oauth2TokenService;
@@ -123,15 +123,15 @@ class AuthServiceTest {
     @BeforeEach
     void setUp() {
         // Built by hand: @InjectMocks can't tell the two decoders apart
-        authService = new AuthService(userRepository, authenticationManager, userMapper, customUserDetailsService,
-                oauth2TokenService, tokenBlacklistService, accessTokenDecoder, refreshTokenDecoder,
-                jwtProperties, stringRedisTemplate);
+        authService = new AuthService(userRepository, authenticationManager, userMapper, oauth2TokenService,
+                tokenBlacklistService, accessTokenDecoder, refreshTokenDecoder, jwtProperties, stringRedisTemplate);
 
         user = new User();
-        user.setId(1L);
+        user.setId(TEST_USER_ID);
         user.setEmail(TEST_EMAIL);
         user.setPassword("encodedPassword");
         user.setName("Test User");
+        user.setRole(User.Role.USER);
 
         userDetails = org.springframework.security.core.userdetails.User.withUsername(TEST_EMAIL)
                 .password("encodedPassword")
@@ -158,8 +158,8 @@ class AuthServiceTest {
         when(authenticationManager.authenticate(any(Authentication.class))).thenReturn(
                 UsernamePasswordAuthenticationToken.authenticated(userDetails, null, userDetails.getAuthorities()));
         when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
-        when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn(ACCESS_TOKEN);
-        when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(validRefreshToken); // Use valid JWT
+        when(oauth2TokenService.generateAccessToken(user)).thenReturn(ACCESS_TOKEN);
+        when(oauth2TokenService.generateRefreshToken(user)).thenReturn(validRefreshToken); // Use valid JWT
         when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
         // Mock Redis set operation for storeRefreshToken
         doNothing().when(valueOperations).set(
@@ -181,10 +181,10 @@ class AuthServiceTest {
         verify(authenticationManager).authenticate(argThat(authentication ->
                 TEST_EMAIL.equals(authentication.getPrincipal())
                         && TEST_PASSWORD.equals(authentication.getCredentials())));
-        // The refresh token is stored by its ID
+        // The refresh token is stored by its ID, with the ID of its user
         verify(valueOperations).set(
             eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID),
-            eq(TEST_EMAIL),
+            eq(TEST_USER_SUBJECT),
             anyLong(),
             eq(TimeUnit.MILLISECONDS)
         );
@@ -208,12 +208,11 @@ class AuthServiceTest {
     void refreshValidTokenReturnsNewTokensAndInvalidatesUsedToken() throws Exception {
         // Arrange
         String newRefreshToken = createValidJWT();
-        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_USER_SUBJECT));
         when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID)).thenReturn(true);
-        when(customUserDetailsService.loadUserByUsername(TEST_EMAIL)).thenReturn(userDetails);
-        when(oauth2TokenService.generateAccessToken(userDetails)).thenReturn("newAccessToken");
-        when(oauth2TokenService.generateRefreshToken(userDetails)).thenReturn(newRefreshToken);
-        when(userRepository.findByEmail(TEST_EMAIL)).thenReturn(Optional.of(user));
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+        when(oauth2TokenService.generateAccessToken(user)).thenReturn("newAccessToken");
+        when(oauth2TokenService.generateRefreshToken(user)).thenReturn(newRefreshToken);
         when(userMapper.toUserResponseDTO(user)).thenReturn(userResponseDTO);
         
         // Act
@@ -224,14 +223,26 @@ class AuthServiceTest {
         assertEquals("newAccessToken", result.token());
         assertEquals(newRefreshToken, result.refreshToken());
         verify(stringRedisTemplate).delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID);
-        verify(valueOperations).set(eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID), eq(TEST_EMAIL), anyLong(),
-                eq(TimeUnit.MILLISECONDS));
+        verify(valueOperations).set(eq(REFRESH_TOKEN_PREFIX + NEW_REFRESH_TOKEN_ID), eq(TEST_USER_SUBJECT),
+                anyLong(), eq(TimeUnit.MILLISECONDS));
+    }
+
+    @Test
+    void refreshTokenOfDeletedUserThrowsException() {
+        // Arrange
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_USER_SUBJECT));
+        when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID)).thenReturn(true);
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.empty());
+
+        // Act & Assert
+        assertThrows(InvalidTokenException.class, () -> authService.refresh(TOKEN_TYPE_PREFIX + REFRESH_TOKEN));
+        verifyNoInteractions(oauth2TokenService);
     }
 
     @Test
     void refreshUsedOrRevokedTokenThrowsException() {
         // Arrange - The token is valid, but no longer stored
-        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_USER_SUBJECT));
         when(stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + REFRESH_TOKEN_ID)).thenReturn(false);
 
         // Act & Assert
@@ -260,8 +271,8 @@ class AuthServiceTest {
     @Test
     void logoutRevokesAccessAndRefreshTokens() {
         // Arrange
-        Jwt accessToken = accessToken(TEST_EMAIL);
-        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_EMAIL));
+        Jwt accessToken = accessToken(TEST_USER_SUBJECT);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(TEST_USER_SUBJECT));
 
         // Act
         authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken);
@@ -274,7 +285,7 @@ class AuthServiceTest {
     @Test
     void logoutWithInvalidRefreshTokenRevokesAccessToken() {
         // Arrange
-        Jwt accessToken = accessToken(TEST_EMAIL);
+        Jwt accessToken = accessToken(TEST_USER_SUBJECT);
         when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenThrow(new BadJwtException("Jwt expired"));
 
         // Act
@@ -288,8 +299,8 @@ class AuthServiceTest {
     @Test
     void logoutDoesNotRevokeRefreshTokenOfAnotherUser() {
         // Arrange
-        Jwt accessToken = accessToken(TEST_EMAIL);
-        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(OTHER_EMAIL));
+        Jwt accessToken = accessToken(TEST_USER_SUBJECT);
+        when(refreshTokenDecoder.decode(REFRESH_TOKEN)).thenReturn(refreshToken(OTHER_USER_SUBJECT));
 
         // Act
         authService.logout(new LogoutRequestDTO(REFRESH_TOKEN), accessToken);
@@ -302,7 +313,7 @@ class AuthServiceTest {
     @Test
     void logoutWhenRedisFailsThrowsException() {
         // Arrange
-        Jwt accessToken = accessToken(TEST_EMAIL);
+        Jwt accessToken = accessToken(TEST_USER_SUBJECT);
         doThrow(new RedisConnectionFailureException("Redis is down")).when(tokenBlacklistService).blacklist(accessToken);
 
         // Act & Assert
@@ -313,7 +324,7 @@ class AuthServiceTest {
     @Test
     void validateTokenValidTokenReturnsValidationResponse() {
         // Arrange
-        when(accessTokenDecoder.decode(ACCESS_TOKEN)).thenReturn(accessToken(TEST_EMAIL));
+        when(accessTokenDecoder.decode(ACCESS_TOKEN)).thenReturn(accessToken(TEST_USER_SUBJECT));
 
         // Act
         TokenValidationResponseDTO result = authService.validateToken(TOKEN_TYPE_PREFIX + ACCESS_TOKEN);
@@ -386,7 +397,7 @@ class AuthServiceTest {
     private String createValidJWT() throws Exception {
         // Create a simple JWT with basic claims
         JWTClaimsSet claimsSet = new JWTClaimsSet.Builder()
-                .subject(TEST_EMAIL)
+                .subject(TEST_USER_SUBJECT)
                 .issuer("g-commerce-api")
                 .audience("g-commerce-api")
                 .expirationTime(new Date(System.currentTimeMillis() + TOKEN_ACCESS_EXPIRATION_MS))

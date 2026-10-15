@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.security.AuthenticatedUser;
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.user.UserDTO;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
@@ -132,7 +133,7 @@ public class UserController {
     })
     @GetMapping("/me")
     public UserResponseDTO getProfile(Authentication authentication) {
-        return userService.getProfile(authentication.getName());
+        return userService.getProfile(AuthenticatedUser.idOf(authentication));
     }
 
 
@@ -160,8 +161,7 @@ public class UserController {
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "Updated profile information", required = true) 
             UserUpdateDTO profileDTO) {
-        return userService.updateProfile(
-                authentication.getName(), profileDTO);
+        return userService.updateProfile(AuthenticatedUser.idOf(authentication), profileDTO);
     }
 
 

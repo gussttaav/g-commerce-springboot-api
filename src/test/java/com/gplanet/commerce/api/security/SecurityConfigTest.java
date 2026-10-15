@@ -13,7 +13,7 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USUARIOS;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -306,7 +306,7 @@ class SecurityConfigTest {
         UserResponseDTO responseDto = new UserResponseDTO(1L, "Updated Name", 
             "updated@test.com", User.Role.USER, LocalDateTime.now());
             
-        when(userService.updateProfile(anyString(), any(UserUpdateDTO.class)))
+        when(userService.updateProfile(anyLong(), any(UserUpdateDTO.class)))
             .thenReturn(responseDto);
 
         // Get user JWT token

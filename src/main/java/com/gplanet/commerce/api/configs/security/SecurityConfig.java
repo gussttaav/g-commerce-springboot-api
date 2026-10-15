@@ -3,6 +3,7 @@ package com.gplanet.commerce.api.configs.security;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -22,6 +23,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.oauth2.core.OAuth2TokenValidator;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.oauth2.jwt.JwtAudienceValidator;
+import org.springframework.security.oauth2.jwt.JwtClaimNames;
 import org.springframework.security.oauth2.jwt.JwtClaimValidator;
 import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.oauth2.jwt.JwtIssuerValidator;
@@ -84,6 +86,7 @@ public class SecurityConfig {
 
     private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_USER = "USER";
+    private static final Pattern USER_ID = Pattern.compile("\\d+");
 
     private final CorsProperties corsProperties;
     private final JwtProperties jwtProperties;
@@ -242,7 +245,11 @@ public class SecurityConfig {
 
     /**
      * Creates a JWT decoder that selects the verification key by the token's key ID and validates its
-     * timestamps, issuer, audience and the given token-specific claims.
+     * timestamps, issuer, audience, subject and the given token-specific claims.
+     * <p>
+     * The subject must be a user ID. Tokens issued by earlier versions of the API have the user's email as
+     * subject, and are rejected: emails can change, so the email of a token may belong to another user by now.
+     * </p>
      *
      * @param jwkSource the JWK source bean
      * @param tokenValidators validators for the claims specific to the type of token
@@ -257,7 +264,9 @@ public class SecurityConfig {
 
         List<OAuth2TokenValidator<Jwt>> validators = new ArrayList<>(List.of(
                 new JwtIssuerValidator(jwtProperties.getIssuer()),
-                new JwtAudienceValidator(jwtProperties.getAudience())));
+                new JwtAudienceValidator(jwtProperties.getAudience()),
+                new JwtClaimValidator<String>(JwtClaimNames.SUB,
+                        subject -> subject != null && USER_ID.matcher(subject).matches())));
         validators.addAll(tokenValidators);
 
         NimbusJwtDecoder decoder = new NimbusJwtDecoder(jwtProcessor);

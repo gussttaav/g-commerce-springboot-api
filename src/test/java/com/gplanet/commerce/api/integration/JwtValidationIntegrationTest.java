@@ -32,7 +32,7 @@ import com.nimbusds.jwt.SignedJWT;
 
 /**
  * Integration tests for the checks applied to incoming access tokens: signature key, timestamps, issuer and
- * audience (SEC-7), token type (SEC-2) and token ID (SEC-1). Each case also checks that
+ * audience (SEC-7), token type (SEC-2), token ID (SEC-1) and subject (FUN-5). Each case also checks that
  * {@code /api/auth/validate} gives the same verdict as the resource server (SEC-4).
  */
 class JwtValidationIntegrationTest extends AbstractIntegrationTest {
@@ -47,9 +47,11 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     @Autowired
     private JwtProperties jwtProperties;
 
+    private Long userId;
+
     @BeforeEach
     void createUser() {
-        crearUsuario("Claims User", USER_EMAIL, USER_PASSWORD, User.Role.USER);
+        userId = crearUsuario("Claims User", USER_EMAIL, USER_PASSWORD, User.Role.USER).getId();
     }
 
     @Test
@@ -118,6 +120,14 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     }
 
     @Test
+    void tokenWithEmailAsSubjectIsRejected() throws Exception {
+        // Tokens issued before tokens identified users by ID; the email may belong to another user by now
+        JWTClaimsSet claims = validClaims().subject(USER_EMAIL).build();
+
+        assertRejected(sign(claims, activeKey()));
+    }
+
+    @Test
     void tokenWithoutIdIsRejected() throws Exception {
         // Tokens are revoked by ID, so a token without one could never be revoked
         JWTClaimsSet claims = validClaims().jwtID(null).build();
@@ -148,7 +158,7 @@ class JwtValidationIntegrationTest extends AbstractIntegrationTest {
     private JWTClaimsSet.Builder validClaims() {
         Instant now = Instant.now();
         return new JWTClaimsSet.Builder()
-                .subject(USER_EMAIL)
+                .subject(userId.toString())
                 .issuer(jwtProperties.getIssuer())
                 .audience(jwtProperties.getAudience())
                 .issueTime(Date.from(now))

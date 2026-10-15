@@ -68,6 +68,9 @@ class UserControllerTest {
     private static final String USER_ROLE = "USER";
     private static final String TEST_USER_NAME = "Test User";
     private static final String TEST_USER_EMAIL = "test@example.com";
+    private static final Long TEST_USER_ID = 1L;
+    // Access tokens identify the user by ID, which is the name of the authentication
+    private static final String TEST_USER_AUTH_NAME = "1";
     private static final String TEST_ADMIN_EMAIL = "admin@example.com";
     private static final String SORT_FIELD_EMAIL = "email";
     private static final String SORT_DIRECTION_ASC = "ASC";
@@ -241,7 +244,7 @@ class UserControllerTest {
         
         @Test
         @DisplayName("Should update profile successfully when authenticated")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void updateProfileValidDataAuthenticatedSuccess() throws Exception {
             // Arrange
             UserUpdateDTO requestDto = new UserUpdateDTO(
@@ -253,7 +256,7 @@ class UserControllerTest {
                 User.Role.USER,
                 LocalDateTime.now());
             
-            when(userService.updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class)))
+            when(userService.updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -264,12 +267,12 @@ class UserControllerTest {
                 .andExpect(userName(requestDto.name()))
                 .andExpect(userEmail(requestDto.newEmail()));
 
-            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
         }
 
         @Test
         @DisplayName("Should return 400 when update data is invalid")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void updateProfileInvalidDataBadRequest() throws Exception {
             // Arrange
             UserUpdateDTO requestDto = new UserUpdateDTO(
@@ -305,7 +308,7 @@ class UserControllerTest {
 
         @Test
         @DisplayName("Should change password successfully when authenticated")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void cambiarContrasenaValidDataAuthenticatedSuccess() throws Exception {
             // Arrange
             UserUpdateDTO requestDto = new UserUpdateDTO(
@@ -317,7 +320,7 @@ class UserControllerTest {
                 User.Role.USER,
                 LocalDateTime.now());
             
-            when(userService.updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class)))
+            when(userService.updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class)))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -326,12 +329,12 @@ class UserControllerTest {
                     .content(objectMapper.writeValueAsString(requestDto)))
                 .andExpect(status().isOk());
 
-            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
         }
 
         @Test
         @DisplayName("Should return 400 when passwords don't match")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void cambiarContrasenaPasswordMismatchBadRequest() throws Exception {
             // Arrange
             UserUpdateDTO requestDto = new UserUpdateDTO(
@@ -339,7 +342,7 @@ class UserControllerTest {
             
             doThrow(new PasswordMismatchException("Las contraseñas no coinciden"))
                 .when(userService)
-                .updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+                .updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
 
             // Act & Assert
             mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
@@ -348,12 +351,12 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest())
                 .andExpect(errorMessage("Las contraseñas no coinciden"));
 
-            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
         }
 
         @Test
         @DisplayName("Should return 401 when current password is incorrect")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void cambiarContrasenaIncorrectCurrentPasswordUnauthorized() throws Exception {
             // Arrange
             UserUpdateDTO requestDto = new UserUpdateDTO(
@@ -361,7 +364,7 @@ class UserControllerTest {
             
             doThrow(new InvalidPasswordException("La contraseña actual es incorrecta"))
                 .when(userService)
-                .updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+                .updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
 
             // Act & Assert
             mockMvc.perform(patch(ENDPOINT_USUARIOS_ME)
@@ -370,7 +373,7 @@ class UserControllerTest {
                 .andExpect(status().isUnauthorized())
                 .andExpect(errorMessage("La contraseña actual es incorrecta"));
 
-            verify(userService).updateProfile(eq(TEST_USER_EMAIL), any(UserUpdateDTO.class));
+            verify(userService).updateProfile(eq(TEST_USER_ID), any(UserUpdateDTO.class));
         }
 
         @Test
@@ -398,7 +401,7 @@ class UserControllerTest {
         
         @Test
         @DisplayName("Should get profile successfully when authenticated")
-        @WithMockUser(username = TEST_USER_EMAIL)
+        @WithMockUser(username = TEST_USER_AUTH_NAME)
         void getProfileAuthenticatedSuccess() throws Exception {
             // Arrange
             UserResponseDTO responseDto = new UserResponseDTO(1L,
@@ -407,7 +410,7 @@ class UserControllerTest {
                 User.Role.USER,
                 LocalDateTime.now());
             
-            when(userService.getProfile(TEST_USER_EMAIL))
+            when(userService.getProfile(TEST_USER_ID))
                 .thenReturn(responseDto);
 
             // Act & Assert
@@ -419,7 +422,7 @@ class UserControllerTest {
                 .andExpect(userRol(USER_ROLE))
                 .andExpect(jsonPath("$.creationDate").exists());
 
-            verify(userService).getProfile(TEST_USER_EMAIL);
+            verify(userService).getProfile(TEST_USER_ID);
         }
 
         @Test

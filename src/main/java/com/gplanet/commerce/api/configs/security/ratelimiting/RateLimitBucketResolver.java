@@ -158,12 +158,12 @@ public class RateLimitBucketResolver {
     }
 
     /**
-     * Identifies a bucket: its kind and the client it limits, a username or an IP address. The kind is part of the
+     * Identifies a bucket: its kind and the client it limits, a user ID or an IP address. The kind is part of the
      * key, so a user gets a new bucket when their role changes, and login attempts don't consume from the bucket of
      * the client's other requests.
      *
      * @param type the kind of bucket
-     * @param client the username or IP address of the client
+     * @param client the user ID or IP address of the client
      */
     private record BucketKey(BucketType type, String client) {
     }

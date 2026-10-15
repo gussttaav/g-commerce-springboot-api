@@ -39,6 +39,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class PurchaseService {
+    private static final String USER_NOT_FOUND_MSG = "User not found";
+
     private final PurchaseMapper purchaseMapper;
     private final PurchaseRepository purchaseRepository;
     private final ProductRepository productRepository;
@@ -48,7 +50,7 @@ public class PurchaseService {
      * Lists purchases based on user role with pagination support.
      * Admins see all purchases, regular users see only their own purchases.
      * 
-     * @param email Email of the requesting user
+     * @param userId ID of the requesting user
      * @param page The page number (zero-based)
      * @param size The page size
      * @param sort The field to sort by
@@ -57,12 +59,12 @@ public class PurchaseService {
      * @throws UsernameNotFoundException if user is not found
      */
     @Transactional(readOnly = true)
-    public Page<PurchaseResponseDTO> listPurchases(String email, int page, int size, String sort, String direction) {
-        log.debug("Listing purchases for user: {} with pagination - page: {}, size: {}, sort: {}, direction: {}", 
-                email, page, size, sort, direction);
+    public Page<PurchaseResponseDTO> listPurchases(Long userId, int page, int size, String sort, String direction) {
+        log.debug("Listing purchases for user ID: {} with pagination - page: {}, size: {}, sort: {}, direction: {}", 
+                userId, page, size, sort, direction);
         
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
             
         // Create Pageable object with sort direction
         Sort.Direction sortDirection = Sort.Direction.fromString(direction);
@@ -91,17 +93,17 @@ public class PurchaseService {
      * Processes a new purchase for a user, calculating totals and
      * creating all necessary purchase records.
      * 
-     * @param email Email of the user making the purchase
+     * @param userId ID of the user making the purchase
      * @param purchaseDTO Data transfer object containing purchase information
      * @return PurchaseResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if user is not found
      * @throws ResourceNotFoundException if any product in the purchase is not found or is not active
      */
     @Transactional
-    public PurchaseResponseDTO createPurchase(String email, PurchaseDTO purchaseDTO) {
-        log.info("Starting new purchase for user: {}", email);
-        User user = userRepository.findByEmail(email)
-            .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
+    public PurchaseResponseDTO createPurchase(Long userId, PurchaseDTO purchaseDTO) {
+        log.info("Starting new purchase for user ID: {}", userId);
+        User user = userRepository.findById(userId)
+            .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
 
         Purchase purchase = new Purchase();
         purchase.setUser(user);

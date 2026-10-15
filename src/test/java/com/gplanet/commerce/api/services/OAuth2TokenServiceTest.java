@@ -9,7 +9,6 @@ import static org.mockito.Mockito.when;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
-import java.util.Collections;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,10 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
+import com.gplanet.commerce.api.entities.User;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
@@ -28,8 +26,8 @@ import com.nimbusds.jwt.SignedJWT;
 @ExtendWith(MockitoExtension.class)
 class OAuth2TokenServiceTest {
 
-    private static final String TEST_USERNAME = "test@example.com";
-    private static final String TEST_PASSWORD = "password123";
+    private static final Long TEST_USER_ID = 42L;
+    private static final String TEST_EMAIL = "test@example.com";
     private static final Long ACCESS_EXPIRATION_MS = 3600000L;
     private static final Long REFRESH_EXPIRATION_MS = 86400000L;
     private static final int RSA_KEY_SIZE = 2048;
@@ -43,15 +41,15 @@ class OAuth2TokenServiceTest {
     @InjectMocks
     private OAuth2TokenService oauth2TokenService;
 
-    private UserDetails userDetails;
+    private User user;
     private RSAKey rsaKey;
 
     @BeforeEach
     void setUp() throws Exception {
-        userDetails = User.withUsername(TEST_USERNAME)
-                .password(TEST_PASSWORD)
-                .authorities("ROLE_USER")
-                .build();
+        user = new User();
+        user.setId(TEST_USER_ID);
+        user.setEmail(TEST_EMAIL);
+        user.setRole(User.Role.USER);
 
         // Create a proper RSA key with sufficient size
         KeyPairGenerator keyPairGenerator = KeyPairGenerator.getInstance("RSA");
@@ -76,7 +74,7 @@ class OAuth2TokenServiceTest {
         when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
 
         // Act
-        SignedJWT token = SignedJWT.parse(oauth2TokenService.generateAccessToken(userDetails));
+        SignedJWT token = SignedJWT.parse(oauth2TokenService.generateAccessToken(user));
 
         // Assert
         JWTClaimsSet claims = token.getJWTClaimsSet();
@@ -86,24 +84,52 @@ class OAuth2TokenServiceTest {
     }
 
     @Test
-    void generateAccessTokenValidUserDetailsReturnsToken() throws Exception {
+    void generateAccessTokenIdentifiesTheUserById() throws Exception {
         // Arrange
         when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
 
         // Act
-        String token = oauth2TokenService.generateAccessToken(userDetails);
+        JWTClaimsSet claims = SignedJWT.parse(oauth2TokenService.generateAccessToken(user)).getJWTClaimsSet();
+
+        // Assert - The email can change, so it is only informative
+        assertThat(claims.getSubject()).isEqualTo(TEST_USER_ID.toString());
+        assertThat(claims.getStringClaim(OAuth2TokenService.EMAIL_CLAIM)).isEqualTo(TEST_EMAIL);
+        assertThat(claims.getStringListClaim("authorities")).containsExactly("ROLE_USER");
+    }
+
+    @Test
+    void generateRefreshTokenIdentifiesTheUserById() throws Exception {
+        // Arrange
+        when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+
+        // Act
+        JWTClaimsSet claims = SignedJWT.parse(oauth2TokenService.generateRefreshToken(user)).getJWTClaimsSet();
+
+        // Assert
+        assertThat(claims.getSubject()).isEqualTo(TEST_USER_ID.toString());
+        assertThat(claims.getStringClaim(OAuth2TokenService.TOKEN_TYPE_CLAIM))
+                .isEqualTo(OAuth2TokenService.REFRESH_TOKEN_TYPE);
+    }
+
+    @Test
+    void generateAccessTokenValidUserReturnsToken() throws Exception {
+        // Arrange
+        when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
+
+        // Act
+        String token = oauth2TokenService.generateAccessToken(user);
 
         // Assert
         assertNotNull(token);
     }
 
     @Test
-    void generateRefreshTokenValidUserDetailsReturnsToken() throws Exception {
+    void generateRefreshTokenValidUserReturnsToken() throws Exception {
         // Arrange
         when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
 
         // Act
-        String token = oauth2TokenService.generateRefreshToken(userDetails);
+        String token = oauth2TokenService.generateRefreshToken(user);
 
         // Assert
         assertNotNull(token);
@@ -116,7 +142,7 @@ class OAuth2TokenServiceTest {
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () -> 
-            oauth2TokenService.generateAccessToken(userDetails));
+            oauth2TokenService.generateAccessToken(user));
     }
 
     @Test
@@ -126,23 +152,6 @@ class OAuth2TokenServiceTest {
 
         // Act & Assert
         assertThrows(IllegalStateException.class, () -> 
-            oauth2TokenService.generateRefreshToken(userDetails));
-    }
-
-    @Test
-    void generateAccessTokenUserWithNoAuthoritiesReturnsToken() throws Exception {
-        // Arrange
-        UserDetails userNoAuthorities = User.withUsername(TEST_USERNAME)
-                .password(TEST_PASSWORD)
-                .authorities(Collections.emptyList())
-                .build();
-        
-        when(keyStoreService.getOrCreateActiveKeyPair()).thenReturn(rsaKey);
-
-        // Act
-        String token = oauth2TokenService.generateAccessToken(userNoAuthorities);
-
-        // Assert
-        assertNotNull(token);
+            oauth2TokenService.generateRefreshToken(user));
     }
 }

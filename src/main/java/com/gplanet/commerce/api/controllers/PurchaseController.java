@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.security.AuthenticatedUser;
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseDTO;
 import com.gplanet.commerce.api.dtos.purchase.PurchaseResponseDTO;
@@ -88,7 +89,7 @@ public class PurchaseController {
             Authentication authentication,
             @Valid @RequestBody @Parameter(description = "New purchase details", required = true)
             PurchaseDTO purchaseDTO) {
-        return purchaseService.createPurchase(authentication.getName(), purchaseDTO);
+        return purchaseService.createPurchase(AuthenticatedUser.idOf(authentication), purchaseDTO);
     }
 
 
@@ -130,7 +131,7 @@ public class PurchaseController {
            String direction,
            Authentication authentication) {
         Page<PurchaseResponseDTO> pageResult = purchaseService.listPurchases(
-            authentication.getName(), page, size, sort, direction);
+            AuthenticatedUser.idOf(authentication), page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
     }
 }

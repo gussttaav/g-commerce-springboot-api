@@ -10,7 +10,6 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.oauth2.core.OAuth2Error;
 import org.springframework.security.oauth2.jwt.BadJwtException;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -30,7 +29,6 @@ import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
-import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.exceptions.TokenStorageException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 import com.nimbusds.jwt.SignedJWT;
@@ -42,8 +40,9 @@ import lombok.extern.slf4j.Slf4j;
  * Service class that handles authentication-related operations including
  * user login, token refresh, logout, and token validation.
  * <p>
- * Refresh tokens are stored in Redis by their {@code jti} claim until they expire, are used or are revoked.
- * Access tokens are not stored; they are revoked by blacklisting them with {@link TokenBlacklistService}.
+ * Tokens identify the user by ID. Refresh tokens are stored in Redis by their {@code jti} claim, with the ID of
+ * their user, until they expire, are used or are revoked. Access tokens are not stored; they are revoked by
+ * blacklisting them with {@link TokenBlacklistService}.
  * </p>
  * 
  * @author Gustavo
@@ -60,7 +59,6 @@ public class AuthService {
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final UserMapper userMapper;
-    private final CustomUserDetailsService userDetallesService;
     private final OAuth2TokenService oauth2TokenService;
     private final TokenBlacklistService tokenBlacklistService;
     private final JwtDecoder accessTokenDecoder;
@@ -83,7 +81,7 @@ public class AuthService {
         User user = userRepository.findByEmail(userDetails.getUsername())
                 .orElseThrow(() -> new InvalidCredentialsException(INVALID_CREDENTIALS_MSG));
 
-        LoginResponseDTO response = issueTokens(user, userDetails);
+        LoginResponseDTO response = issueTokens(user);
         log.info("Successful login for user: {}", loginDTO.email());
         return response;
     }
@@ -95,8 +93,8 @@ public class AuthService {
      * 
      * @param authorizationHeader the Authorization header containing the refresh token
      * @return LoginResponseDTO containing the new access and refresh tokens
-     * @throws UsernameNotFoundException if user is not found
-     * @throws InvalidTokenException if the refresh token is invalid, expired, already used or revoked
+     * @throws InvalidTokenException if the refresh token is invalid, expired, already used or revoked, or its user
+     *         no longer exists
      * @throws TokenStorageException if there's an error storing the new refresh token
      */
     @Transactional
@@ -109,15 +107,12 @@ public class AuthService {
                     refreshToken.getSubject());
             throw new InvalidTokenException("Refresh token has already been used or revoked");
         }
-            
-        String username = refreshToken.getSubject();
-        UserDetails userDetails = userDetallesService.loadUserByUsername(username);
-        User user = userRepository.findByEmail(username)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                    "No user found with email " + username
-                ));
-            
-        return issueTokens(user, userDetails);
+
+        // The decoder only accepts tokens whose subject is a user ID
+        User user = userRepository.findById(Long.valueOf(refreshToken.getSubject()))
+                .orElseThrow(() -> new InvalidTokenException("The user of the refresh token no longer exists"));
+
+        return issueTokens(user);
     }
 
     /**
@@ -192,15 +187,14 @@ public class AuthService {
      * Generates a new access and refresh token pair for the user and stores the refresh token.
      *
      * @param user the user the tokens are issued to
-     * @param userDetails the user's security details
      * @return LoginResponseDTO containing the user's information and the new tokens
      * @throws TokenStorageException if the refresh token cannot be stored
      */
-    private LoginResponseDTO issueTokens(User user, UserDetails userDetails) {
-        String access = oauth2TokenService.generateAccessToken(userDetails);
-        String refresh = oauth2TokenService.generateRefreshToken(userDetails);
+    private LoginResponseDTO issueTokens(User user) {
+        String access = oauth2TokenService.generateAccessToken(user);
+        String refresh = oauth2TokenService.generateRefreshToken(user);
 
-        storeRefreshToken(refresh, user.getEmail());
+        storeRefreshToken(refresh, user.getId());
 
         return new LoginResponseDTO(
             userMapper.toUserResponseDTO(user),
@@ -216,17 +210,17 @@ public class AuthService {
      * Stores refresh token in Redis with expiration.
      * 
      * @param refreshToken the refresh token to store
-     * @param username the username associated with the token
+     * @param userId the ID of the user the token was issued to
      * @throws TokenStorageException if token storage fails
      */
-    private void storeRefreshToken(String refreshToken, String username) {
+    private void storeRefreshToken(String refreshToken, Long userId) {
         try {
             SignedJWT jwt = SignedJWT.parse(refreshToken);
             long expirationMs = jwt.getJWTClaimsSet().getExpirationTime().getTime() - System.currentTimeMillis();
             
             stringRedisTemplate.opsForValue().set(
                 REFRESH_TOKEN_PREFIX + jwt.getJWTClaimsSet().getJWTID(),
-                username,
+                userId.toString(),
                 expirationMs,
                 TimeUnit.MILLISECONDS
             );
@@ -256,21 +250,21 @@ public class AuthService {
      * Invalidates a refresh token if it is a valid refresh token of the user.
      *
      * @param token the refresh token
-     * @param username the user whose session is being closed
+     * @param userId the ID of the user whose session is being closed
      */
-    private void revokeRefreshToken(String token, String username) {
+    private void revokeRefreshToken(String token, String userId) {
         Jwt refreshToken;
         try {
             refreshToken = refreshTokenDecoder.decode(token);
         } catch (BadJwtException e) {
-            log.info("Logout of user {} with an invalid refresh token: {}", username, e.getMessage());
+            log.info("Logout of user {} with an invalid refresh token: {}", userId, e.getMessage());
             return;
         }
 
-        if (username.equals(refreshToken.getSubject())) {
+        if (userId.equals(refreshToken.getSubject())) {
             stringRedisTemplate.delete(REFRESH_TOKEN_PREFIX + refreshToken.getId());
         } else {
-            log.warn("User {} sent a refresh token of another user on logout", username);
+            log.warn("User {} sent a refresh token of another user on logout", userId);
         }
     }
 

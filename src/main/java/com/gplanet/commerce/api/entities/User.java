@@ -72,6 +72,15 @@ public class User {
         /** 
          * Regular user role with limited privileges.
          */
-        USER
+        USER;
+
+        /**
+         * Returns the Spring Security authority granted to the users with this role.
+         *
+         * @return the authority, e.g. {@code ROLE_ADMIN}
+         */
+        public String authority() {
+            return "ROLE_" + name();
+        }
     }
 }

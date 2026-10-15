@@ -40,24 +40,25 @@ public class PurchaseProduct {
      */
     @JsonBackReference
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "compra_id")
+    @JoinColumn(name = "compra_id", nullable = false)
     private Purchase purchase;
     
     /** 
      * The product that was purchased. 
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "producto_id")
+    @JoinColumn(name = "producto_id", nullable = false)
     private Product product;
     
     /** 
      * Quantity of the product purchased. 
      */
-    @Column(name = "cantidad")
+    @Column(name = "cantidad", nullable = false)
     private Integer quantity;
     
     /** 
      * Subtotal for this item (price * quantity). 
      */
+    @Column(nullable = false)
     private BigDecimal subtotal;
 }

@@ -46,6 +46,20 @@ public record UserDTO(
     User.Role role
 ) {
     /**
+     * Creates a UserDTO, giving the USER role to a registration that doesn't request a role.
+     *
+     * @param name The full name of the user.
+     * @param email The email address for the user account, used as username.
+     * @param password The password for the user account.
+     * @param role The role assigned to the user, or {@code null} for the USER role.
+     */
+    public UserDTO {
+        if (role == null) {
+            role = User.Role.USER;
+        }
+    }
+
+    /**
      * Creates a UsuarioDTO with default USER role.
      *
      * @param nam The full name of the user.

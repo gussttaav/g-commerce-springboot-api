@@ -44,7 +44,7 @@ public class Purchase {
      * User who made the purchase. 
      */
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "usuario_id")
+    @JoinColumn(name = "usuario_id", nullable = false)
     private User user;
     
     /** 
@@ -56,6 +56,7 @@ public class Purchase {
     /** 
      * Total amount of the purchase. 
      */
+    @Column(nullable = false)
     private BigDecimal total;
     
     /** 

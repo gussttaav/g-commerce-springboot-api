@@ -32,7 +32,7 @@ public class Product {
     /** 
      * Product name (unique). 
      */
-    @Column(name = "nombre", unique = true)
+    @Column(name = "nombre", unique = true, nullable = false)
     private String name;
 
     /** 
@@ -44,7 +44,7 @@ public class Product {
     /** 
      * Product price. 
      */
-    @Column(name = "precio")
+    @Column(name = "precio", nullable = false)
     private BigDecimal price;
     
     /** 

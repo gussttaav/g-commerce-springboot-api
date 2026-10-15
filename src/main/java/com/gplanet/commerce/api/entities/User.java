@@ -33,25 +33,26 @@ public class User {
     /** 
      * User's full name. 
      */
-    @Column(name = "nombre")
+    @Column(name = "nombre", nullable = false)
     private String name;
     
     /** 
      * User's email address (unique). 
      */
-    @Column(unique = true)
+    @Column(unique = true, nullable = false)
     private String email;
     
     /** 
      * User's encrypted password. 
      */
+    @Column(nullable = false)
     private String password;
     
     /** 
      * User's role in the system. 
      * */
     @Enumerated(EnumType.STRING)
-    @Column(name = "rol")
+    @Column(name = "rol", nullable = false)
     private Role role;
     
     /** 

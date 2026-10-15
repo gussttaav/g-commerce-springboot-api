@@ -78,6 +78,24 @@ class UserIntegrationTest extends AbstractIntegrationTest {
     }
     
     @Test
+    void registerWithoutRoleCreatesUserWithUserRole() throws Exception {
+        // Arrange - The role is optional, as in the README example
+        String request = """
+            {"name": "%s", "email": "%s", "password": "%s"}
+            """.formatted(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD);
+
+        // Act & Assert
+        mockMvc.perform(post(ENDPOINT_USUARIOS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+                .andExpect(status().isOk())
+                .andExpect(userRol(USER_ROLE));
+
+        User savedUser = userRepository.findByEmail(TEST_EMAIL).orElseThrow();
+        assertEquals(User.Role.USER, savedUser.getRole());
+    }
+
+    @Test
     void registroAdminDatosValidosRetornaAdminCreado() throws Exception {
         // Arrange
         final String newEmail = "new.admin@example.com";

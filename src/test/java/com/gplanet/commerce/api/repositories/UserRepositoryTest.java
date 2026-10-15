@@ -72,6 +72,18 @@ class UserRepositoryTest {
     }
     
     @Test
+    void saveUserWithoutRoleThrowsException() {
+        // Arrange - The role column is NOT NULL in MySQL, and the test schema must reject it too
+        User user = new User();
+        user.setName(TEST_NAME);
+        user.setEmail(TEST_USERNAME);
+        user.setPassword(TEST_PASSWD);
+
+        // Act & Assert
+        assertThrows(DataIntegrityViolationException.class, () -> userRepository.saveAndFlush(user));
+    }
+
+    @Test
     void findByEmailExistingEmailReturnsUser() {
         // Arrange
         User user = new User();

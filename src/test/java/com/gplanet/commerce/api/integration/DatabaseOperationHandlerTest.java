@@ -51,12 +51,14 @@ class DatabaseOperationHandlerTest extends AbstractIntegrationTest {
         usuario1.setEmail("duplicate@example.com");
         usuario1.setName("Test 1");
         usuario1.setPassword("password1");
+        usuario1.setRole(User.Role.USER);
         usuarioRepository.save(usuario1);
         
         User usuario2 = new User();
         usuario2.setEmail("duplicate@example.com");
         usuario2.setName("Test 2");
         usuario2.setPassword("password2");
+        usuario2.setRole(User.Role.USER);
         
         // Act & Assert
         assertThrows(ApiException.class, () -> 

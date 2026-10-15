@@ -1,6 +1,8 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -50,6 +52,15 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.price").value("99.99"));
     }
     
+    @Test
+    void listProductsUnknownSortFieldReturnsBadRequest() throws Exception {
+        // Act & Assert - The sort field was passed to the database query, which failed with a 500
+        mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+                .param("sort", "unknown"))
+                .andExpect(status().isBadRequest())
+                .andExpect(errorDetailContains("sort: must be one of name|price"));
+    }
+
     @Test
     void crearProductoUsuarioRetornaForbidden() throws Exception {
         // Create regular user

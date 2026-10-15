@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.controllers;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTOS;
@@ -29,6 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -169,6 +172,20 @@ class ProductControllerTest {
 
             verify(productService).listProducts(
                 eq(ProductStatus.ACTIVE), eq(null), eq(0), eq(10), eq(SORT_FIELD_NOMBRE), eq(SORT_DIRECTION_ASC));
+        }
+
+        @ParameterizedTest
+        @WithAnonymousUser
+        @CsvSource({"page, -1", "size, 0", "size, 101", "sort, description", "sort, unknown"})
+        @DisplayName("Should return 400 when a paging parameter is invalid")
+        void listProductsInvalidPagingParameterReturns400(String parameter, String value) throws Exception {
+            // Act & Assert
+            mockMvc.perform(get(ENDPOINT_PRODUCTOS)
+                    .param(parameter, value))
+                .andExpect(status().isBadRequest())
+                .andExpect(errorDetailContains(parameter));
+
+            verifyNoInteractions(productService);
         }
 
         @Test

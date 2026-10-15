@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.controllers;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static org.mockito.ArgumentMatchers.any;
@@ -22,6 +23,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
@@ -52,8 +54,8 @@ import com.gplanet.commerce.api.services.PurchaseService;
 @ActiveProfiles("test")
 class PurchaseControllerTest {
 
-    public static final PageRequest PAGE_REQUEST_DESC_BY_FECHA = 
-        PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "fecha"));
+    public static final PageRequest PAGE_REQUEST_DESC_BY_DATE = 
+        PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "date"));
     
     public static final BigDecimal PRODUCT_PRICE_50 = new BigDecimal("50.00");
     public static final BigDecimal PRODUCT_PRICE_75 = new BigDecimal("75.00");
@@ -61,7 +63,7 @@ class PurchaseControllerTest {
     public static final BigDecimal COMPRA_TOTAL_150 = new BigDecimal("150.00");
     private static final String TEST_USER_EMAIL = "test@example.com";
     private static final String TEST_ADMIN_EMAIL = "admin@example.com";
-    private static final String SORT_FIELD_FECHA = "fecha";
+    private static final String SORT_FIELD_DATE = "date";
     private static final String SORT_DIRECTION_DESC = "DESC";
     
     @Autowired
@@ -149,7 +151,7 @@ class PurchaseControllerTest {
         // Arrange
         Page<PurchaseResponseDTO> page = new PageImpl<>(
             createMockPurchasesList(),
-            PAGE_REQUEST_DESC_BY_FECHA,
+            PAGE_REQUEST_DESC_BY_DATE,
             2
         );
         
@@ -157,7 +159,7 @@ class PurchaseControllerTest {
                 eq(TEST_USER_EMAIL), 
                 eq(0), 
                 eq(10), 
-                eq(SORT_FIELD_FECHA), 
+                eq(SORT_FIELD_DATE), 
                 eq(SORT_DIRECTION_DESC)))
             .thenReturn(page);
 
@@ -165,7 +167,7 @@ class PurchaseControllerTest {
         mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .param("page", "0")
                 .param("size", "10")
-                .param("sort", SORT_FIELD_FECHA)
+                .param("sort", SORT_FIELD_DATE)
                 .param("direction", SORT_DIRECTION_DESC))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", Matchers.hasSize(2)))
@@ -175,7 +177,7 @@ class PurchaseControllerTest {
             eq(TEST_USER_EMAIL), 
             eq(0), 
             eq(10), 
-            eq(SORT_FIELD_FECHA), 
+            eq(SORT_FIELD_DATE), 
             eq(SORT_DIRECTION_DESC));
     }
 
@@ -186,7 +188,7 @@ class PurchaseControllerTest {
         // Arrange
         Page<PurchaseResponseDTO> page = new PageImpl<>(
             createMockPurchasesList(),
-            PAGE_REQUEST_DESC_BY_FECHA,
+            PAGE_REQUEST_DESC_BY_DATE,
             2
         );
         
@@ -194,7 +196,7 @@ class PurchaseControllerTest {
                 eq(TEST_ADMIN_EMAIL), 
                 eq(0), 
                 eq(10), 
-                eq(SORT_FIELD_FECHA), 
+                eq(SORT_FIELD_DATE), 
                 eq(SORT_DIRECTION_DESC)))
             .thenReturn(page);
 
@@ -202,7 +204,7 @@ class PurchaseControllerTest {
         mockMvc.perform(get(ENDPOINT_COMPRAS)
                 .param("page", "0")
                 .param("size", "10")
-                .param("sort", SORT_FIELD_FECHA)
+                .param("sort", SORT_FIELD_DATE)
                 .param("direction", SORT_DIRECTION_DESC))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.content", Matchers.hasSize(2)));
@@ -211,8 +213,22 @@ class PurchaseControllerTest {
             eq(TEST_ADMIN_EMAIL), 
             eq(0), 
             eq(10), 
-            eq(SORT_FIELD_FECHA), 
+            eq(SORT_FIELD_DATE), 
             eq(SORT_DIRECTION_DESC));
+    }
+
+    @ParameterizedTest
+    @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
+    @CsvSource({"page, -1", "size, 0", "size, 101", "sort, user.password", "sort, unknown"})
+    @DisplayName("Should return 400 when a paging parameter is invalid")
+    void listPurchasesInvalidPagingParameterReturnsBadRequest(String parameter, String value) throws Exception {
+        // Act & Assert
+        mockMvc.perform(get(ENDPOINT_COMPRAS)
+                .param(parameter, value))
+            .andExpect(status().isBadRequest())
+            .andExpect(errorDetailContains(parameter));
+
+        verifyNoInteractions(purchaseService);
     }
 
     // Helper methods

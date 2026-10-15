@@ -4,6 +4,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -33,7 +34,10 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -62,7 +66,10 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "User", 
      description = "API endpoints for user management")
 @RequiredArgsConstructor
+@Validated
 public class UserController {
+
+    private static final String SORT_FIELDS = "email|name|creationDate";
 
     private final UserService userService;
 
@@ -162,8 +169,8 @@ public class UserController {
      * Lists all users in the system with pagination support. Only accessible by administrators.
      * 
      * @param page The page number (zero-based)
-     * @param size The page size
-     * @param sort The field to sort by
+     * @param size The page size, at most {@value PaginatedResponse#MAX_PAGE_SIZE}
+     * @param sort The field to sort by: email, name or creationDate
      * @param direction The sort direction (ASC or DESC)
      * @return PaginatedResponse of UsuarioResponseDTO containing paginated users' information
      * @throws AccessDeniedException if the current user is not an administrator
@@ -174,17 +181,19 @@ public class UserController {
         @ApiResponse(responseCode = "200", description = "Users successfully retrieved",
             content = @Content(mediaType = "application/json",
                 schema = @Schema(ref = "#/components/schemas/PaginatedUsers"))),
+        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
         @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
         @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
         @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
     })
     @GetMapping
     public PaginatedResponse<UserResponseDTO> listUsers(
-            @RequestParam(defaultValue = "0") 
+            @RequestParam(defaultValue = "0") @Min(0)
             @Schema(description = "Page number (zero-based)", example = "0") int page,
-            @RequestParam(defaultValue = "10") 
+            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE)
             @Schema(description = "Page size", example = "10") int size,
-            @RequestParam(defaultValue = "email") 
+            @RequestParam(defaultValue = "email")
+            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS)
             @Schema(description = "Sort field", example = "email", allowableValues = {"email", "name", "creationDate"}) 
             String sort,
             @RequestParam(defaultValue = "ASC") 

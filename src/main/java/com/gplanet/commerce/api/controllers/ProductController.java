@@ -31,7 +31,9 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -58,6 +60,8 @@ import lombok.RequiredArgsConstructor;
 @Validated
 public class ProductController {
 
+    private static final String SORT_FIELDS = "name|price";
+
     private final ProductService productService;
 
     /**
@@ -73,8 +77,8 @@ public class ProductController {
      * @param status Optional query parameter to filter products by status (ACTIVE/INACTIVE/ALL)
      * @param searchText Optional query parameter to search within product name and description
      * @param page The page number (zero-based)
-     * @param size The page size
-     * @param sort The field to sort by
+     * @param size The page size, at most {@value PaginatedResponse#MAX_PAGE_SIZE}
+     * @param sort The field to sort by: name or price
      * @param direction The sort direction (ASC or DESC)
      * @param authentication Spring Security authentication object, may be null for unauthenticated requests
      * @return {@code PaginatedResponse<ProductResponseDTO>} containing the filtered and searched paginated products
@@ -107,11 +111,12 @@ public class ProductController {
             @RequestParam(required = false) 
             @Schema(description = "Search text for product name or description")
             String searchText,
-            @RequestParam(defaultValue = "0") 
+            @RequestParam(defaultValue = "0") @Min(0)
             @Schema(description = "Page number (zero-based)", example = "0") int page,
-            @RequestParam(defaultValue = "10") 
+            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE)
             @Schema(description = "Page size", example = "10") int size,
-            @RequestParam(defaultValue = "name") 
+            @RequestParam(defaultValue = "name")
+            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS)
             @Schema(description = "Sort field", example = "name", allowableValues = {"name", "price"}) String sort,
             @RequestParam(defaultValue = "ASC") 
             @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"})

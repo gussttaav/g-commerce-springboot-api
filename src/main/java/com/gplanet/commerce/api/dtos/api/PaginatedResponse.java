@@ -27,6 +27,11 @@ public record PaginatedResponse<T>(
     boolean isLastPage
 ) {
     /**
+     * The largest page size that the listing endpoints accept.
+     */
+    public static final int MAX_PAGE_SIZE = 100;
+
+    /**
      * Creates a PaginatedResponse from a Spring Page object.
      *
      * @param <T> The type of content being paginated

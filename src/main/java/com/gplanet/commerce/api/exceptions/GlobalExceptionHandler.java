@@ -23,6 +23,7 @@ import com.gplanet.commerce.api.dtos.api.ApiErrorDTO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
+import jakarta.validation.Path;
 import lombok.extern.slf4j.Slf4j;
 
 /**
@@ -83,7 +84,7 @@ public class GlobalExceptionHandler {
         log.warn("Constraint violation occurred for request to {}: {}", request.getRequestURI(), ex.getMessage());
         List<String> details = ex.getConstraintViolations()
                 .stream()
-                .map(ConstraintViolation::getMessage)
+                .map(GlobalExceptionHandler::describeViolation)
                 .collect(Collectors.toList());
 
         ApiErrorDTO error = new ApiErrorDTO(
@@ -450,6 +451,24 @@ public class GlobalExceptionHandler {
         );
 
         return ResponseEntity.status(HttpStatus.CONFLICT).body(error);
+    }
+
+    /**
+     * Describes a constraint violation as the name of the invalid parameter or field followed by the error,
+     * e.g. "size: must be less than or equal to 100".
+     *
+     * @param violation The constraint violation
+     * @return The description of the violation
+     */
+    private static String describeViolation(ConstraintViolation<?> violation) {
+        String invalidName = null;
+        for (Path.Node node : violation.getPropertyPath()) {
+            invalidName = node.getName();
+        }
+        if (invalidName == null) {
+            return violation.getMessage();
+        }
+        return invalidName + ": " + violation.getMessage();
     }
 
     /**

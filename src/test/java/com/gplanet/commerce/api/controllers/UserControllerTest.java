@@ -30,6 +30,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -489,6 +491,20 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.totalElements").value(0));
 
             verify(userService).listUsers(0, 10, SORT_FIELD_EMAIL, SORT_DIRECTION_ASC);
+        }
+
+        @ParameterizedTest
+        @WithMockUser(username = TEST_ADMIN_EMAIL, roles = "ADMIN")
+        @CsvSource({"page, -1", "size, 0", "size, 101", "sort, password", "sort, unknown"})
+        @DisplayName("Should return 400 when a paging parameter is invalid")
+        void listUsersInvalidPagingParameterBadRequest(String parameter, String value) throws Exception {
+            // Act & Assert
+            mockMvc.perform(get(ENDPOINT_USUARIOS)
+                    .param(parameter, value))
+                .andExpect(status().isBadRequest())
+                .andExpect(errorDetailContains(parameter));
+
+            verifyNoInteractions(userService);
         }
 
         @Test

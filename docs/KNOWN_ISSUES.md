@@ -14,22 +14,12 @@ Severity: **High** = security hole or production outage · **Medium** = wrong be
 |----|----------|-------|
 | KEY-3 | Medium | **Private-key encryption gives no protection.** The AES key that encrypts each RSA private key is stored in the same Redis instance right next to the ciphertext (`oauth2:encryption:{kid}`), and the cipher uses ECB mode (`AES/ECB/PKCS5Padding`). |
 
-### Functional bugs
-
-| ID | Severity | Issue |
-|----|----------|-------|
-| FUN-1 | Medium | **Registering without `role` fails in production.** `UserDTO.role` defaults to `null` when omitted (as in the README example). MySQL's `rol ... NOT NULL` rejects the insert (409 with a confusing message). In the H2 test schema the column is nullable, so the user is saved with a null role and gets a `ROLE_null` authority — which is why tests don't catch it. |
-| FUN-2 | Medium | **Inactive products can be purchased.** `PurchaseService.createPurchase` looks products up by id without checking `active`. |
-| FUN-3 | Medium | **Missing `productId`/`quantity` cause 500s.** `PurchaseProductDTO` uses `@Positive` without `@NotNull`, and `@Positive` accepts `null`; the service then fails with an NPE / `InvalidDataAccessApiUsageException`. |
-| FUN-4 | Medium | **Unvalidated paging parameters.** `sort` is passed straight to `Sort.by`: an unknown field results in a 500, and any entity field is sortable (including `password` on `/api/users`). `size` has no upper bound. |
-| FUN-5 | Low | **Changing email breaks the current session.** The JWT `sub` is the email, so after `PATCH /api/users/me` changes it, the user's existing tokens resolve to a non-existent user (401) with no explanation. |
-
 ### Configuration and polish
 
 | ID | Severity | Issue |
 |----|----------|-------|
 | OPS-1 | Low | **`SslProfileDetector` overrides `SPRING_PROFILES_ACTIVE`** (which the README tells users to set), and its classpath check uses `ClassPathResource.getFile()`, which throws inside a packaged jar. |
-| OPS-2 | Low | **Mixed-language API output.** Several error messages are in Spanish ("Ha ocurrido un error inesperado", "Error de validación", "Usuario no encontrado"), plus leftover Spanish identifiers (`toProductoResponseDTO`, test helpers) and `spring.application.name: gestion-tienda`. |
+| OPS-2 | Low | **Mixed-language API output.** Several error messages are in Spanish ("Ha ocurrido un error inesperado", "Error de validación"), plus leftover Spanish identifiers (`toProductoResponseDTO`, test helpers) and `spring.application.name: gestion-tienda`. |
 | OPS-3 | Low | **README is out of date.** Wrong Spring Boot version, login response shows `usuario` (now `user`), single-test example uses `UsuarioControllerTest`, and the HTTPS instructions don't match OPS-1. |
 | OPS-4 | Low | **CI only runs on pushes to `main`.** Pull requests get no Checkstyle/PMD/test feedback before merging. |
 | OPS-5 | Low | **`mvnw` is not executable.** It is committed with mode `100644`, so `./mvnw` fails with "Permission denied" on Linux/macOS (the Dockerfile works around it with `chmod +x`). |
@@ -47,12 +37,8 @@ The resource server decodes access tokens with validators that reject refresh to
 ### Phase 3 — Abuse protection (SEC-5, SEC-6) — done
 Anonymous requests (`AnonymousAuthenticationToken` included) are limited per client IP address with the `unauthenticated` limits, and login attempts have a stricter bucket of their own per client IP address (`rate-limit.login`). Users get the limits of the role in their current token, since buckets are keyed by type and client. Buckets live in a size-bounded Caffeine cache that evicts a bucket once it has been unused long enough to refill, so eviction never resets a limit; they are per application instance (several instances would need the Bucket4j Redis backend). The client IP address is the request's remote address; behind a reverse proxy, `server.forward-headers-strategy=native` takes it from the `X-Forwarded-For` header of trusted proxies only. Login answers an unknown email and a wrong password with the same 401 "Invalid email or password", through Spring Security's `DaoAuthenticationProvider`, which also checks a dummy password hash for unknown emails so the response time doesn't reveal them. Registration still answers 409 for a registered email, now rate-limited per IP address; hiding that would need an email verification flow.
 
-### Phase 4 — Functional correctness (FUN-1 … FUN-5)
-1. Default `role` to `USER` in `UserDTO`'s compact constructor; add `@Column(nullable = false)` so H2 matches MySQL (FUN-1).
-2. Reject inactive products in `createPurchase` (FUN-2).
-3. Add `@NotNull` to `productId` and `quantity` (FUN-3).
-4. Whitelist sort fields per resource, cap `size` (e.g. `@Max(100)`), and map invalid sort fields to 400 (FUN-4).
-5. Use the user id as JWT `sub` (email as a claim), or return a new token pair from `PATCH /api/users/me` when the email changes (FUN-5).
+### Phase 4 — Functional correctness (FUN-1 … FUN-5) — done
+A registration without a role gets the `USER` role, and the entities declare the `NOT NULL` columns of `mysql-init/shopping_db.sql`, so the H2 test schema rejects the same nulls as MySQL. Purchases only find active products: an inactive (removed) product is reported as not found, with its ID in the message. Purchase items require `productId` and `quantity`, and a null item is rejected. The listings validate their paging parameters: `sort` must be one of the fields the listing documents (products `name`, `price`; users `email`, `name`, `creationDate`; purchases `date`, `total`), `page` must not be negative and `size` must be between 1 and 100 (`PaginatedResponse.MAX_PAGE_SIZE`); invalid values get a 400 whose details name the parameter. Tokens identify the user by ID in `sub`, with the email as an informative `email` claim, so a session survives an email change, and a refresh token can no longer issue tokens to whoever registers its user's old email. Tokens with an email as subject, issued before this change, are rejected with 401, so their users have to sign in again.
 
 ### Phase 5 — Hardening and polish (KEY-3, OPS-1 … OPS-5)
 1. Encrypt private keys with AES-GCM using a key derived from an environment secret (e.g. `OAUTH2_KEY_ENCRYPTION_SECRET`), never stored in Redis (KEY-3).
@@ -64,5 +50,5 @@ Anonymous requests (`AnonymousAuthenticationToken` included) are limited per cli
 
 ### Beyond bug fixes (portfolio improvements to consider)
 - **Flyway migrations** instead of `mysql-init/shopping_db.sql`, so schema and entities can't drift apart silently.
-- **Testcontainers (MySQL + Redis)** for integration tests — this would have caught FUN-1, which H2 hides.
+- **Testcontainers (MySQL + Redis)** for integration tests — H2 hid FUN-1, and still differs from MySQL in other ways (e.g. column lengths).
 - **JaCoCo coverage report** in CI with a badge in the README.

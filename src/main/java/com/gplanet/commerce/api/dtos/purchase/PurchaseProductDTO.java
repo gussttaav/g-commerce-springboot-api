@@ -1,6 +1,7 @@
 package com.gplanet.commerce.api.dtos.purchase;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 
 /**
@@ -16,10 +17,12 @@ import jakarta.validation.constraints.Positive;
 @Schema(name = "PurchaseProductRequest", description = "Product purchase request information")
 public record PurchaseProductDTO(
     @Schema(description = "Product ID to purchase", example = "1")
+    @NotNull(message = "Product id is required")
     @Positive(message = "Product id must be positive")
     Long productId,
 
     @Schema(description = "Quantity to purchase", example = "1")
+    @NotNull(message = "The quantity of the product is required")
     @Positive(message = "The quantity of the product must be greater than 0")
     Integer quantity
 ) {}

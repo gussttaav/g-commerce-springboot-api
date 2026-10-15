@@ -5,6 +5,7 @@ import java.util.List;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotEmpty;
+import jakarta.validation.constraints.NotNull;
 
 /**
  * Data Transfer Object (DTO) for purchase requests.
@@ -21,5 +22,5 @@ public record PurchaseDTO(
     @Schema(description = "List of products to purchase")
     @NotEmpty(message = "The purchase must have at least one producto")
     @Valid
-    List<PurchaseProductDTO> products
+    List<@NotNull(message = "The products of the purchase cannot be null") PurchaseProductDTO> products
 ) {}

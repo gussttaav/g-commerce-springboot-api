@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.controllers;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.validationError;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -20,6 +21,8 @@ import org.hamcrest.Matchers;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.context.annotation.Import;
@@ -103,6 +106,25 @@ class PurchaseControllerTest {
             .andExpect(jsonPath("$.products", Matchers.hasSize(2)));
 
         verify(purchaseService).createPurchase(eq(TEST_USER_EMAIL), any(PurchaseDTO.class));
+    }
+
+    @ParameterizedTest
+    @WithMockUser(username = TEST_USER_EMAIL, roles = "USER")
+    @ValueSource(strings = {
+        "{\"products\": [{\"quantity\": 1}]}",
+        "{\"products\": [{\"productId\": 1}]}",
+        "{\"products\": [null]}"
+    })
+    @DisplayName("Should return 400 when a product of the purchase is incomplete")
+    void createPurchaseIncompleteProductReturnsBadRequest(String request) throws Exception {
+        // Act & Assert
+        mockMvc.perform(post(ENDPOINT_COMPRAS)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(request))
+            .andExpect(status().isBadRequest())
+            .andExpect(validationError());
+
+        verifyNoInteractions(purchaseService);
     }
 
     @Test

@@ -11,7 +11,8 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    # Only builds of pushes to main publish images; pull request runs only check the code
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' }}
     
     steps:
       - name: Checkout code

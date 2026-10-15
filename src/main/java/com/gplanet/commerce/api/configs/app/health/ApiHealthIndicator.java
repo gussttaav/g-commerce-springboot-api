@@ -58,18 +58,14 @@ public class ApiHealthIndicator implements HealthIndicator {
                 version = "unknown";
             }
 
-            // Safe profile check
-            String[] activeProfiles;
-            if (environment != null) {
-                activeProfiles = environment.getActiveProfiles();
-            } else {
-                activeProfiles = new String[0];
-            }
+            // Profiles in effect: the active ones, or the default ones when none is active
             String profiles;
-            if (activeProfiles.length > 0) {
-                profiles = String.join(",", activeProfiles);
-            } else {
+            if (environment == null) {
                 profiles = "default";
+            } else if (environment.getActiveProfiles().length > 0) {
+                profiles = String.join(",", environment.getActiveProfiles());
+            } else {
+                profiles = String.join(",", environment.getDefaultProfiles());
             }
 
             Health.Builder healthBuilder = Health.up();

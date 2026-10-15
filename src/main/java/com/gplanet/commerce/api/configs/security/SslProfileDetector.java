@@ -1,65 +1,109 @@
 package com.gplanet.commerce.api.configs.security;
 
-import java.io.File;
-import java.io.IOException;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
+import org.apache.commons.logging.Log;
+import org.springframework.boot.DefaultPropertiesPropertySource;
 import org.springframework.boot.SpringApplication;
+import org.springframework.boot.context.config.ConfigDataEnvironmentPostProcessor;
 import org.springframework.boot.env.EnvironmentPostProcessor;
+import org.springframework.boot.logging.DeferredLogFactory;
+import org.springframework.core.Ordered;
 import org.springframework.core.env.ConfigurableEnvironment;
-import org.springframework.core.io.ClassPathResource;
-
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.io.DefaultResourceLoader;
+import org.springframework.core.io.ResourceLoader;
 
 /**
- * This class detects the presence of an SSL certificate and configures the appropriate profile.
- * Implements EnvironmentPostProcessor to process the environment before application startup.
- * 
- * <p>The SSL certificate can be provided in the resource folder in development mode,
- * or in the /certs directory in a Docker container.</p>
- * 
+ * Chooses the {@code https} or {@code http} profile for an application started without an explicit profile.
+ * <p>
+ * If a keystore exists, {@code https} becomes the default profile and the keystore becomes the default key store of
+ * that profile ({@code SSL_KEY_STORE}); otherwise the default profile is {@code http}. The keystore is looked up in
+ * the {@code /certs} directory, where a Docker container mounts it, and then on the classpath, where it can be
+ * placed in development.
+ * </p>
+ * <p>
+ * Default profiles only apply when no profile is active, so a profile set explicitly, e.g. with
+ * {@code SPRING_PROFILES_ACTIVE}, always wins. This runs before the configuration files are loaded, so that the
+ * documents of the chosen profile are loaded too.
+ * </p>
+ *
  * @author Gustavo
  * @version 1.0
  */
-@Slf4j
-public class SslProfileDetector implements EnvironmentPostProcessor {
+public class SslProfileDetector implements EnvironmentPostProcessor, Ordered {
 
-    private static final String FILESYSTEM_KEYSTORE_PATH = "/certs/keystore.p12"; // For Docker
-    private static final String CLASSPATH_KEYSTORE_PATH = "keystore.p12"; // For Development
+    /** Runs right before the configuration files are loaded. */
+    public static final int ORDER = ConfigDataEnvironmentPostProcessor.ORDER - 1;
+
+    static final String HTTPS_PROFILE = "https";
+    static final String HTTP_PROFILE = "http";
+    static final String KEY_STORE_PROPERTY = "SSL_KEY_STORE";
+
+    private static final String DEFAULT_PROFILES_PROPERTY = "spring.profiles.default";
+    private static final List<String> KEYSTORE_LOCATIONS = List.of(
+            "file:/certs/keystore.p12",
+            "classpath:keystore.p12");
+
+    private final Log log;
+    private final List<String> keystoreLocations;
 
     /**
-     * Processes the environment to detect the presence of an SSL certificate and
-     * configures the corresponding profile (HTTP or HTTPS).
-     * 
+     * Creates the detector that looks for the keystore in its standard locations.
+     *
+     * @param logFactory the factory of loggers whose output is deferred until logging is initialized
+     */
+    public SslProfileDetector(DeferredLogFactory logFactory) {
+        this(logFactory, KEYSTORE_LOCATIONS);
+    }
+
+    /**
+     * Creates a detector that looks for the keystore in the given locations.
+     *
+     * @param logFactory the factory of loggers whose output is deferred until logging is initialized
+     * @param keystoreLocations the resource locations of the keystore, in order of preference
+     */
+    SslProfileDetector(DeferredLogFactory logFactory, List<String> keystoreLocations) {
+        this.log = logFactory.getLog(SslProfileDetector.class);
+        this.keystoreLocations = List.copyOf(keystoreLocations);
+    }
+
+    /**
+     * Sets the default profile, and the default key store when a keystore is found.
+     *
      * @param environment the Spring configurable environment
      * @param application the Spring Boot application
      */
     @Override
     public void postProcessEnvironment(ConfigurableEnvironment environment, SpringApplication application) {
-        boolean sslEnabled = false;
+        ResourceLoader resourceLoader = Optional.ofNullable(application.getResourceLoader())
+                .orElseGet(() -> new DefaultResourceLoader(application.getClassLoader()));
+        Optional<String> keystore = keystoreLocations.stream()
+                .filter(location -> resourceLoader.getResource(location).exists())
+                .findFirst();
 
-        // Check if keystore exists in filesystem (Dockerized environment)
-        File keystoreFile = new File(FILESYSTEM_KEYSTORE_PATH);
-        if (keystoreFile.exists()) {
-            log.info("SSL certificate found at {} , enabling HTTPS profile.", FILESYSTEM_KEYSTORE_PATH);
-            sslEnabled = true;
+        Map<String, Object> defaults = new HashMap<>();
+        if (keystore.isPresent()) {
+            log.info("Keystore found at " + keystore.get() + ": the default profile is " + HTTPS_PROFILE);
+            defaults.put(DEFAULT_PROFILES_PROPERTY, HTTPS_PROFILE);
+            defaults.put(KEY_STORE_PROPERTY, keystore.get());
         } else {
-            // Check if keystore exists in classpath (Development mode)
-            try {
-                if (new ClassPathResource(CLASSPATH_KEYSTORE_PATH).getFile().exists()) {
-                    log.info("SSL certificate found in classpath, enabling HTTPS profile.");
-                    sslEnabled = true;
-                }
-            } catch (IOException e) {
-                log.info("No SSL certificate found in classpath.");
-            }
+            log.info("No keystore found: the default profile is " + HTTP_PROFILE);
+            defaults.put(DEFAULT_PROFILES_PROPERTY, HTTP_PROFILE);
         }
+        // Lowest precedence: any explicit setting of these properties wins
+        DefaultPropertiesPropertySource.addOrMerge(defaults, environment.getPropertySources());
+    }
 
-        // Set the appropriate profile
-        if (sslEnabled) {
-            environment.setActiveProfiles("https");
-        } else {
-            environment.setActiveProfiles("http");
-            log.info("No SSL certificate found, using HTTP profile.");
-        }
+    /**
+     * Returns the order of this post-processor, which runs before the configuration files are loaded.
+     *
+     * @return int the order
+     */
+    @Override
+    public int getOrder() {
+        return ORDER;
     }
 }

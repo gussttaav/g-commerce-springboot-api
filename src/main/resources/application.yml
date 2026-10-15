@@ -14,8 +14,6 @@ spring:
             connection:
                 characterEncoding: utf8
                 useUnicode: true
-  profiles:
-    active: ${SPRING_PROFILES_ACTIVE:http}
   data:
     redis:
       host: ${REDIS_HOST:localhost}
@@ -142,7 +140,8 @@ management:
       application: ${spring.application.name}
 
 ---
-# HTTP-only profile (default)
+# HTTP profile. Unless a profile is set explicitly (e.g. with SPRING_PROFILES_ACTIVE), SslProfileDetector picks
+# https when it finds a keystore at /certs/keystore.p12 or on the classpath, and http otherwise
 spring:
   config:
     activate:
@@ -159,7 +158,7 @@ spring:
 server:
   port: 8443
   ssl:
-    key-store: classpath:keystore.p12
+    key-store: ${SSL_KEY_STORE:classpath:keystore.p12}
     key-store-password: ${SSL_PASSWORD:changeit}
     key-store-type: PKCS12
     key-alias: springboot

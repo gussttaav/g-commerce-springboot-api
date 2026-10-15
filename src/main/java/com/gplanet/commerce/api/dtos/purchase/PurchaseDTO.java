@@ -20,7 +20,7 @@ import jakarta.validation.constraints.NotNull;
         description = "Purchase request information")
 public record PurchaseDTO(
     @Schema(description = "List of products to purchase")
-    @NotEmpty(message = "The purchase must have at least one producto")
+    @NotEmpty(message = "The purchase must have at least one product")
     @Valid
     List<@NotNull(message = "The products of the purchase cannot be null") PurchaseProductDTO> products
 ) {}

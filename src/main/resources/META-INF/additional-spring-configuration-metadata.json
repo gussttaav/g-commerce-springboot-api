@@ -11,11 +11,6 @@
       "description": "Admin default password"
     },
     {
-      "name": "admin.default.nombre",
-      "type": "java.lang.String",
-      "description": "Admin default name"
-    },
-    {
       "name": "cors.allowed-origins",
       "type": "java.util.List<java.lang.String>",
       "description": "List of origins allowed to access the API (e.g., http://localhost:3000).",

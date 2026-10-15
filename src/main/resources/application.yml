@@ -1,6 +1,6 @@
 spring:
   application:
-    name: gestion-tienda
+    name: g-commerce-api
   datasource:
     url: jdbc:mysql://${MYSQL_HOST:localhost:3306}/shopping?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: ${MYSQL_USER}

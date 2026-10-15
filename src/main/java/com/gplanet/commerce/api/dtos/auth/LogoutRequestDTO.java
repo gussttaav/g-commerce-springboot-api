@@ -17,6 +17,6 @@ import jakarta.validation.constraints.NotBlank;
 public record LogoutRequestDTO(
     @Schema(description = "Refresh token to invalidate", 
              example = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...")
-    @NotBlank(message = "El refresh token es obligatorio")
+    @NotBlank(message = "Refresh token is required")
     String refreshToken
 ) {}

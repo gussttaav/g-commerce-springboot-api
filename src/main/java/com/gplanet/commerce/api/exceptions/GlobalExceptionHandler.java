@@ -62,7 +62,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 "Validation Error",
-                "Error de validación",
+                "Validation failed",
                 request.getRequestURI(),
                 details
         );
@@ -91,7 +91,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.BAD_REQUEST.value(),
                 "Constraint Violation",
-                "Error de validación",
+                "Validation failed",
                 request.getRequestURI(),
                 details
         );
@@ -141,7 +141,7 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorDTO> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
                                                                   HttpServletRequest request) {
         log.warn("Message not readable error for request to {}: {}", request.getRequestURI(), ex.getMessage());
-        String message = "Error en el formato JSON";
+        String message = "Malformed JSON request";
         List<String> details = new ArrayList<>();
         details.add(ex.getMessage());
 
@@ -222,9 +222,9 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.UNAUTHORIZED.value(),
                 "Missing Authorization Header",
-                "Se requiere cabecera de autorización",
+                "Authorization header is required",
                 request.getRequestURI(),
-                List.of("Falta la cabecera Authorization con el token Bearer")
+                List.of("The Authorization header with a Bearer token is missing")
         );
 
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
@@ -347,7 +347,7 @@ public class GlobalExceptionHandler {
                 LocalDateTime.now(),
                 HttpStatus.INTERNAL_SERVER_ERROR.value(),
                 "Internal Server Error",
-                "Ha ocurrido un error inesperado",
+                "An unexpected error occurred",
                 request.getRequestURI(),
                 new ArrayList<>()
         );
@@ -368,7 +368,7 @@ public class GlobalExceptionHandler {
                                                         HttpServletRequest request) {
         log.warn("Type mismatch error for request to {}: {}", request.getRequestURI(), ex.getMessage());
         List<String> details = new ArrayList<>();
-        String message = "Error en el tipo de dato";
+        String message = "Invalid parameter type";
         
         if (ex instanceof MethodArgumentTypeMismatchException) {
             MethodArgumentTypeMismatchException matex = (MethodArgumentTypeMismatchException) ex;
@@ -378,7 +378,7 @@ public class GlobalExceptionHandler {
             if (reqType != null) {
                 requiredType = reqType.getSimpleName();
             } else {
-                requiredType = "desconocido";
+                requiredType = "unknown";
             }
             String invalidValue;
             Object valueObj = matex.getValue();
@@ -387,9 +387,9 @@ public class GlobalExceptionHandler {
             } else {
                 invalidValue = "null";
             }
-            message = String.format("El parámetro '%s' debe ser de tipo %s", paramName, requiredType);
-            details.add(String.format("Valor recibido: '%s'", invalidValue));
-            details.add(String.format("Tipo esperado: %s", requiredType));
+            message = String.format("Parameter '%s' must be of type %s", paramName, requiredType);
+            details.add(String.format("Received value: '%s'", invalidValue));
+            details.add(String.format("Expected type: %s", requiredType));
         }
 
         ApiErrorDTO error = new ApiErrorDTO(
@@ -419,7 +419,7 @@ public class GlobalExceptionHandler {
         log.error("Data integrity violation for request to {}: {}", 
             request.getRequestURI(), ex.getMostSpecificCause().getMessage());
         
-        String message = "Error de integridad de datos";
+        String message = "Data integrity violation";
         List<String> details = new ArrayList<>();
         
         // Extract specific database error
@@ -427,18 +427,18 @@ public class GlobalExceptionHandler {
         
         // Handle specific cases
         if (errorMessage.contains("Duplicate entry")) {
-            message = "Ya existe un registro con estos datos";
+            message = "A record with this data already exists";
             // Extract the duplicate value from the error message
             String duplicateValue = extractDuplicateValue(errorMessage);
-            details.add("Valor duplicado: " + duplicateValue);
+            details.add("Duplicate value: " + duplicateValue);
         } else if (errorMessage.contains("cannot be null")) {
-            message = "Datos requeridos no proporcionados";
+            message = "Required data is missing";
             // Extract the column name from the error message
             String columnName = extractColumnName(errorMessage);
-            details.add("Campo requerido: " + columnName);
+            details.add("Required field: " + columnName);
         } else if (errorMessage.contains("foreign key constraint")) {
-            message = "Violación de integridad referencial";
-            details.add("No se puede realizar la operación porque afectaría datos relacionados");
+            message = "Referential integrity violation";
+            details.add("The operation would affect related data");
         }
 
         ApiErrorDTO error = new ApiErrorDTO(
@@ -483,7 +483,7 @@ public class GlobalExceptionHandler {
             int endIndex = errorMessage.indexOf(SINGLE_QUOTE, startIndex);
             return errorMessage.substring(startIndex, endIndex);
         } catch (Exception e) {
-            return "No se pudo extraer el valor duplicado";
+            return "The duplicate value could not be extracted";
         }
     }
 
@@ -499,7 +499,7 @@ public class GlobalExceptionHandler {
             int endIndex = errorMessage.indexOf(SINGLE_QUOTE, startIndex);
             return errorMessage.substring(startIndex, endIndex);
         } catch (Exception e) {
-            return "No se pudo extraer el nombre de la columna";
+            return "The column name could not be extracted";
         }
     }
 }

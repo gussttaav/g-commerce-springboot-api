@@ -59,11 +59,12 @@ public class PurchaseController {
      * @param purchaseDTO the purchase details including products and quantities
      * @return CompraResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if the user is not found
-     * @throws ResourceNotFoundException if any of the products don't exist
+     * @throws ResourceNotFoundException if any of the products don't exist or are not active
      * @throws ApiException if the purchase could not be added due to a constraint violation
      */
     @Operation(summary = "Create a new purchase",
-               description = "Creates a new purchase for the authenticated user with the provided information")
+               description = "Creates a new purchase for the authenticated user with the provided information. "
+                           + "Products that are not active can't be bought and are reported as not found.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Purchase created successfully",
             content = @Content(mediaType = "application/json",

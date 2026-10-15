@@ -95,7 +95,7 @@ public class PurchaseService {
      * @param purchaseDTO Data transfer object containing purchase information
      * @return PurchaseResponseDTO containing the created purchase information
      * @throws UsernameNotFoundException if user is not found
-     * @throws ResourceNotFoundException if any product in the purchase is not found
+     * @throws ResourceNotFoundException if any product in the purchase is not found or is not active
      */
     @Transactional
     public PurchaseResponseDTO createPurchase(String email, PurchaseDTO purchaseDTO) {
@@ -111,8 +111,9 @@ public class PurchaseService {
         BigDecimal total = BigDecimal.ZERO;
 
         for (PurchaseProductDTO item : purchaseDTO.products()) {
-            Product product = productRepository.findById(item.productId())
-                .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
+            // Removed products are only marked as inactive, and can no longer be bought
+            Product product = productRepository.findByIdAndActiveTrue(item.productId())
+                .orElseThrow(() -> new ResourceNotFoundException("Product " + item.productId() + " not found"));
 
             PurchaseProduct purchaseProduct = new PurchaseProduct();
             purchaseProduct.setProduct(product);

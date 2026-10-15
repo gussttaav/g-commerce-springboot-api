@@ -178,9 +178,9 @@ class PurchaseServiceTest {
         // Arrange
         when(userRepository.findByEmail(regularUser.getEmail()))
             .thenReturn(Optional.of(regularUser));
-        when(productRepository.findById(1L))
+        when(productRepository.findByIdAndActiveTrue(1L))
             .thenReturn(Optional.of(product1));
-        when(productRepository.findById(2L))
+        when(productRepository.findByIdAndActiveTrue(2L))
             .thenReturn(Optional.of(product2));
         when(purchaseRepository.save(any(Purchase.class)))
             .thenReturn(purchase);
@@ -213,7 +213,7 @@ class PurchaseServiceTest {
         // Arrange
         when(userRepository.findByEmail(regularUser.getEmail()))
             .thenReturn(Optional.of(regularUser));
-        when(productRepository.findById(anyLong()))
+        when(productRepository.findByIdAndActiveTrue(anyLong()))
             .thenReturn(Optional.empty());
             
         // Act & Assert
@@ -226,9 +226,9 @@ class PurchaseServiceTest {
         // Arrange
         when(userRepository.findByEmail(regularUser.getEmail()))
             .thenReturn(Optional.of(regularUser));
-        when(productRepository.findById(1L))
+        when(productRepository.findByIdAndActiveTrue(1L))
             .thenReturn(Optional.of(product1));
-        when(productRepository.findById(2L))
+        when(productRepository.findByIdAndActiveTrue(2L))
             .thenReturn(Optional.of(product2));
         when(purchaseRepository.save(any(Purchase.class)))
             .thenAnswer(invocation -> {

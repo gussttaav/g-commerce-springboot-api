@@ -1,5 +1,6 @@
 package com.gplanet.commerce.api.integration;
 
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_COMPRAS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -100,6 +101,31 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
         assertEquals(1, purchaseSaved.getProducts().size());
     }
     
+    @Test
+    void createPurchaseWithInactiveProductReturnsNotFound() throws Exception {
+        // Arrange - Removing a product only marks it as inactive
+        Product inactiveProduct = new Product();
+        inactiveProduct.setName("Removed Product");
+        inactiveProduct.setPrice(new BigDecimal(PRODUCT_PRICE));
+        inactiveProduct.setActive(false);
+        inactiveProduct.setCreationDate(LocalDateTime.now());
+        Long inactiveProductId = productRepository.save(inactiveProduct).getId();
+
+        PurchaseDTO purchaseDTO = new PurchaseDTO(List.of(
+            new PurchaseProductDTO(productId, 1),
+            new PurchaseProductDTO(inactiveProductId, 1)));
+
+        // Act & Assert
+        mockMvc.perform(post(ENDPOINT_COMPRAS)
+                .header(HttpHeaders.AUTHORIZATION, obtenerJwtToken(USER_EMAIL, USER_PASSWORD))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(purchaseDTO)))
+                .andExpect(status().isNotFound())
+                .andExpect(errorMessage("Product " + inactiveProductId + " not found"));
+
+        assertEquals(0, purchaseRepository.count());
+    }
+
     @Test
     void listPurchasesUsuarioAutenticadoRetornaCompras() throws Exception {
         // First create a purchase

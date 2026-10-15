@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.repositories;
 
+import java.util.Optional;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -16,6 +18,13 @@ import com.gplanet.commerce.api.entities.Product;
  */
 public interface ProductRepository extends JpaRepository<Product, Long> {
     
+    /**
+     * Finds a product by ID if it is active.
+     * @param id the ID of the product
+     * @return an Optional containing the product if it exists and its 'activo' flag is true
+     */
+    Optional<Product> findByIdAndActiveTrue(Long id);
+
     /**
      * Finds all active products in the system with pagination support.
      * @param pageable pagination information

@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.purchase;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -21,21 +23,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param total The total amount of the purchase.
  * @param products The list of products included in this purchase.
  */
-@Schema(name = "Purchase", 
-        description = "Logged in user's purchase details")
+@Schema(name = "Purchase", description = "A purchase and the products bought")
 public record PurchaseResponseDTO(
-    @Schema(description = "Purchase ID", example = "1")
+    @Schema(description = "Purchase ID", example = "12", requiredMode = REQUIRED)
     Long id,
 
-    @Schema(description = "Customer name", example = "John Doe")
+    @Schema(description = "Name of the user who made the purchase", example = "John Doe", requiredMode = REQUIRED)
     String userName,
 
-    @Schema(description = "Purchase date and time")
+    @Schema(description = "When the purchase was made", example = "2026-10-20T09:30:00", requiredMode = REQUIRED)
     LocalDateTime date,
 
-    @Schema(description = "Total purchase amount", example = "99.99")
+    @Schema(description = "Total amount in US dollars", example = "399.99", requiredMode = REQUIRED)
     BigDecimal total,
 
-    @Schema(description = "List of purchased products")
+    @Schema(description = "The products bought", requiredMode = REQUIRED)
     List<PurchaseProductResponseDTO> products
 ) {}

@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.auth;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -21,24 +23,26 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Gustavo
  * @version 1.0
  */
-@Schema(name = "LoginResponse", description = "Login response data")
+@Schema(name = "LoginResponse", description = "The signed-in user and a new pair of tokens")
 public record LoginResponseDTO(
-    @Schema(description = "Authenticated user information")
+    @Schema(description = "The signed-in user", requiredMode = REQUIRED)
     UserResponseDTO user,
 
-    @Schema(description = "JWT access token issued after successful authentication", 
-            example = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
+    @Schema(description = "Access token: send it as `Authorization: Bearer <token>`",
+            example = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...", requiredMode = REQUIRED)
     String token,
 
-    @Schema(description = "Type of the token", example = "Bearer")
+    @Schema(description = "Type of the tokens", example = "Bearer", requiredMode = REQUIRED)
     String tokenType,
 
-    @Schema(description = "Access token expiration time in seconds", example = "3600")
+    @Schema(description = "Seconds until the access token expires", example = "3600", requiredMode = REQUIRED)
     long expiresIn,
 
-    @Schema(description = "JWT refresh token")
+    @Schema(description = "Refresh token: exchange it for a new pair with `POST /api/auth/refresh`; it works once",
+            example = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+            requiredMode = REQUIRED)
     String refreshToken,
 
-    @Schema(description = "Refresh token expiration time in seconds", example = "86400")
+    @Schema(description = "Seconds until the refresh token expires", example = "86400", requiredMode = REQUIRED)
     long refreshExpiresIn
 ) {}

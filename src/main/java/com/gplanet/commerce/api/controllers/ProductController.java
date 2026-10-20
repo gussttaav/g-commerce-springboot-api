@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.app.docs.ApiDocs;
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.product.ProductDTO;
 import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
@@ -53,7 +54,7 @@ import lombok.RequiredArgsConstructor;
  * @author Gustavo
  * @version 1.0
  */
-@Tag(name = "Products", description = "API for product management")
+@Tag(name = ApiDocs.TAG_PRODUCTS)
 @RestController
 @RequestMapping("/api/products")
 @RequiredArgsConstructor
@@ -84,44 +85,39 @@ public class ProductController {
      * @return {@code PaginatedResponse<ProductResponseDTO>} containing the filtered and searched paginated products
      * @throws AccessDeniedException if a non-admin user attempts to access non-active products
      */
-    @Operation(
-        summary = "List and search products with pagination", 
-        description = """
-            Returns a paginated list of products filtered by status and optional search text.
-            - Public access is allowed for ACTIVE products
-            - ROLE_ADMIN users can filter by ACTIVE, INACTIVE, or ALL status
-            - ROLE_USER users can access ACTIVE products
-            - Search parameter filters products by matching text in name or description
-            """
-    )
+    // OpenAPIConfig documents the access token of this endpoint as optional
+    @Operation(operationId = "listProducts", summary = "List products",
+               description = "Returns a page of the catalog, optionally filtered by a text found in the name or "
+                           + "the description. Anyone can list the active products; only administrators can list "
+                           + "the inactive ones with `status=INACTIVE` or `status=ALL`.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Products found successfully",
+        @ApiResponse(responseCode = "200", description = "A page of products",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(ref = "#/components/schemas/PaginatedProducts"))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
+                schema = @Schema(ref = ApiDocs.PAGINATED_PRODUCTS))),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.PRODUCT_STATUS_FORBIDDEN),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @GetMapping
     public PaginatedResponse<ProductResponseDTO> listProducts(
-            @RequestParam(required = false, defaultValue = "ACTIVE") 
-            @Schema(description = "Filter products by status (ADMIN only for non-ACTIVE)")
-            ProductStatus status,
-            @RequestParam(required = false) 
-            @Schema(description = "Search text for product name or description")
-            String searchText,
-            @RequestParam(defaultValue = "0") @Min(0)
-            @Schema(description = "Page number (zero-based)", example = "0") int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE)
-            @Schema(description = "Page size", example = "10") int size,
+            @Parameter(description = "Which products to list: `ACTIVE`, or `INACTIVE` and `ALL` for administrators")
+            @RequestParam(required = false, defaultValue = "ACTIVE") ProductStatus status,
+            @Parameter(description = "Text to find in the name or the description, ignoring case",
+                example = "monitor")
+            @RequestParam(required = false) String searchText,
+            @Parameter(description = "Page number, starting at 0")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @Parameter(description = "Products per page")
+            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE) int size,
+            @Parameter(description = "Field to sort by")
+            @Schema(allowableValues = {"name", "price"})
             @RequestParam(defaultValue = "name")
-            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS)
-            @Schema(description = "Sort field", example = "name", allowableValues = {"name", "price"}) String sort,
-            @RequestParam(defaultValue = "ASC") 
-            @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"})
-            String direction,
-            Authentication authentication) {
+            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"ASC", "DESC"})
+            @RequestParam(defaultValue = "ASC") String direction,
+            @Parameter(hidden = true) Authentication authentication) {
     
         // Allow unauthenticated access for ACTIVE products
         if (authentication == null) {
@@ -157,21 +153,18 @@ public class ProductController {
      * @return ProductResponseDTO containing the created product's information
      * @throws ApiException if the product could not be saved due to a constraint violation
      */
-    @Operation(summary = "Create a new product", description = "Creates a new product with the provided data")
+    @Operation(operationId = "createProduct", summary = "Create a product",
+               description = "Adds a product to the catalog. Requires the `ADMIN` role.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product created successfully",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = ProductResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "The new product"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "409", ref = ApiDocs.DUPLICATED_PRODUCT),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PostMapping
-    public ProductResponseDTO createProduct(
-            @Valid @RequestBody @Parameter(description = "New product parameters", required = true) 
-            ProductDTO productDTO) {
+    public ProductResponseDTO createProduct(@Valid @RequestBody ProductDTO productDTO) {
         return productService.createProduct(productDTO);
     }
 
@@ -187,31 +180,23 @@ public class ProductController {
      * @throws ResourceNotFoundException if the product with the given ID doesn't exist
      * @throws ApiException if the product could not be updated due to a constraint violation
      */
-    @Operation(
-        summary = "Update an existing product", 
-        description = "Updates a product's information."
-    )
+    @Operation(operationId = "updateProduct", summary = "Update a product",
+               description = "Sets the name, description, price and status of a product. Setting `active` to "
+                           + "`true` restores a deactivated product. Requires the `ADMIN` role.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product updated successfully",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = ProductResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
-        @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedProduct"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "The updated product"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "404", ref = ApiDocs.PRODUCT_NOT_FOUND),
+        @ApiResponse(responseCode = "409", ref = ApiDocs.DUPLICATED_PRODUCT),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PutMapping("/{id}")
     public ProductResponseDTO updateProduct(
-            @Parameter(name = "id", description = "Unique identifier of the product to update",
-                      required = true,
-                      example = "1",
-                      schema = @Schema(type = "long", minimum = "1"))
+            @Parameter(description = "ID of the product", example = "3")
             @PathVariable @Min(1) Long id,
-            @Valid @RequestBody
-            @Parameter(description = "Updated product parameters", required = true)
-            ProductDTO productDTO) {
+            @Valid @RequestBody ProductDTO productDTO) {
         return productService.updateProduct(id, productDTO);
     }
 
@@ -224,21 +209,21 @@ public class ProductController {
      * @param id the unique identifier of the product to delete
      * @throws ResourceNotFoundException if the product with the given ID doesn't exist
      */
-    @Operation(summary = "Delete a product", description = "Deletes a product by its ID")
+    @Operation(operationId = "deactivateProduct", summary = "Deactivate a product",
+               description = "Removes a product from the public catalog by marking it inactive: it can't be "
+                           + "bought anymore, but it stays in the purchase history. Restore it by updating it with "
+                           + "`active` set to `true`. Requires the `ADMIN` role.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Product deleted successfully"),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "404", ref = "#/components/responses/ProductNotFound"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "Product deactivated; the response has no body"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "404", ref = ApiDocs.PRODUCT_NOT_FOUND),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @DeleteMapping("/{id}")
     public void removeProduct(
-        @Parameter(name = "id", description = "Unique identifier of the product to delete",
-                   required = true,
-                   example = "1",
-                   schema = @Schema(type = "long", minimum = "1"))
+        @Parameter(description = "ID of the product", example = "3")
         @PathVariable @Min(1) Long id) {
         productService.removeProduct(id);
     }

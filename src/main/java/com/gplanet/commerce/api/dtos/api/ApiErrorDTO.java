@@ -1,7 +1,11 @@
 package com.gplanet.commerce.api.dtos.api;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.time.LocalDateTime;
 import java.util.List;
+
+import com.gplanet.commerce.api.configs.app.docs.ApiDocs;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
@@ -20,23 +24,25 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param path The API endpoint path where the error occurred.
  * @param details Additional detailed error messages or validation errors.
  */
-@Schema(description = "API error response data transfer object")
+@Schema(name = ApiDocs.ERROR_SCHEMA, description = "The body of every error response")
 public record ApiErrorDTO(
-    @Schema(description = "Timestamp when the error occurred")
+    @Schema(description = "When the error occurred, in server time without a time zone offset",
+            example = "2026-10-20T09:30:00", requiredMode = REQUIRED)
     LocalDateTime timestamp,
 
-    @Schema(description = "HTTP status code", example = "400")
+    @Schema(description = "HTTP status code", example = "404", requiredMode = REQUIRED)
     int status,
 
-    @Schema(description = "Error type", example = "Bad Request")
+    @Schema(description = "Short name of the error", example = "Not Found", requiredMode = REQUIRED)
     String error,
 
-    @Schema(description = "Error message", example = "Invalid input")
+    @Schema(description = "What went wrong", example = "Product not found", requiredMode = REQUIRED)
     String message,
 
-    @Schema(description = "Request path", example = "/api/products")
+    @Schema(description = "Path of the request", example = "/api/products/42", requiredMode = REQUIRED)
     String path,
 
-    @Schema(description = "Detailed error messages")
+    @Schema(description = "Specific problems, such as one entry per invalid field; may be empty",
+            requiredMode = REQUIRED)
     List<String> details
 ) {}

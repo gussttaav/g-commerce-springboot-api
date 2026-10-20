@@ -10,11 +10,11 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.app.docs.ApiDocs;
 import com.gplanet.commerce.api.dtos.auth.LoginDTO;
 import com.gplanet.commerce.api.dtos.auth.LoginResponseDTO;
 import com.gplanet.commerce.api.dtos.auth.LogoutRequestDTO;
 import com.gplanet.commerce.api.dtos.auth.TokenValidationResponseDTO;
-import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.exceptions.InvalidCredentialsException;
 import com.gplanet.commerce.api.exceptions.InvalidTokenException;
 import com.gplanet.commerce.api.exceptions.LogoutFailedException;
@@ -24,9 +24,11 @@ import com.gplanet.commerce.api.services.AuthService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -52,8 +54,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RestController
 @RequestMapping("/api/auth")
-@Tag(name = "Authentication", 
-    description = "API endpoints for user authentication and token management")
+@Tag(name = ApiDocs.TAG_AUTHENTICATION)
 @RequiredArgsConstructor
 public class AuthController {
 
@@ -67,19 +68,18 @@ public class AuthController {
      * @throws InvalidCredentialsException if the email is not registered or the password is incorrect
      */
     @SecurityRequirements
-    @Operation(summary = "Authenticate user", description = "Authenticates a user with email and password")
+    @Operation(operationId = "login", summary = "Log in",
+               description = "Signs in with an email and a password, and returns the user with a new access token "
+                           + "and refresh token. Login attempts are rate-limited per IP address.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Successfully authenticated",
-            content = @Content(schema = @Schema(implementation = UserResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidCredentials"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/LoginRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "Signed in"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.INVALID_CREDENTIALS),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.LOGIN_RATE_LIMIT_EXCEEDED)
     })
     @PostMapping("/login")
     public LoginResponseDTO login(
-            @Valid @RequestBody 
-            @Parameter(description = "User credentials containing email and password", required = true) 
-            LoginDTO loginDTO) {
+            @Valid @RequestBody LoginDTO loginDTO) {
         return authService.login(loginDTO);
     }
 
@@ -93,24 +93,19 @@ public class AuthController {
      * @throws UsernameNotFoundException if the user cannot be loaded
      * @throws TokenStorageException if there's an error storing the new refresh token
      */
-    @SecurityRequirements
-    @Operation(summary = "Refresh access token", 
-               description = "Generates new access and refresh tokens using a valid refresh token. "
-                           + "The old refresh token becomes invalid after successful refresh.")
+    @SecurityRequirement(name = ApiDocs.REFRESH_TOKEN_AUTH)
+    @Operation(operationId = "refreshTokens", summary = "Refresh tokens",
+               description = "Exchanges a refresh token, sent as `Authorization: Bearer <refresh token>`, for a new "
+                           + "access token and refresh token. Each refresh token works once: the used one is "
+                           + "revoked, and sending it again gets a 401.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Tokens refreshed successfully",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = LoginResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidRefreshToken"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "New tokens issued"),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.INVALID_REFRESH_TOKEN),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PostMapping("/refresh")
     public LoginResponseDTO refresh(
-            @RequestHeader("Authorization") 
-            @Parameter(description = "Bearer refresh token", required = true, 
-                      example = "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...") 
-            String authorization) {
+            @RequestHeader("Authorization") @Parameter(hidden = true) String authorization) {
         return authService.refresh(authorization);
     }
 
@@ -122,21 +117,19 @@ public class AuthController {
      * @param accessToken the access token that authenticated the request
      * @throws LogoutFailedException if the logout operation fails
      */
-    @Operation(summary = "User logout", 
-               description = "Logs out the authenticated user by revoking the access token used for this request "
-                           + "and the given refresh token, preventing their future use. A refresh token that is "
-                           + "invalid, expired or issued to another user is ignored.")
+    @Operation(operationId = "logout", summary = "Log out",
+               description = "Revokes the access token that authenticates the request and the refresh token in "
+                           + "the body, so neither works again. A refresh token that is invalid, expired or issued "
+                           + "to another user is ignored.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User logged out successfully"),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidToken"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "Logged out; the response has no body"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PostMapping("/logout")
     public void logout(
-            @Valid @RequestBody 
-            @Parameter(description = "Logout request containing refresh token to invalidate", required = true) 
-            LogoutRequestDTO logoutRequest, 
+            @Valid @RequestBody LogoutRequestDTO logoutRequest, 
             @AuthenticationPrincipal @Parameter(hidden = true) Jwt accessToken) {
         authService.logout(logoutRequest, accessToken);
     }
@@ -149,25 +142,29 @@ public class AuthController {
      * @return TokenValidationResponseDTO containing validation results and token status
      * @throws InvalidTokenException if the Authorization header doesn't contain a Bearer token
      */
-    @SecurityRequirements
-    @Operation(summary = "Validate JWT token", 
-               description = "Checks whether a token would be accepted as an access token: verifies its "
-                           + "signature, expiration, issuer, audience, type and revocation status. An invalid "
-                           + "token is reported with valid=false and the reason in the message.")
+    @SecurityRequirement(name = ApiDocs.BEARER_AUTH)
+    @Operation(operationId = "validateToken", summary = "Validate a token",
+               description = "Checks whether the token in the `Authorization` header would be accepted as an "
+                           + "access token: its signature, expiration, issuer, audience, type and revocation. An "
+                           + "invalid token is not an error: the response reports `valid: false` and the reason.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Token validation completed",
+        @ApiResponse(responseCode = "200", description = "The result of the check",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = TokenValidationResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/InvalidToken"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
+                schema = @Schema(implementation = TokenValidationResponseDTO.class),
+                examples = {
+                    @ExampleObject(name = "valid", summary = "Valid token",
+                        value = "{\"valid\": true, \"message\": \"Token is valid\"}"),
+                    @ExampleObject(name = "revoked", summary = "Revoked by a logout",
+                        value = "{\"valid\": false, \"message\": \"The token has been revoked\"}"),
+                    @ExampleObject(name = "malformed", summary = "Malformed or forged token",
+                        value = "{\"valid\": false, \"message\": \"Token is malformed or its signature is invalid\"}")
+                })),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.BEARER_TOKEN_REQUIRED),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @GetMapping("/validate")
     public TokenValidationResponseDTO validate(
-            @RequestHeader("Authorization") 
-            @Parameter(description = "Bearer JWT token to validate", required = true,
-                      example = "Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9...")
-            String authorization) {
+            @RequestHeader("Authorization") @Parameter(hidden = true) String authorization) {
         return authService.validateToken(authorization);
     }
 }

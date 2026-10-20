@@ -15,7 +15,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Gustavo
  * @version 1.0
  */
-@Schema(description = "JSON Web Key Set containing public keys for JWT verification")
+@Schema(name = "JwkSet", description = "The public keys that verify the tokens of this API (RFC 7517)")
 public record JwksResponseDTO(
     @Schema(description = "Array of JSON Web Keys", requiredMode = REQUIRED)
     List<JwkDTO> keys

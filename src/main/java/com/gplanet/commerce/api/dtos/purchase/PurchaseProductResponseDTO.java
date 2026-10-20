@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.purchase;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.math.BigDecimal;
 
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,21 +19,20 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param quantity The quantity of the product purchased.
  * @param subtotal The subtotal for this product (unit price * quantity).
  */
-@Schema(name = "PurchasedProduct", 
-        description = "Purchased product details")
+@Schema(name = "PurchasedProduct", description = "A product of a purchase")
 public record PurchaseProductResponseDTO(
-    @Schema(description = "Product ID", example = "1")
+    @Schema(description = "Product ID", example = "3", requiredMode = REQUIRED)
     Long id,
 
-    @Schema(description = "Product name", example = "Product A")
+    @Schema(description = "Product name", example = "4K Monitor", requiredMode = REQUIRED)
     String productName,
 
-    @Schema(description = "Unit price", example = "19.99")
+    @Schema(description = "Price paid per unit, in US dollars", example = "399.99", requiredMode = REQUIRED)
     BigDecimal unitPrice,
 
-    @Schema(description = "Quantity purchased", example = "2")
+    @Schema(description = "Quantity bought", example = "1", requiredMode = REQUIRED)
     Integer quantity,
 
-    @Schema(description = "Subtotal for this product", example = "39.98")
+    @Schema(description = "Unit price times quantity, in US dollars", example = "399.99", requiredMode = REQUIRED)
     BigDecimal subtotal
 ) {}

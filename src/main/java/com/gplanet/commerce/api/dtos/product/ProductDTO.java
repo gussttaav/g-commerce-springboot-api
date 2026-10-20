@@ -22,21 +22,21 @@ import jakarta.validation.constraints.Positive;
  * @param price The price of the product.
  * @param active Indicates if the product is active.
  */
-@Schema(name = "ProductRequest", 
-        description = "Product data for creation and updates")
+@Schema(name = "ProductRequest", description = "The data of a product to create or update")
 public record ProductDTO(
-    @Schema(description = "Product name", example = "Laptop", requiredMode = REQUIRED)
+    @Schema(description = "Product name, unique in the catalog", example = "Espresso Machine", requiredMode = REQUIRED)
     @NotBlank(message = "The name of the product is mandatory")
     String name,
 
-    @Schema(description = "Product description", example = "High performance laptop")
+    @Schema(description = "Product description", example = "15-bar espresso machine with milk frother")
     String description,
 
-    @Schema(description = "Product price", example = "999.99", requiredMode = REQUIRED)
+    @Schema(description = "Price in US dollars, greater than 0", example = "249.99", requiredMode = REQUIRED)
     @Positive(message = "The price of the product must be greater than 0")
     BigDecimal price,
 
-    @Schema(description = "Product status", example = "true", defaultValue = "true")
+    @Schema(description = "Whether the product is in the public catalog and can be bought", example = "true",
+            defaultValue = "true")
     boolean active
 ) {
     /**

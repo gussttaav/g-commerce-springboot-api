@@ -18,7 +18,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Gustavo
  * @version 1.0
  */
-@Schema(description = "JSON Web Key containing RSA public key information")
+@Schema(name = "Jwk", description = "A public RSA key that verifies the signature of the tokens")
 public record JwkDTO(
     @Schema(description = "Key type", example = "RSA", requiredMode = REQUIRED)
     String kty,

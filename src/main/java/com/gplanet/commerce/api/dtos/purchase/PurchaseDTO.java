@@ -16,10 +16,9 @@ import jakarta.validation.constraints.NotNull;
  * @version 1.0
  * @param products The list of products to be purchased.
  */
-@Schema(name = "PurchaseRequest", 
-        description = "Purchase request information")
+@Schema(name = "PurchaseRequest", description = "The products to buy")
 public record PurchaseDTO(
-    @Schema(description = "List of products to purchase")
+    @Schema(description = "Products to buy, with their quantities")
     @NotEmpty(message = "The purchase must have at least one product")
     @Valid
     List<@NotNull(message = "The products of the purchase cannot be null") PurchaseProductDTO> products

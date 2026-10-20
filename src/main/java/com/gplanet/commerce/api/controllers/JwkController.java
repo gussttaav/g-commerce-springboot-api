@@ -6,6 +6,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.app.docs.ApiDocs;
 import com.gplanet.commerce.api.configs.app.props.JwtProperties;
 import com.gplanet.commerce.api.dtos.jwks.JwkDTO;
 import com.gplanet.commerce.api.dtos.jwks.JwksResponseDTO;
@@ -14,8 +15,6 @@ import com.gplanet.commerce.api.services.KeyStoreService;
 import com.nimbusds.jose.jwk.RSAKey;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirements;
@@ -44,8 +43,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 @RestController
-@Tag(name = "JWKS & Discovery", 
-     description = "JSON Web Key Set and OpenID Connect discovery endpoints for JWT verification")
+@Tag(name = ApiDocs.TAG_DISCOVERY)
 @RequiredArgsConstructor
 public class JwkController {
 
@@ -67,17 +65,14 @@ public class JwkController {
      * @throws IllegalStateException if key retrieval fails
      */
     @SecurityRequirements
-    @Operation(summary = "Get JSON Web Key Set",
-               description = "Returns the public RSA keys in JWKS format for JWT signature verification. "
-                           + "This endpoint follows RFC 7517 standard and is used by external services and clients "
-                           + "to validate JWT tokens issued by this authorization server. "
-                           + "The active signing key is listed first, followed by recently rotated keys that "
-                           + "still have valid tokens. Each key includes its key ID, algorithm, and RSA parameters.")
+    @Operation(operationId = "getJwks", summary = "Get the JSON Web Key Set",
+               description = "Returns the public RSA keys that verify the tokens of this API, in the JWKS format "
+                           + "of RFC 7517: the active signing key first, then the keys retired by a rotation whose "
+                           + "tokens haven't expired yet. Cache the keys, and fetch them again when a token has an "
+                           + "unknown `kid`.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "JWKS retrieved successfully",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                schema = @Schema(implementation = JwksResponseDTO.class))),
-        @ApiResponse(responseCode = "500", description = "Internal server error - failed to retrieve or generate JWKS")
+        @ApiResponse(responseCode = "200", description = "The public keys"),
+        @ApiResponse(responseCode = "500", ref = ApiDocs.INTERNAL_ERROR)
     })
     @GetMapping(value = "/.well-known/jwks.json", produces = MediaType.APPLICATION_JSON_VALUE)
     public JwksResponseDTO jwks() {
@@ -112,16 +107,12 @@ public class JwkController {
      * @return OpenIdConfigurationDTO containing OpenID Provider metadata
      */
     @SecurityRequirements
-    @Operation(summary = "Get OpenID Connect configuration", 
-               description = "Returns OpenID Provider metadata according to RFC 8414 (OAuth 2.0 Authorization "
-                           + "Server Metadata) and OpenID Connect Discovery 1.0 specification. This endpoint "
-                           + "provides essential configuration information for OAuth 2.0 and OpenID Connect clients, "
-                           + "including supported grant types, token endpoints, and cryptographic algorithms.")
+    @Operation(operationId = "getOpenIdConfiguration", summary = "Get the OpenID configuration",
+               description = "Returns the provider metadata of RFC 8414 and OpenID Connect Discovery 1.0: the "
+                           + "issuer, the JWKS URI, the token endpoint and the supported grant types and "
+                           + "signing algorithms.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "OpenID configuration retrieved successfully",
-            content = @Content(mediaType = MediaType.APPLICATION_JSON_VALUE,
-                schema = @Schema(implementation = OpenIdConfigurationDTO.class))),
-        @ApiResponse(responseCode = "500", description = "Internal server error - failed to generate configuration")
+        @ApiResponse(responseCode = "200", description = "The provider metadata")
     })
     @GetMapping(value = "/.well-known/openid-configuration", produces = MediaType.APPLICATION_JSON_VALUE)
     public OpenIdConfigurationDTO openidConfiguration() {

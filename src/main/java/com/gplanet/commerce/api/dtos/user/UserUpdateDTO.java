@@ -23,26 +23,28 @@ import jakarta.validation.constraints.Size;
  * @param newPassword The new password to be set (optional).
  * @param confirmPassword Confirmation of the new password (optional).
  */
-@Schema(name = "UpdateUserInfo", description = "Logged in user's information to be updated; optionally change password")
+@Schema(name = "UpdateUserInfo", description = "The profile fields to change; omitted fields keep their value. "
+        + "To change the password, send the current password, the new one and its confirmation.")
 public record UserUpdateDTO(
-    @Schema(description = "User's name (optional; if present must not be empty)", 
-        example = "John Doe", nullable = true)
+    @Schema(description = "New full name", example = "John A. Doe", nullable = true)
     @Size(min = 1, max = 100, message = "Name cannot be empty")
     String name,
 
-    @Schema(description = "User's new email (optional; if present must be valid)", 
-        example = "john.doe@example.com", nullable = true)
+    @Schema(description = "New email address; it must not belong to another user", example = "john.doe@example.com",
+        nullable = true)
     @Email(message = "Email must be valid")
     String newEmail,
 
-    @Schema(description = "Current password (required to change password)", example = "oldPassword123", nullable = true)
+    @Schema(description = "Current password, required to change the password", example = "your-current-password",
+        nullable = true)
     String currentPassword,
 
-    @Schema(description = "New password", example = "newPassword123", nullable = true)
+    @Schema(description = "New password, at least 8 characters and different from the current one",
+        example = "your-new-password", nullable = true)
     @Size(min = 8, message = "New password must be at least 8 characters long")
     String newPassword,
 
-    @Schema(description = "Confirmation of new password", example = "newPassword123", nullable = true)
+    @Schema(description = "The new password again", example = "your-new-password", nullable = true)
     String confirmPassword
 ) {
 

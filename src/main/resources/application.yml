@@ -74,7 +74,12 @@ springdoc:
   swagger-ui:
     path: /swagger-ui
   packages-to-scan: com.gplanet.commerce.api
-  paths-to-match: /api/**
+  paths-to-match: /api/**,/.well-known/**
+  default-produces-media-type: application/json
+
+# Public address of the API, the first server of the OpenAPI document (docs-site/public/openapi.json)
+openapi:
+  production-url: ${OPENAPI_PRODUCTION_URL:https://g-commerce.duckdns.org}
 
 # Management/Actuator Configuration
 management:

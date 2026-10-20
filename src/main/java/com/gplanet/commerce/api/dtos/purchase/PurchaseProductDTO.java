@@ -14,14 +14,14 @@ import jakarta.validation.constraints.Positive;
  * @param productId The ID of the product to be purchased.
  * @param quantity The quantity of the product to purchase.
  */
-@Schema(name = "PurchaseProductRequest", description = "Product purchase request information")
+@Schema(name = "PurchaseProductRequest", description = "A product to buy and its quantity")
 public record PurchaseProductDTO(
-    @Schema(description = "Product ID to purchase", example = "1")
+    @Schema(description = "ID of an active product", example = "3")
     @NotNull(message = "Product id is required")
     @Positive(message = "Product id must be positive")
     Long productId,
 
-    @Schema(description = "Quantity to purchase", example = "1")
+    @Schema(description = "Quantity to buy", example = "1")
     @NotNull(message = "The quantity of the product is required")
     @Positive(message = "The quantity of the product must be greater than 0")
     Integer quantity

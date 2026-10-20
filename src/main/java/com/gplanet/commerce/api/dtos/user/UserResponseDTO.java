@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.user;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.time.LocalDateTime;
 
 import com.gplanet.commerce.api.entities.User;
@@ -21,21 +23,21 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param role The role assigned to the user in the system.
  * @param creationDate The date and time when the user account was created.
  */
-@Schema(name = "User", 
-        description = "User data object")
+@Schema(name = "User", description = "A user account")
 public record UserResponseDTO(
-    @Schema(description = "User's unique identifier", example = "1")
+    @Schema(description = "User ID", example = "2", requiredMode = REQUIRED)
     Long id,
 
-    @Schema(description = "User's full name", example = "John Doe")
+    @Schema(description = "Full name", example = "John Doe", requiredMode = REQUIRED)
     String name,
 
-    @Schema(description = "User's email address", example = "john.doe@example.com")
+    @Schema(description = "Email address, used to sign in", example = "john@example.com", requiredMode = REQUIRED)
     String email,
 
-    @Schema(description = "User's role in the system", example = "USER")
+    @Schema(description = "Role: `USER` can buy products, `ADMIN` can manage products and users", example = "USER",
+            requiredMode = REQUIRED)
     User.Role role,
 
-    @Schema(description = "Account creation timestamp", example = "2023-01-01T10:00:00")
+    @Schema(description = "When the account was created", example = "2026-10-01T09:30:00", requiredMode = REQUIRED)
     LocalDateTime creationDate
 ) {}

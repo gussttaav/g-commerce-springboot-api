@@ -17,10 +17,10 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Gustavo
  * @version 1.0
  */
-@Schema(description = "OpenID Connect Provider configuration metadata")
+@Schema(name = "OpenIdConfiguration", description = "OpenID provider metadata (RFC 8414)")
 public record OpenIdConfigurationDTO(
     @Schema(description = "Authorization server's issuer identifier", 
-            example = "https://api.g-commerce.com", requiredMode = REQUIRED)
+            example = "g-commerce-api", requiredMode = REQUIRED)
     String issuer,
     
     @Schema(description = "URL of the authorization server's JWK Set document", 

@@ -1,0 +1,8 @@
+# This file instructs Redocly's linter to ignore the rules contained for specific parts of your API.
+# See https://redocly.com/docs/cli/ for more information.
+docs-site/public/openapi.json:
+  # The discovery endpoints are public, static and outside the rate-limited /api/** paths,
+  # so no client error (4XX) can happen
+  operation-4xx-response:
+    - '#/paths/~1.well-known~1jwks.json/get/responses'
+    - '#/paths/~1.well-known~1openid-configuration/get/responses'

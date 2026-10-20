@@ -1,0 +1,2376 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "G-Commerce API",
+    "description": "The G-Commerce API is the backend of a demo online store: user accounts, a product catalog and purchases.\nIt is a Spring Boot application that issues and verifies its own RS256-signed JSON Web Tokens.\n\n## Authentication\n\nMost endpoints need an access token in the `Authorization` header:\n\n```http\nAuthorization: Bearer <access token>\n```\n\n1. Get an access token and a refresh token with `POST /api/auth/login`.\n2. The access token expires after 60 minutes. Exchange the refresh token for a new pair with\n   `POST /api/auth/refresh`; each refresh token works once and expires after 24 hours.\n3. `POST /api/auth/logout` revokes the access token and the refresh token of the session.\n\nTokens are signed with rotating RSA keys, published at `/.well-known/jwks.json` for other services to verify them.\n\n## Demo accounts\n\nThis deployment is a public demo, so anyone can sign in with these accounts and change the data:\n\n| Email | Password | Role |\n|---|---|---|\n| `john@example.com` | `JohnDoe123!` | `USER`: can buy products |\n| `admin@example.com` | `Admin123!` | `ADMIN`: can manage products and users |\n\n## Errors\n\nErrors use conventional HTTP status codes and share one JSON body, the `Error` schema:\n\n```json\n{\n  \"timestamp\": \"2026-10-20T09:30:00\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Product not found\",\n  \"path\": \"/api/products/42\",\n  \"details\": []\n}\n```\n\n`message` explains the error, and `details` lists the specific problems, such as one entry per invalid field.\n\n## Pagination\n\nList endpoints take `page` (0-based), `size` (1 to 100), `sort` and `direction` (`ASC` or `DESC`)\nquery parameters, and return the items in `content` with the page metadata.\n\n## Rate limits\n\nEvery client gets a bucket of requests that refills over time:\n\n| Requests | Counted per | Burst | Refill per minute |\n|---|---|---|---|\n| Anonymous | IP address | 10 | 5 |\n| Signed-in users | user | 30 | 20 |\n| Administrators | user | 100 | 50 |\n| Login attempts | IP address | 5 | 1 |\n\nSuccessful responses carry an `X-Rate-Limit-Remaining` header. When the bucket is empty, the API answers\n`429 Too Many Requests` with a `Retry-After` header: the seconds to wait before trying again.\n",
+    "contact": {
+      "name": "Gustavo Torres Guerrero",
+      "url": "https://github.com/gussttaav/g-commerce-springboot-api",
+      "email": "gvs7aav0@gmail.com"
+    },
+    "license": {
+      "name": "MIT License",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "version": "v1.0"
+  },
+  "servers": [
+    {
+      "url": "https://g-commerce.duckdns.org",
+      "description": "Production (public demo)"
+    },
+    {
+      "url": "http://localhost:8080",
+      "description": "Local development"
+    }
+  ],
+  "security": [
+    {
+      "bearerAuth": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Authentication",
+      "description": "Sign in, refresh and revoke tokens, and check whether a token is still valid."
+    },
+    {
+      "name": "Users",
+      "description": "Register accounts and manage the signed-in user's profile. Administrators can also list the users and change their roles."
+    },
+    {
+      "name": "Products",
+      "description": "Browse the catalog, which is public, and manage the products as an administrator. Removing a product deactivates it, so it stays in the purchase history."
+    },
+    {
+      "name": "Purchases",
+      "description": "Buy active products and read the purchase history. Users see their own purchases and administrators see all of them."
+    },
+    {
+      "name": "Discovery",
+      "description": "Public signing keys and OpenID provider metadata, so other services can verify the tokens this API issues."
+    }
+  ],
+  "paths": {
+    "/.well-known/jwks.json": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Get the JSON Web Key Set",
+        "description": "Returns the public RSA keys that verify the tokens of this API, in the JWKS format of RFC 7517: the active signing key first, then the keys retired by a rotation whose tokens haven't expired yet. Cache the keys, and fetch them again when a token has an unknown `kid`.",
+        "operationId": "getJwks",
+        "responses": {
+          "200": {
+            "description": "The public keys",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/JwkSet"
+                }
+              }
+            }
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalError"
+          }
+        },
+        "security": []
+      }
+    },
+    "/.well-known/openid-configuration": {
+      "get": {
+        "tags": [
+          "Discovery"
+        ],
+        "summary": "Get the OpenID configuration",
+        "description": "Returns the provider metadata of RFC 8414 and OpenID Connect Discovery 1.0: the issuer, the JWKS URI, the token endpoint and the supported grant types and signing algorithms.",
+        "operationId": "getOpenIdConfiguration",
+        "responses": {
+          "200": {
+            "description": "The provider metadata",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenIdConfiguration"
+                }
+              }
+            }
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/login": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log in",
+        "description": "Signs in with an email and a password, and returns the user with a new access token and refresh token. Login attempts are rate-limited per IP address.",
+        "operationId": "login",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Login"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Signed in",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidCredentials"
+          },
+          "429": {
+            "$ref": "#/components/responses/LoginRateLimitExceeded"
+          }
+        },
+        "security": []
+      }
+    },
+    "/api/auth/logout": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Log out",
+        "description": "Revokes the access token that authenticates the request and the refresh token in the body, so neither works again. A refresh token that is invalid, expired or issued to another user is ignored.",
+        "operationId": "logout",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LogoutRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Logged out; the response has no body",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/auth/refresh": {
+      "post": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Refresh tokens",
+        "description": "Exchanges a refresh token, sent as `Authorization: Bearer <refresh token>`, for a new access token and refresh token. Each refresh token works once: the used one is revoked, and sending it again gets a 401.",
+        "operationId": "refreshTokens",
+        "responses": {
+          "200": {
+            "description": "New tokens issued",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LoginResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/InvalidRefreshToken"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        },
+        "security": [
+          {
+            "refreshToken": []
+          }
+        ]
+      }
+    },
+    "/api/auth/validate": {
+      "get": {
+        "tags": [
+          "Authentication"
+        ],
+        "summary": "Validate a token",
+        "description": "Checks whether the token in the `Authorization` header would be accepted as an access token: its signature, expiration, issuer, audience, type and revocation. An invalid token is not an error: the response reports `valid: false` and the reason.",
+        "operationId": "validateToken",
+        "responses": {
+          "200": {
+            "description": "The result of the check",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenValidationResponse"
+                },
+                "examples": {
+                  "valid": {
+                    "summary": "Valid token",
+                    "description": "valid",
+                    "value": {
+                      "valid": true,
+                      "message": "Token is valid"
+                    }
+                  },
+                  "revoked": {
+                    "summary": "Revoked by a logout",
+                    "description": "revoked",
+                    "value": {
+                      "valid": false,
+                      "message": "The token has been revoked"
+                    }
+                  },
+                  "malformed": {
+                    "summary": "Malformed or forged token",
+                    "description": "malformed",
+                    "value": {
+                      "valid": false,
+                      "message": "Token is malformed or its signature is invalid"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/BearerTokenRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        },
+        "security": [
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/products": {
+      "get": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "List products",
+        "description": "Returns a page of the catalog, optionally filtered by a text found in the name or the description. Anyone can list the active products; only administrators can list the inactive ones with `status=INACTIVE` or `status=ALL`.",
+        "operationId": "listProducts",
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "description": "Which products to list: `ACTIVE`, or `INACTIVE` and `ALL` for administrators",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "ACTIVE",
+              "enum": [
+                "ACTIVE",
+                "INACTIVE",
+                "ALL"
+              ]
+            }
+          },
+          {
+            "name": "searchText",
+            "in": "query",
+            "description": "Text to find in the name or the description, ignoring case",
+            "required": false,
+            "schema": {
+              "type": "string"
+            },
+            "example": "monitor"
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, starting at 0",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Products per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "name",
+              "enum": [
+                "name",
+                "price"
+              ],
+              "pattern": "name|price"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Sort direction",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "ASC",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of products",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedProducts"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/ProductStatusForbidden"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ]
+      },
+      "post": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Create a product",
+        "description": "Adds a product to the catalog. Requires the `ADMIN` role.",
+        "operationId": "createProduct",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new product",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRoleRequired"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicatedProduct"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/products/{id}": {
+      "put": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Update a product",
+        "description": "Sets the name, description, price and status of a product. Setting `active` to `true` restores a deactivated product. Requires the `ADMIN` role.",
+        "operationId": "updateProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the product",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 3
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ProductRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The updated product",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Product"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRoleRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProductNotFound"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicatedProduct"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "delete": {
+        "tags": [
+          "Products"
+        ],
+        "summary": "Deactivate a product",
+        "description": "Removes a product from the public catalog by marking it inactive: it can't be bought anymore, but it stays in the purchase history. Restore it by updating it with `active` set to `true`. Requires the `ADMIN` role.",
+        "operationId": "deactivateProduct",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the product",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64",
+              "minimum": 1
+            },
+            "example": 3
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Product deactivated; the response has no body",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRoleRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/ProductNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/purchases": {
+      "get": {
+        "tags": [
+          "Purchases"
+        ],
+        "summary": "List purchases",
+        "description": "Returns a page of the signed-in user's purchases, newest first by default. Administrators get the purchases of all the users.",
+        "operationId": "listPurchases",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, starting at 0",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Purchases per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "date",
+              "enum": [
+                "date",
+                "total"
+              ],
+              "pattern": "date|total"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Sort direction",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "DESC",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of purchases",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedPurchases"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Purchases"
+        ],
+        "summary": "Create a purchase",
+        "description": "Buys the given products for the signed-in user at their current prices. Requires the `USER` role: administrators can't make purchases. Inactive products can't be bought and are reported as not found.",
+        "operationId": "createPurchase",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PurchaseRequest"
+              },
+              "examples": {
+                "twoProducts": {
+                  "summary": "Two products",
+                  "description": "twoProducts",
+                  "value": {
+                    "products": [
+                      {
+                        "productId": 3,
+                        "quantity": 1
+                      },
+                      {
+                        "productId": 2,
+                        "quantity": 2
+                      }
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new purchase",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Purchase"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/UserRoleRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/PurchaseProductNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/users": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "List users",
+        "description": "Returns a page of all the users. Requires the `ADMIN` role.",
+        "operationId": "listUsers",
+        "parameters": [
+          {
+            "name": "page",
+            "in": "query",
+            "description": "Page number, starting at 0",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 0,
+              "minimum": 0
+            }
+          },
+          {
+            "name": "size",
+            "in": "query",
+            "description": "Users per page",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "default": 10,
+              "maximum": 100,
+              "minimum": 1
+            }
+          },
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field to sort by",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "email",
+              "enum": [
+                "email",
+                "name",
+                "creationDate"
+              ],
+              "pattern": "email|name|creationDate"
+            }
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Sort direction",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "default": "ASC",
+              "enum": [
+                "ASC",
+                "DESC"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of users",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PaginatedUsers"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRoleRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Register a user",
+        "description": "Creates a user account; sign in with it at `POST /api/auth/login`. Anyone can register a `USER`, but registering an `ADMIN` requires an administrator's access token.",
+        "operationId": "registerUser",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UserRegistration"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The new user",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRegistrationForbidden"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicatedEmail"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        },
+        "security": [
+          {},
+          {
+            "bearerAuth": []
+          }
+        ]
+      }
+    },
+    "/api/users/me": {
+      "get": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Retrieve your profile",
+        "description": "Returns the signed-in user.",
+        "operationId": "getProfile",
+        "responses": {
+          "200": {
+            "description": "The signed-in user",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      },
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Update your profile",
+        "description": "Changes the name, email or password of the signed-in user; omitted fields keep their value. A password change needs `currentPassword`, `newPassword` and `confirmPassword`. The user's tokens keep working after an email change.",
+        "operationId": "updateProfile",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateUserInfo"
+              },
+              "examples": {
+                "rename": {
+                  "summary": "Change the name",
+                  "description": "rename",
+                  "value": {
+                    "name": "John A. Doe"
+                  }
+                },
+                "changeEmail": {
+                  "summary": "Change the email",
+                  "description": "changeEmail",
+                  "value": {
+                    "newEmail": "john.doe@example.com"
+                  }
+                },
+                "changePassword": {
+                  "summary": "Change the password",
+                  "description": "changePassword",
+                  "value": {
+                    "currentPassword": "your-current-password",
+                    "newPassword": "your-new-password",
+                    "confirmPassword": "your-new-password"
+                  }
+                }
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "The updated user",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            },
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/User"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidProfileUpdate"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "409": {
+            "$ref": "#/components/responses/DuplicatedEmail"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    },
+    "/api/users/{id}/role": {
+      "patch": {
+        "tags": [
+          "Users"
+        ],
+        "summary": "Change a user's role",
+        "description": "Gives a user the `USER` or `ADMIN` role. Requires the `ADMIN` role. The user's current access token keeps the old role until it expires or is refreshed.",
+        "operationId": "changeUserRole",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "description": "ID of the user",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "format": "int64"
+            },
+            "example": 5
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Role changed; the response has no body",
+            "headers": {
+              "X-Rate-Limit-Remaining": {
+                "$ref": "#/components/headers/X-Rate-Limit-Remaining"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidInput"
+          },
+          "401": {
+            "$ref": "#/components/responses/AuthenticationRequired"
+          },
+          "403": {
+            "$ref": "#/components/responses/AdminRoleRequired"
+          },
+          "404": {
+            "$ref": "#/components/responses/UserNotFound"
+          },
+          "429": {
+            "$ref": "#/components/responses/RateLimitExceeded"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "Error": {
+        "type": "object",
+        "description": "The body of every error response",
+        "properties": {
+          "timestamp": {
+            "type": "string",
+            "description": "When the error occurred, in server time without a time zone offset",
+            "example": "2026-10-20T09:30:00",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"
+          },
+          "status": {
+            "type": "integer",
+            "format": "int32",
+            "description": "HTTP status code",
+            "example": 404
+          },
+          "error": {
+            "type": "string",
+            "description": "Short name of the error",
+            "example": "Not Found"
+          },
+          "message": {
+            "type": "string",
+            "description": "What went wrong",
+            "example": "Product not found"
+          },
+          "path": {
+            "type": "string",
+            "description": "Path of the request",
+            "example": "/api/products/42"
+          },
+          "details": {
+            "type": "array",
+            "description": "Specific problems, such as one entry per invalid field; may be empty",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "details",
+          "error",
+          "message",
+          "path",
+          "status",
+          "timestamp"
+        ]
+      },
+      "Jwk": {
+        "type": "object",
+        "description": "A public RSA key that verifies the signature of the tokens",
+        "properties": {
+          "kty": {
+            "type": "string",
+            "description": "Key type",
+            "example": "RSA"
+          },
+          "use": {
+            "type": "string",
+            "description": "Public key use",
+            "example": "sig"
+          },
+          "kid": {
+            "type": "string",
+            "description": "Key ID - unique identifier for this key",
+            "example": "12345678-1234-1234-1234-123456789012"
+          },
+          "alg": {
+            "type": "string",
+            "description": "Algorithm intended for use with this key",
+            "example": "RS256"
+          },
+          "n": {
+            "type": "string",
+            "description": "RSA public key modulus (Base64url encoded)",
+            "example": "0vx7agoebGcQSuuPiLJXZptN9nndrQmbXEps2aiAFbWhM78LhWx..."
+          },
+          "e": {
+            "type": "string",
+            "description": "RSA public key exponent (Base64url encoded)",
+            "example": "AQAB"
+          }
+        },
+        "required": [
+          "alg",
+          "e",
+          "kid",
+          "kty",
+          "n",
+          "use"
+        ]
+      },
+      "JwkSet": {
+        "type": "object",
+        "description": "The public keys that verify the tokens of this API (RFC 7517)",
+        "properties": {
+          "keys": {
+            "type": "array",
+            "description": "Array of JSON Web Keys",
+            "items": {
+              "$ref": "#/components/schemas/Jwk"
+            }
+          }
+        },
+        "required": [
+          "keys"
+        ]
+      },
+      "Login": {
+        "type": "object",
+        "description": "Login request data",
+        "properties": {
+          "email": {
+            "type": "string",
+            "description": "User's email address",
+            "example": "john@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "User's password",
+            "example": "JohnDoe123!"
+          }
+        },
+        "required": [
+          "email",
+          "password"
+        ]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "description": "The signed-in user and a new pair of tokens",
+        "properties": {
+          "user": {
+            "$ref": "#/components/schemas/User",
+            "description": "The signed-in user"
+          },
+          "token": {
+            "type": "string",
+            "description": "Access token: send it as `Authorization: Bearer <token>`",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+          },
+          "tokenType": {
+            "type": "string",
+            "description": "Type of the tokens",
+            "example": "Bearer"
+          },
+          "expiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until the access token expires",
+            "example": 3600
+          },
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token: exchange it for a new pair with `POST /api/auth/refresh`; it works once",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+          },
+          "refreshExpiresIn": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Seconds until the refresh token expires",
+            "example": 86400
+          }
+        },
+        "required": [
+          "expiresIn",
+          "refreshExpiresIn",
+          "refreshToken",
+          "token",
+          "tokenType",
+          "user"
+        ]
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "description": "Logout request data",
+        "properties": {
+          "refreshToken": {
+            "type": "string",
+            "description": "Refresh token of the session, revoked together with the access token",
+            "example": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9..."
+          }
+        },
+        "required": [
+          "refreshToken"
+        ]
+      },
+      "OpenIdConfiguration": {
+        "type": "object",
+        "description": "OpenID provider metadata (RFC 8414)",
+        "properties": {
+          "issuer": {
+            "type": "string",
+            "description": "Authorization server's issuer identifier",
+            "example": "g-commerce-api"
+          },
+          "jwks_uri": {
+            "type": "string",
+            "description": "URL of the authorization server's JWK Set document",
+            "example": "/.well-known/jwks.json"
+          },
+          "token_endpoint": {
+            "type": "string",
+            "description": "URL of the token endpoint",
+            "example": "/api/auth/login"
+          },
+          "grant_types_supported": {
+            "type": "array",
+            "description": "Grant types supported by the authorization server",
+            "example": [
+              "password",
+              "refresh_token"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "id_token_signing_alg_values_supported": {
+            "type": "array",
+            "description": "JWS signing algorithms supported for ID Tokens",
+            "example": [
+              "RS256"
+            ],
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "grant_types_supported",
+          "id_token_signing_alg_values_supported",
+          "issuer",
+          "jwks_uri",
+          "token_endpoint"
+        ]
+      },
+      "PaginatedProducts": {
+        "type": "object",
+        "description": "A page of products",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "The items of the page",
+            "items": {
+              "$ref": "#/components/schemas/Product"
+            }
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current page number (0-based)",
+            "example": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of items per page",
+            "example": 10
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total number of items across all pages",
+            "example": 24
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total number of pages",
+            "example": 3
+          },
+          "isLastPage": {
+            "type": "boolean",
+            "description": "Whether this is the last page",
+            "example": false
+          }
+        },
+        "required": [
+          "content",
+          "isLastPage",
+          "pageNumber",
+          "pageSize",
+          "totalElements",
+          "totalPages"
+        ]
+      },
+      "PaginatedPurchases": {
+        "type": "object",
+        "description": "A page of purchases",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "The items of the page",
+            "items": {
+              "$ref": "#/components/schemas/Purchase"
+            }
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current page number (0-based)",
+            "example": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of items per page",
+            "example": 10
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total number of items across all pages",
+            "example": 24
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total number of pages",
+            "example": 3
+          },
+          "isLastPage": {
+            "type": "boolean",
+            "description": "Whether this is the last page",
+            "example": false
+          }
+        },
+        "required": [
+          "content",
+          "isLastPage",
+          "pageNumber",
+          "pageSize",
+          "totalElements",
+          "totalPages"
+        ]
+      },
+      "PaginatedUsers": {
+        "type": "object",
+        "description": "A page of users",
+        "properties": {
+          "content": {
+            "type": "array",
+            "description": "The items of the page",
+            "items": {
+              "$ref": "#/components/schemas/User"
+            }
+          },
+          "pageNumber": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Current page number (0-based)",
+            "example": 0
+          },
+          "pageSize": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Maximum number of items per page",
+            "example": 10
+          },
+          "totalElements": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Total number of items across all pages",
+            "example": 24
+          },
+          "totalPages": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Total number of pages",
+            "example": 3
+          },
+          "isLastPage": {
+            "type": "boolean",
+            "description": "Whether this is the last page",
+            "example": false
+          }
+        },
+        "required": [
+          "content",
+          "isLastPage",
+          "pageNumber",
+          "pageSize",
+          "totalElements",
+          "totalPages"
+        ]
+      },
+      "Product": {
+        "type": "object",
+        "description": "A product of the catalog",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Product ID",
+            "example": 3
+          },
+          "name": {
+            "type": "string",
+            "description": "Product name, unique in the catalog",
+            "example": "4K Monitor"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description",
+            "example": "27-inch 4K Ultra HD Monitor"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price in US dollars",
+            "example": 399.99
+          },
+          "creationDate": {
+            "type": "string",
+            "description": "When the product was created",
+            "example": "2026-10-01T09:30:00",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"
+          },
+          "active": {
+            "type": "boolean",
+            "description": "Whether the product is in the public catalog and can be bought",
+            "example": true
+          }
+        },
+        "required": [
+          "active",
+          "creationDate",
+          "id",
+          "name",
+          "price"
+        ]
+      },
+      "ProductRequest": {
+        "type": "object",
+        "description": "The data of a product to create or update",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Product name, unique in the catalog",
+            "example": "Espresso Machine"
+          },
+          "description": {
+            "type": "string",
+            "description": "Product description",
+            "example": "15-bar espresso machine with milk frother"
+          },
+          "price": {
+            "type": "number",
+            "description": "Price in US dollars, greater than 0",
+            "example": 249.99
+          },
+          "active": {
+            "type": "boolean",
+            "default": "true",
+            "description": "Whether the product is in the public catalog and can be bought",
+            "example": true
+          }
+        },
+        "required": [
+          "name",
+          "price"
+        ]
+      },
+      "Purchase": {
+        "type": "object",
+        "description": "A purchase and the products bought",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Purchase ID",
+            "example": 12
+          },
+          "userName": {
+            "type": "string",
+            "description": "Name of the user who made the purchase",
+            "example": "John Doe"
+          },
+          "date": {
+            "type": "string",
+            "description": "When the purchase was made",
+            "example": "2026-10-20T09:30:00",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"
+          },
+          "total": {
+            "type": "number",
+            "description": "Total amount in US dollars",
+            "example": 399.99
+          },
+          "products": {
+            "type": "array",
+            "description": "The products bought",
+            "items": {
+              "$ref": "#/components/schemas/PurchasedProduct"
+            }
+          }
+        },
+        "required": [
+          "date",
+          "id",
+          "products",
+          "total",
+          "userName"
+        ]
+      },
+      "PurchaseProductRequest": {
+        "type": "object",
+        "description": "A product to buy and its quantity",
+        "properties": {
+          "productId": {
+            "type": "integer",
+            "format": "int64",
+            "description": "ID of an active product",
+            "example": 3
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Quantity to buy",
+            "example": 1
+          }
+        },
+        "required": [
+          "productId",
+          "quantity"
+        ]
+      },
+      "PurchaseRequest": {
+        "type": "object",
+        "description": "The products to buy",
+        "properties": {
+          "products": {
+            "type": "array",
+            "description": "Products to buy, with their quantities",
+            "items": {
+              "$ref": "#/components/schemas/PurchaseProductRequest"
+            }
+          }
+        },
+        "required": [
+          "products"
+        ]
+      },
+      "PurchasedProduct": {
+        "type": "object",
+        "description": "A product of a purchase",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "Product ID",
+            "example": 3
+          },
+          "productName": {
+            "type": "string",
+            "description": "Product name",
+            "example": "4K Monitor"
+          },
+          "unitPrice": {
+            "type": "number",
+            "description": "Price paid per unit, in US dollars",
+            "example": 399.99
+          },
+          "quantity": {
+            "type": "integer",
+            "format": "int32",
+            "description": "Quantity bought",
+            "example": 1
+          },
+          "subtotal": {
+            "type": "number",
+            "description": "Unit price times quantity, in US dollars",
+            "example": 399.99
+          }
+        },
+        "required": [
+          "id",
+          "productName",
+          "quantity",
+          "subtotal",
+          "unitPrice"
+        ]
+      },
+      "RoleUpdate": {
+        "type": "object",
+        "description": "Payload to update a user's role. Valid values: ADMIN, USER",
+        "properties": {
+          "role": {
+            "type": "string",
+            "description": "New role to assign (ADMIN or USER)",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ],
+            "example": "ADMIN"
+          }
+        },
+        "required": [
+          "role"
+        ]
+      },
+      "TokenValidationResponse": {
+        "type": "object",
+        "description": "Whether the token would be accepted as an access token",
+        "properties": {
+          "valid": {
+            "type": "boolean",
+            "description": "Whether the token is a valid access token",
+            "example": true
+          },
+          "message": {
+            "type": "string",
+            "description": "`Token is valid`, or why the token is not valid",
+            "example": "Token is valid"
+          }
+        },
+        "required": [
+          "message",
+          "valid"
+        ]
+      },
+      "UpdateUserInfo": {
+        "type": "object",
+        "description": "The profile fields to change; omitted fields keep their value. To change the password, send the current password, the new one and its confirmation.",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "New full name",
+            "example": "John A. Doe",
+            "maxLength": 100,
+            "minLength": 1
+          },
+          "newEmail": {
+            "type": "string",
+            "description": "New email address; it must not belong to another user",
+            "example": "john.doe@example.com"
+          },
+          "currentPassword": {
+            "type": "string",
+            "description": "Current password, required to change the password",
+            "example": "your-current-password"
+          },
+          "newPassword": {
+            "type": "string",
+            "description": "New password, at least 8 characters and different from the current one",
+            "example": "your-new-password",
+            "maxLength": 2147483647,
+            "minLength": 8
+          },
+          "confirmPassword": {
+            "type": "string",
+            "description": "The new password again",
+            "example": "your-new-password"
+          }
+        }
+      },
+      "User": {
+        "type": "object",
+        "description": "A user account",
+        "properties": {
+          "id": {
+            "type": "integer",
+            "format": "int64",
+            "description": "User ID",
+            "example": 2
+          },
+          "name": {
+            "type": "string",
+            "description": "Full name",
+            "example": "John Doe"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address, used to sign in",
+            "example": "john@example.com"
+          },
+          "role": {
+            "type": "string",
+            "description": "Role: `USER` can buy products, `ADMIN` can manage products and users",
+            "enum": [
+              "ADMIN",
+              "USER"
+            ],
+            "example": "USER"
+          },
+          "creationDate": {
+            "type": "string",
+            "description": "When the account was created",
+            "example": "2026-10-01T09:30:00",
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}(\\.\\d+)?$"
+          }
+        },
+        "required": [
+          "creationDate",
+          "email",
+          "id",
+          "name",
+          "role"
+        ]
+      },
+      "UserRegistration": {
+        "type": "object",
+        "description": "The data of a new user account",
+        "properties": {
+          "name": {
+            "type": "string",
+            "description": "Full name",
+            "example": "Maria Garcia"
+          },
+          "email": {
+            "type": "string",
+            "description": "Email address, used to sign in; it must not be registered yet",
+            "example": "maria.garcia@example.com"
+          },
+          "password": {
+            "type": "string",
+            "description": "Password",
+            "example": "Secret123!"
+          },
+          "role": {
+            "type": "string",
+            "default": "USER",
+            "description": "Role of the new user. Only an administrator can register a user with the ADMIN role.",
+            "enum": [
+              "USER",
+              "ADMIN"
+            ],
+            "example": "USER"
+          }
+        },
+        "required": [
+          "email",
+          "name",
+          "password"
+        ]
+      }
+    },
+    "responses": {
+      "AdminRegistrationForbidden": {
+        "description": "Only an administrator can register a user with the `ADMIN` role.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "adminRegistrationForbidden": {
+                "summary": "Not an administrator",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Access Denied",
+                  "message": "Only administrators can create admin users",
+                  "path": "/api/users",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "AdminRoleRequired": {
+        "description": "The endpoint requires the `ADMIN` role.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "adminRoleRequired": {
+                "summary": "Not an administrator",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "Unauthorized operation",
+                  "path": "/api/products",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "AuthenticationRequired": {
+        "description": "The request has no access token, or the token is invalid, expired or revoked.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "missingToken": {
+                "summary": "No valid access token",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Unauthorized",
+                  "message": "Access token required",
+                  "path": "/api/users/me",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "BearerTokenRequired": {
+        "description": "The `Authorization` header is missing or doesn't contain a Bearer token. An invalid token is not an error: it is reported in a 200 response with `valid: false`.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "missingHeader": {
+                "summary": "No Authorization header",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Missing Authorization Header",
+                  "message": "Authorization header is required",
+                  "path": "/api/auth/validate",
+                  "details": [
+                    "The Authorization header with a Bearer token is missing"
+                  ]
+                }
+              },
+              "notBearer": {
+                "summary": "Not a Bearer token",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Invalid Token",
+                  "message": "Missing or invalid Bearer token",
+                  "path": "/api/auth/validate",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "DuplicatedEmail": {
+        "description": "Another user already has this email.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "duplicatedEmail": {
+                "summary": "Email taken",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 409,
+                  "error": "Conflict",
+                  "message": "A user with this email already exists",
+                  "path": "/api/users",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "DuplicatedProduct": {
+        "description": "Another product, active or not, already has this name.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "duplicatedProduct": {
+                "summary": "Name taken",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 409,
+                  "error": "Conflict",
+                  "message": "A product with this name already exists",
+                  "path": "/api/products",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalError": {
+        "description": "An unexpected error on the server.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "internalError": {
+                "summary": "Server error",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 500,
+                  "error": "Internal Server Error",
+                  "message": "An unexpected error occurred",
+                  "path": "/.well-known/jwks.json",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvalidCredentials": {
+        "description": "The email is not registered or the password is wrong. Both cases get the same answer, so it doesn't reveal which emails are registered.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidCredentials": {
+                "summary": "Wrong email or password",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Unauthorized",
+                  "message": "Invalid email or password",
+                  "path": "/api/auth/login",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvalidInput": {
+        "description": "The request is invalid: a body field or a query parameter failed validation, or the body is not valid JSON. `details` lists each problem.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidBody": {
+                "summary": "Invalid body field",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Validation Error",
+                  "message": "Validation failed",
+                  "path": "/api/users",
+                  "details": [
+                    "email: Email must be valid",
+                    "password: Password is required"
+                  ]
+                }
+              },
+              "invalidQueryParameter": {
+                "summary": "Invalid query parameter",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Constraint Violation",
+                  "message": "Validation failed",
+                  "path": "/api/products",
+                  "details": [
+                    "size: must be less than or equal to 100"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvalidProfileUpdate": {
+        "description": "The update is invalid: a field failed validation, or the password change was rejected.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "invalidField": {
+                "summary": "Invalid field",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Validation Error",
+                  "message": "Validation failed",
+                  "path": "/api/users/me",
+                  "details": [
+                    "newPassword: New password must be at least 8 characters long"
+                  ]
+                }
+              },
+              "wrongCurrentPassword": {
+                "summary": "Wrong current password",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Bad Request",
+                  "message": "The current password is incorrect",
+                  "path": "/api/users/me",
+                  "details": []
+                }
+              },
+              "confirmationMismatch": {
+                "summary": "New password not confirmed",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Bad Request",
+                  "message": "The new password and its confirmation don't match",
+                  "path": "/api/users/me",
+                  "details": []
+                }
+              },
+              "samePassword": {
+                "summary": "New password equals the current one",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 400,
+                  "error": "Validation Error",
+                  "message": "The new password must be different from the current password",
+                  "path": "/api/users/me",
+                  "details": [
+                    "The new password must be different from the current password"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "InvalidRefreshToken": {
+        "description": "The refresh token is missing, invalid, expired, already used or revoked by a logout.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "usedToken": {
+                "summary": "Already used or revoked",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Invalid Token",
+                  "message": "Refresh token has already been used or revoked",
+                  "path": "/api/auth/refresh",
+                  "details": []
+                }
+              },
+              "invalidToken": {
+                "summary": "Invalid or expired",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Invalid Token",
+                  "message": "Invalid refresh token",
+                  "path": "/api/auth/refresh",
+                  "details": []
+                }
+              },
+              "missingHeader": {
+                "summary": "No Authorization header",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 401,
+                  "error": "Missing Authorization Header",
+                  "message": "Authorization header is required",
+                  "path": "/api/auth/refresh",
+                  "details": [
+                    "The Authorization header with a Bearer token is missing"
+                  ]
+                }
+              }
+            }
+          }
+        }
+      },
+      "LoginRateLimitExceeded": {
+        "description": "Too many login attempts from this IP address: bursts of 5, refilled at 1 every 1 minute(s). Wait the seconds of the `Retry-After` header.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before the next request is accepted",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 30
+            }
+          },
+          "X-Rate-Limit-Retry-After-Seconds": {
+            "description": "Same as `Retry-After`",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 30
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "rateLimitExceeded": {
+                "summary": "Rate limit exceeded",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 429,
+                  "error": "Too Many Requests",
+                  "message": "Rate limit exceeded",
+                  "path": "/api/auth/login",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductNotFound": {
+        "description": "No product has the given ID.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "productNotFound": {
+                "summary": "Unknown product",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 404,
+                  "error": "Not Found",
+                  "message": "Product not found",
+                  "path": "/api/products/42",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProductStatusForbidden": {
+        "description": "Only administrators can list products that are not active (`status` other than `ACTIVE`).",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "anonymous": {
+                "summary": "Anonymous request",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Access Denied",
+                  "message": "Unauthenticated users can only access active products",
+                  "path": "/api/products",
+                  "details": []
+                }
+              },
+              "regularUser": {
+                "summary": "Regular user",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "Only administrators can access non-active products",
+                  "path": "/api/products",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "PurchaseProductNotFound": {
+        "description": "A product of the purchase doesn't exist or is not active; the message names its ID.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "productNotFound": {
+                "summary": "Unknown or inactive product",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 404,
+                  "error": "Not Found",
+                  "message": "Product 42 not found",
+                  "path": "/api/purchases",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "RateLimitExceeded": {
+        "description": "The caller's rate limit is exhausted. Anonymous requests are limited per IP address (bursts of 10), and signed-in requests per user: 30 for users, 100 for administrators. Wait the seconds of the `Retry-After` header.",
+        "headers": {
+          "Retry-After": {
+            "description": "Seconds to wait before the next request is accepted",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 30
+            }
+          },
+          "X-Rate-Limit-Retry-After-Seconds": {
+            "description": "Same as `Retry-After`",
+            "schema": {
+              "type": "integer",
+              "format": "int32",
+              "example": 30
+            }
+          }
+        },
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "rateLimitExceeded": {
+                "summary": "Rate limit exceeded",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 429,
+                  "error": "Too Many Requests",
+                  "message": "Rate limit exceeded",
+                  "path": "/api/products",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "UserNotFound": {
+        "description": "No user has the given ID.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "userNotFound": {
+                "summary": "Unknown user",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 404,
+                  "error": "Not Found",
+                  "message": "No user exists with the provided ID",
+                  "path": "/api/users/42/role",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "UserRoleRequired": {
+        "description": "The endpoint requires the `USER` role: administrators can't make purchases.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "userRoleRequired": {
+                "summary": "Not a regular user",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "Unauthorized operation",
+                  "path": "/api/purchases",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "headers": {
+      "X-Rate-Limit-Remaining": {
+        "description": "Requests left in the caller's rate limit bucket",
+        "schema": {
+          "type": "integer",
+          "format": "int32",
+          "example": 29
+        }
+      }
+    },
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "description": "An access token, the `token` field returned by `POST /api/auth/login` and `POST /api/auth/refresh`. It expires after 60 minutes.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      },
+      "refreshToken": {
+        "type": "http",
+        "description": "A refresh token, the `refreshToken` field returned by `POST /api/auth/login` and `POST /api/auth/refresh`. Each one works once and expires after 24 hours.",
+        "scheme": "bearer",
+        "bearerFormat": "JWT"
+      }
+    }
+  }
+}

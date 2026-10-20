@@ -1,0 +1,9 @@
+# Lint rules for the published OpenAPI document, docs-site/public/openapi.json. CI runs:
+#   npx @redocly/cli@2.58.2 lint docs-site/public/openapi.json
+# Accepted findings are listed in .redocly.lint-ignore.yaml with the reason.
+extends:
+  - recommended-strict
+
+rules:
+  # The second server, http://localhost:8080, is listed on purpose for developers running the API locally
+  no-server-example.com: off

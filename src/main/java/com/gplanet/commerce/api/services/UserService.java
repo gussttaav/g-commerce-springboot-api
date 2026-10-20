@@ -16,6 +16,7 @@ import com.gplanet.commerce.api.dtos.user.UserMapper;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
 import com.gplanet.commerce.api.entities.User;
+import com.gplanet.commerce.api.exceptions.DuplicateResourceException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
@@ -37,19 +38,25 @@ import lombok.extern.slf4j.Slf4j;
 public class UserService {
     
     private static final String USER_NOT_FOUND_MSG = "User not found";
+    private static final String DUPLICATE_EMAIL_MSG = "A user with this email already exists";
     private final UserMapper userMapper;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
 
     /**
      * Registers a new user in the system.
-     * 
+     *
      * @param userDTO Data transfer object containing user registration information
      * @return UserResponseDTO containing the created user's information
+     * @throws DuplicateResourceException if another user already has the email
      */
     @Transactional
     public UserResponseDTO registerUser(UserDTO userDTO) {
         log.info("Registering new user with email: {}", userDTO.email());
+        // Checked up front so the client gets a clear message; the unique constraint still guards races
+        if (userRepository.existsByEmail(userDTO.email())) {
+            throw new DuplicateResourceException(DUPLICATE_EMAIL_MSG);
+        }
         User user = new User();
         user.setName(userDTO.name());
         user.setEmail(userDTO.email());
@@ -71,6 +78,7 @@ public class UserService {
      * @param profileDTO Data transfer object containing new profile information
      * @return UserResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if user is not found
+     * @throws DuplicateResourceException if another user already has the new email
      */
     @Transactional
     public UserResponseDTO updateProfile(Long userId, UserUpdateDTO profileDTO) {
@@ -82,6 +90,9 @@ public class UserService {
             String newEmail = profileDTO.newEmail().trim();
             if (newEmail.isEmpty()) {
                 throw new IllegalArgumentException("The new email cannot be empty");
+            }
+            if (!newEmail.equals(user.getEmail()) && userRepository.existsByEmail(newEmail)) {
+                throw new DuplicateResourceException(DUPLICATE_EMAIL_MSG);
             }
             user.setEmail(newEmail);
         }

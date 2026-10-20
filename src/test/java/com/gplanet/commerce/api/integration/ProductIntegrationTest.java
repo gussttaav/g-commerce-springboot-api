@@ -1,6 +1,7 @@
 package com.gplanet.commerce.api.integration;
 
 import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorDetailContains;
+import static com.gplanet.commerce.api.testutils.ApiErrorResultMatchers.errorMessage;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_PRODUCTS;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -21,6 +22,7 @@ import org.springframework.test.web.servlet.MvcResult;
 
 import com.gplanet.commerce.api.dtos.product.ProductDTO;
 import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
+import com.gplanet.commerce.api.entities.Product;
 import com.gplanet.commerce.api.entities.User;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
@@ -32,7 +34,19 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
     private static final String USER_EMAIL = "user@example.com";
     private static final String USER_PASSWORD = "user123";
     private static final String ENDPOINT_PRODUCT = ENDPOINT_PRODUCTS + "/";
-    
+    private static final String EXISTING_PRODUCT_NAME = "Existing Product";
+    private static final String DUPLICATE_NAME_MESSAGE = "A product with this name already exists";
+
+    private Product saveProduct(String name) {
+        Product product = new Product();
+        product.setName(name);
+        product.setDescription("Description of " + name);
+        product.setPrice(new BigDecimal("9.99"));
+        product.setActive(true);
+        product.setCreationDate(LocalDateTime.now());
+        return productRepository.save(product);
+    }
+
     @Test
     void createProductAsAdminCreatesProduct() throws Exception {
         // Arrange
@@ -52,6 +66,58 @@ class ProductIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.price").value("99.99"));
     }
     
+    @Test
+    void createProductWithTakenNameReturnsConflict() throws Exception {
+        // Arrange
+        createAdminUser();
+        saveProduct(EXISTING_PRODUCT_NAME);
+        ProductDTO productDTO = new ProductDTO(
+            EXISTING_PRODUCT_NAME, "Same name", new BigDecimal("10.00"), true);
+
+        // Act & Assert - The database error used to leak the table and column names
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productDTO)))
+                .andExpect(status().isConflict())
+                .andExpect(errorMessage(DUPLICATE_NAME_MESSAGE));
+    }
+
+    @Test
+    void updateProductToTakenNameReturnsConflict() throws Exception {
+        // Arrange
+        createAdminUser();
+        saveProduct(EXISTING_PRODUCT_NAME);
+        Product product = saveProduct("Product To Rename");
+        ProductDTO productUpdate = new ProductDTO(
+            EXISTING_PRODUCT_NAME, "Renamed", new BigDecimal("10.00"), true);
+
+        // Act & Assert
+        mockMvc.perform(put(ENDPOINT_PRODUCT + product.getId())
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productUpdate)))
+                .andExpect(status().isConflict())
+                .andExpect(errorMessage(DUPLICATE_NAME_MESSAGE));
+    }
+
+    @Test
+    void updateProductKeepingItsNameUpdatesProduct() throws Exception {
+        // Arrange
+        createAdminUser();
+        Product product = saveProduct(EXISTING_PRODUCT_NAME);
+        ProductDTO productUpdate = new ProductDTO(
+            EXISTING_PRODUCT_NAME, "New description", new BigDecimal("12.50"), true);
+
+        // Act & Assert - Keeping the current name is not a conflict with itself
+        mockMvc.perform(put(ENDPOINT_PRODUCT + product.getId())
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(ADMIN_EMAIL, ADMIN_PASSWORD))
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(productUpdate)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.description").value("New description"));
+    }
+
     @Test
     void listProductsUnknownSortFieldReturnsBadRequest() throws Exception {
         // Act & Assert - The sort field was passed to the database query, which failed with a 500

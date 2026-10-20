@@ -135,11 +135,12 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         // Arrange - Create duplicate user
         UserDTO duplicatedUser = new UserDTO("Duplicate User", TEST_EMAIL, TEST_PASSWORD);
         
-        // Act & Assert
+        // Act & Assert - The database error used to leak the table and column names
         mockMvc.perform(post(ENDPOINT_USERS)
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(duplicatedUser)))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(errorMessage("A user with this email already exists"));
     }
     
     @Test
@@ -171,10 +172,45 @@ class UserIntegrationTest extends AbstractIntegrationTest {
         // Verify database update
         assertFalse(userRepository.findByEmail(TEST_EMAIL).isPresent(), 
             "Old email should not exist");
-        assertTrue(userRepository.findByEmail(updatedEmail).isPresent(), 
+        assertTrue(userRepository.findByEmail(updatedEmail).isPresent(),
             "New email should exist");
     }
-    
+
+    @Test
+    void updateProfileToTakenEmailReturnsConflict() throws Exception {
+        // Arrange - Two users; the second one tries to take the email of the first
+        final String takenEmail = "taken@example.com";
+        createUser("Other User", takenEmail, TEST_PASSWORD, User.Role.USER);
+        createUser(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD, User.Role.USER);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
+
+        // Act & Assert
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
+                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UserUpdateDTO(null, takenEmail))))
+                .andExpect(status().isConflict())
+                .andExpect(errorMessage("A user with this email already exists"));
+
+        assertTrue(userRepository.findByEmail(TEST_EMAIL).isPresent(), "The email should not change");
+    }
+
+    @Test
+    void updateProfileKeepingOwnEmailUpdatesProfile() throws Exception {
+        // Arrange
+        createUser(TEST_USER_NAME, TEST_EMAIL, TEST_PASSWORD, User.Role.USER);
+        String authHeader = obtainJwtToken(TEST_EMAIL, TEST_PASSWORD);
+
+        // Act & Assert - Sending the current email again is not a conflict with itself
+        mockMvc.perform(patch(ENDPOINT_USERS_ME)
+                .header(HttpHeaders.AUTHORIZATION, authHeader)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(new UserUpdateDTO("Renamed User", TEST_EMAIL))))
+                .andExpect(status().isOk())
+                .andExpect(userName("Renamed User"))
+                .andExpect(userEmail(TEST_EMAIL));
+    }
+
     @Test
     void changePasswordValidDataChangesSuccessfully() throws Exception {
         // Arrange - Create user first

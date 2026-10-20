@@ -38,7 +38,7 @@ public final class DatabaseErrorParser {
             return handleNullConstraint(originalMessage);
         }
         
-        return new DatabaseError("Database error", "An error ocurred processing this operation");
+        return new DatabaseError("Database error", "An error occurred processing this operation");
     }
     
     /**

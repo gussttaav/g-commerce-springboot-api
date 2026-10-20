@@ -15,6 +15,7 @@ import com.gplanet.commerce.api.dtos.product.ProductMapper;
 import com.gplanet.commerce.api.dtos.product.ProductResponseDTO;
 import com.gplanet.commerce.api.dtos.product.ProductStatus;
 import com.gplanet.commerce.api.entities.Product;
+import com.gplanet.commerce.api.exceptions.DuplicateResourceException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.ProductRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
@@ -33,6 +34,8 @@ import lombok.extern.slf4j.Slf4j;
 @Service
 @RequiredArgsConstructor
 public class ProductService {
+
+    private static final String DUPLICATE_NAME_MSG = "A product with this name already exists";
 
     private final ProductMapper productMapper;
     private final ProductRepository productRepository;
@@ -101,10 +104,15 @@ public class ProductService {
      * 
      * @param productDTO Data transfer object containing product information
      * @return ProductResponseDTO containing the created product's information
+     * @throws DuplicateResourceException if another product already has the name
      */
     @Transactional
     public ProductResponseDTO createProduct(ProductDTO productDTO) {
         log.info("Creating new product: {}", productDTO.name());
+        // Checked up front so the client gets a clear message; the unique constraint still guards races
+        if (productRepository.existsByName(productDTO.name())) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MSG);
+        }
         Product product = productMapper.toProduct(productDTO);
         product.setCreationDate(LocalDateTime.now());
         
@@ -122,13 +130,17 @@ public class ProductService {
      * @param productDTO Data transfer object containing updated product information
      * @return ProductResponseDTO containing the updated product's information
      * @throws ResourceNotFoundException if product is not found
+     * @throws DuplicateResourceException if another product already has the new name
      */
     @Transactional
     public ProductResponseDTO updateProduct(Long id, ProductDTO productDTO) {
         log.info("Updating product with ID: {}", id);
         Product product = productRepository.findById(id)
             .orElseThrow(() -> new ResourceNotFoundException("Product not found"));
-        
+        if (!productDTO.name().equals(product.getName()) && productRepository.existsByName(productDTO.name())) {
+            throw new DuplicateResourceException(DUPLICATE_NAME_MSG);
+        }
+
         productMapper.updateProductFromDTO(productDTO, product);
         
         Product updatedProduct = DatabaseOperationHandler.executeOperation(() -> 

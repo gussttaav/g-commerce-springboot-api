@@ -26,6 +26,13 @@ public interface ProductRepository extends JpaRepository<Product, Long> {
     Optional<Product> findByIdAndActiveTrue(Long id);
 
     /**
+     * Checks whether a product with the given name exists.
+     * @param name the product name
+     * @return true if any product, active or not, has that name
+     */
+    boolean existsByName(String name);
+
+    /**
      * Finds all active products in the system with pagination support.
      * @param pageable pagination information
      * @return a page of products where the 'active' flag is true

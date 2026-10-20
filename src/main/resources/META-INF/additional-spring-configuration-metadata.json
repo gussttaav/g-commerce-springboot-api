@@ -1,6 +1,12 @@
 {
   "properties": [
     {
+      "name": "openapi.production-url",
+      "type": "java.lang.String",
+      "description": "Public address of the API, listed as the first server of the OpenAPI document.",
+      "defaultValue": "https://g-commerce.duckdns.org"
+    },
+    {
       "name": "admin.default.email",
       "type": "java.lang.String",
       "description": "Admin default email"

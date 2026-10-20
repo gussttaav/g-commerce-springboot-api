@@ -17,12 +17,12 @@ import jakarta.validation.constraints.NotBlank;
  */
 @Schema(name = "Login", description = "Login request data")
 public record LoginDTO(
-    @Schema(description = "User's email address", example = "john.doe@example.com")
+    @Schema(description = "User's email address", example = "john@example.com")
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     String email,
 
-    @Schema(description = "User's password", example = "password123")
+    @Schema(description = "User's password", example = "JohnDoe123!")
     @NotBlank(message = "Password is required")
     String password
 ) {}

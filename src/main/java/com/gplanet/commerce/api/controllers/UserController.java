@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.gplanet.commerce.api.configs.app.docs.ApiDocs;
 import com.gplanet.commerce.api.configs.security.AuthenticatedUser;
 import com.gplanet.commerce.api.dtos.api.PaginatedResponse;
 import com.gplanet.commerce.api.dtos.user.UserDTO;
@@ -29,10 +30,10 @@ import com.gplanet.commerce.api.services.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.security.SecurityRequirements;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Max;
@@ -64,8 +65,7 @@ import lombok.RequiredArgsConstructor;
  */
 @RestController
 @RequestMapping("/api/users")
-@Tag(name = "User", 
-     description = "API endpoints for user management")
+@Tag(name = ApiDocs.TAG_USERS)
 @RequiredArgsConstructor
 @Validated
 public class UserController {
@@ -85,24 +85,23 @@ public class UserController {
      * @throws ApiException if the user could not be registered due to a constraint violation
      * @throws AccessDeniedException if a non-admin user attempts to create an ADMIN user
      */
-    @SecurityRequirements(value = {})
-    @Operation(summary = "Register a new user",
-        description = "Creates a new user account. If the requested role is ADMIN, the caller must have ADMIN role.")
+    // OpenAPIConfig documents the access token of this endpoint as optional
+    @Operation(operationId = "registerUser", summary = "Register a user",
+               description = "Creates a user account; sign in with it at `POST /api/auth/login`. Anyone can "
+                           + "register a `USER`, but registering an `ADMIN` requires an administrator's access "
+                           + "token.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "User successfully registered",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UserResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "409", ref = "#/components/responses/DuplicatedEmail"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UnauthenticatedRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "The new user"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_REGISTRATION_FORBIDDEN),
+        @ApiResponse(responseCode = "409", ref = ApiDocs.DUPLICATED_EMAIL),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PostMapping
     public UserResponseDTO register(
-            Authentication authentication,
-            @Valid @RequestBody @Parameter(description = "User registration details", required = true)
-            UserDTO userDTO) {
+            @Parameter(hidden = true) Authentication authentication,
+            @Valid @RequestBody UserDTO userDTO) {
 
         // If the request explicitly asks for ADMIN role, require caller to be ADMIN
         if (userDTO.role() == User.Role.ADMIN) {
@@ -123,16 +122,15 @@ public class UserController {
      * @return UserResponseDTO containing the user's information
      * @throws UsernameNotFoundException if the user is not found
      */
-    @Operation(summary = "Get user profile", description = "Retrieves the authenticated user's profile information")
+    @Operation(operationId = "getProfile", summary = "Retrieve your profile",
+               description = "Returns the signed-in user.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Profile successfully retrieved",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UserResponseDTO.class))),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "The signed-in user"),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @GetMapping("/me")
-    public UserResponseDTO getProfile(Authentication authentication) {
+    public UserResponseDTO getProfile(@Parameter(hidden = true) Authentication authentication) {
         return userService.getProfile(AuthenticatedUser.idOf(authentication));
     }
 
@@ -147,19 +145,32 @@ public class UserController {
      * @throws PasswordMismatchException if the new password is not confirmed correctly
      * @throws ApiException if the user could not be updated due to a constraint violation
      */
-    @Operation(summary = "Update user profile", description = "Updates the authenticated user's profile information")
+    @Operation(operationId = "updateProfile", summary = "Update your profile",
+               description = "Changes the name, email or password of the signed-in user; omitted fields keep "
+                           + "their value. A password change needs `currentPassword`, `newPassword` and "
+                           + "`confirmPassword`. The user's tokens keep working after an email change.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Profile successfully updated",
-            content = @Content(mediaType = "application/json",
-                schema = @Schema(implementation = UserResponseDTO.class))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/UserRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "The updated user"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_PROFILE_UPDATE),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "409", ref = ApiDocs.DUPLICATED_EMAIL),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PatchMapping("/me")
     public UserResponseDTO updateProfile(
-            Authentication authentication,
-            @Valid @RequestBody @Parameter(description = "Updated profile information", required = true) 
+            @Parameter(hidden = true) Authentication authentication,
+            @Valid @RequestBody
+            @io.swagger.v3.oas.annotations.parameters.RequestBody(content = @Content(
+                schema = @Schema(implementation = UserUpdateDTO.class),
+                examples = {
+                    @ExampleObject(name = "rename", summary = "Change the name",
+                        value = "{\"name\": \"John A. Doe\"}"),
+                    @ExampleObject(name = "changeEmail", summary = "Change the email",
+                        value = "{\"newEmail\": \"john.doe@example.com\"}"),
+                    @ExampleObject(name = "changePassword", summary = "Change the password",
+                        value = "{\"currentPassword\": \"your-current-password\", "
+                            + "\"newPassword\": \"your-new-password\", \"confirmPassword\": \"your-new-password\"}")
+                }))
             UserUpdateDTO profileDTO) {
         return userService.updateProfile(AuthenticatedUser.idOf(authentication), profileDTO);
     }
@@ -175,30 +186,30 @@ public class UserController {
      * @return PaginatedResponse of UserResponseDTO containing paginated users' information
      * @throws AccessDeniedException if the current user is not an administrator
      */
-    @Operation(summary = "List all users with pagination", 
-               description = "Retrieves a paginated list of all users in the system. Requires ADMIN role.")
+    @Operation(operationId = "listUsers", summary = "List users",
+               description = "Returns a page of all the users. Requires the `ADMIN` role.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Users successfully retrieved",
+        @ApiResponse(responseCode = "200", description = "A page of users",
             content = @Content(mediaType = "application/json",
-                schema = @Schema(ref = "#/components/schemas/PaginatedUsers"))),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+                schema = @Schema(ref = ApiDocs.PAGINATED_USERS))),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @GetMapping
     public PaginatedResponse<UserResponseDTO> listUsers(
-            @RequestParam(defaultValue = "0") @Min(0)
-            @Schema(description = "Page number (zero-based)", example = "0") int page,
-            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE)
-            @Schema(description = "Page size", example = "10") int size,
+            @Parameter(description = "Page number, starting at 0")
+            @RequestParam(defaultValue = "0") @Min(0) int page,
+            @Parameter(description = "Users per page")
+            @RequestParam(defaultValue = "10") @Min(1) @Max(PaginatedResponse.MAX_PAGE_SIZE) int size,
+            @Parameter(description = "Field to sort by")
+            @Schema(allowableValues = {"email", "name", "creationDate"})
             @RequestParam(defaultValue = "email")
-            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS)
-            @Schema(description = "Sort field", example = "email", allowableValues = {"email", "name", "creationDate"}) 
-            String sort,
-            @RequestParam(defaultValue = "ASC") 
-            @Schema(description = "Sort direction", example = "ASC", allowableValues = {"ASC", "DESC"}) 
-            String direction) {
+            @Pattern(regexp = SORT_FIELDS, message = "must be one of " + SORT_FIELDS) String sort,
+            @Parameter(description = "Sort direction")
+            @Schema(allowableValues = {"ASC", "DESC"})
+            @RequestParam(defaultValue = "ASC") String direction) {
         
         Page<UserResponseDTO> pageResult = userService.listUsers(page, size, sort, direction);
         return PaginatedResponse.fromPage(pageResult);
@@ -213,22 +224,22 @@ public class UserController {
      * @throws AccessDeniedException if the current user is not an administrator
      * @throws ResourceNotFoundException if the user is not found
      */
-    @Operation(summary = "Change user role", description = "Updates a user's role in the system. Requires ADMIN role.")
+    @Operation(operationId = "changeUserRole", summary = "Change a user's role",
+               description = "Gives a user the `USER` or `ADMIN` role. Requires the `ADMIN` role. The user's "
+                           + "current access token keeps the old role until it expires or is refreshed.")
     @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Role successfully updated"),
-        @ApiResponse(responseCode = "400", ref = "#/components/responses/InvalidInput"),
-        @ApiResponse(responseCode = "401", ref = "#/components/responses/AccessDenied"),
-        @ApiResponse(responseCode = "403", ref = "#/components/responses/AccessDeniedUser"),
-        @ApiResponse(responseCode = "404", ref = "#/components/responses/UserNotFound"),
-        @ApiResponse(responseCode = "429", ref = "#/components/responses/AdminRateLimitExceeded")
+        @ApiResponse(responseCode = "200", description = "Role changed; the response has no body"),
+        @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
+        @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "404", ref = ApiDocs.USER_NOT_FOUND),
+        @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
     @PatchMapping("/{id}/role")
     public void changeRole(
-            @Parameter(description = "ID of the user", required = true)
+            @Parameter(description = "ID of the user", example = "5")
             @NotNull @PathVariable("id") Long userId,
-            @Valid @RequestBody
-            @Parameter(description = "New role payload", required = true)
-            UserRoleUpdateDTO roleDTO) {
+            @Valid @RequestBody UserRoleUpdateDTO roleDTO) {
         userService.changeRole(userId, roleDTO.role());
     }
 }

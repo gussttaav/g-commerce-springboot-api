@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.auth;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import io.swagger.v3.oas.annotations.media.Schema;
 
 /**
@@ -17,12 +19,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @author Gustavo
  * @version 1.0
  */
-@Schema(name = "TokenValidationResponse", description = "Token validation response data")
+@Schema(name = "TokenValidationResponse", description = "Whether the token would be accepted as an access token")
 public record TokenValidationResponseDTO(
-    @Schema(description = "Indicates if the token is valid", example = "true")
+    @Schema(description = "Whether the token is a valid access token", example = "true", requiredMode = REQUIRED)
     boolean valid,
 
-    @Schema(description = "Additional message about validation result", 
-            example = "Token is valid and not blacklisted")
+    @Schema(description = "`Token is valid`, or why the token is not valid", example = "Token is valid",
+            requiredMode = REQUIRED)
     String message
 ) {}

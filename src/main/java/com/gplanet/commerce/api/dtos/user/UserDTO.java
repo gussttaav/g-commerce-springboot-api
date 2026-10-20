@@ -20,25 +20,24 @@ import jakarta.validation.constraints.NotBlank;
  * @param password The password for the user account.
  * @param role The role assigned to the user in the system. Possible values: USER, ADMIN. Defaults to USER role.
  */
-@Schema(name = "UserRegistration", 
-        description = "User registration data")
+@Schema(name = "UserRegistration", description = "The data of a new user account")
 public record UserDTO(
-    @Schema(description = "User's full name", example = "John Doe")
+    @Schema(description = "Full name", example = "Maria Garcia")
     @NotBlank(message = "Name is required")
     String name,
 
-    @Schema(description = "User's email address", example = "john.doe@example.com")
+    @Schema(description = "Email address, used to sign in; it must not be registered yet",
+            example = "maria.garcia@example.com")
     @Email(message = "Email must be valid")
     @NotBlank(message = "Email is required")
     String email,
 
-    @Schema(description = "User's password", example = "password123")
+    @Schema(description = "Password", example = "Secret123!")
     @NotBlank(message = "Password is required")
     String password,
 
     @Schema(
-        description = "User role. Allowed values: USER, ADMIN. "
-                    + "Only ADMIN users may create users with ADMIN role.",
+        description = "Role of the new user. Only an administrator can register a user with the ADMIN role.",
         example = "USER",
         defaultValue = "USER",
         allowableValues = {"USER", "ADMIN"}

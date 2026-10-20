@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.product;
 
+import static io.swagger.v3.oas.annotations.media.Schema.RequiredMode.REQUIRED;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -20,23 +22,24 @@ import io.swagger.v3.oas.annotations.media.Schema;
  * @param creationDate The timestamp when the product was created.
  * @param active Indicates whether the product is currently active in the system.
  */
-@Schema(name = "Product", description = "Product response data transfer object")
+@Schema(name = "Product", description = "A product of the catalog")
 public record ProductResponseDTO(
-    @Schema(description = "Product unique identifier", example = "1")
+    @Schema(description = "Product ID", example = "3", requiredMode = REQUIRED)
     Long id,
 
-    @Schema(description = "Product name", example = "Laptop")
+    @Schema(description = "Product name, unique in the catalog", example = "4K Monitor", requiredMode = REQUIRED)
     String name,
 
-    @Schema(description = "Product description", example = "High performance laptop")
+    @Schema(description = "Product description", example = "27-inch 4K Ultra HD Monitor")
     String description,
 
-    @Schema(description = "Product price", example = "999.99")
+    @Schema(description = "Price in US dollars", example = "399.99", requiredMode = REQUIRED)
     BigDecimal price,
 
-    @Schema(description = "Product creation date")
+    @Schema(description = "When the product was created", example = "2026-10-01T09:30:00", requiredMode = REQUIRED)
     LocalDateTime creationDate,
 
-    @Schema(description = "Is an active product", example = "true")
+    @Schema(description = "Whether the product is in the public catalog and can be bought", example = "true",
+            requiredMode = REQUIRED)
     boolean active
 ) {}

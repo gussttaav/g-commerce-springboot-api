@@ -10,3 +10,12 @@
   --sl-color-accent: #4f46e5;
   --sl-color-accent-high: #312e81;
 }
+
+/*
+ * The API reference uses Starlight's splash layout, which caps the content at 67.5rem. Let it fill the page, like the
+ * other pages with their sidebars, so Scalar can show requests and responses next to each operation.
+ * [data-scalar-client] is the container that @scalar/astro renders.
+ */
+:root:has([data-scalar-client]) .sl-container {
+  max-width: none;
+}

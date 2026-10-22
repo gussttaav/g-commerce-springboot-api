@@ -34,6 +34,9 @@ A registration or profile update with an email that another user has, and a prod
 
 The purchase history showed each product's current price as its unit price, so after a price change the unit price no longer matched the subtotal that was charged. The unit price is now derived from the stored subtotal and quantity, which are fixed when the purchase is made.
 
+### Found while launching the docs console (FUN-8) — done
+The "Test Request" console of the documentation site got CORS errors on every request until a token was entered. The console sends `Authorization: Bearer` with no token, which the resource server rejected as malformed even on public endpoints and on login, and the 401 and 403 handlers called `response.reset()`, which also removed the CORS headers, so browsers couldn't read the error. The handlers now only clear the body, a `Bearer` header without a token counts as no token, and login ignores the `Authorization` header, so a token kept from an expired session doesn't block signing in again.
+
 ### Beyond bug fixes (portfolio improvements to consider)
 - **Flyway migrations** instead of `mysql-init/shopping_db.sql`, so schema and entities can't drift apart silently.
 - **Testcontainers (MySQL + Redis)** for integration tests — H2 hid FUN-1, and still differs from MySQL in other ways (e.g. column lengths).

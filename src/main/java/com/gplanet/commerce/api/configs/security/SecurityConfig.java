@@ -8,6 +8,7 @@ import java.util.regex.Pattern;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.ProviderManager;
@@ -54,6 +55,7 @@ import com.nimbusds.jose.proc.JWSVerificationKeySelector;
 import com.nimbusds.jose.proc.SecurityContext;
 import com.nimbusds.jwt.proc.DefaultJWTProcessor;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 
 /**
@@ -87,6 +89,7 @@ public class SecurityConfig {
     private static final String ROLE_ADMIN = "ADMIN";
     private static final String ROLE_USER = "USER";
     private static final Pattern USER_ID = Pattern.compile("\\d+");
+    private static final String BEARER_SCHEME = "Bearer";
 
     private final CorsProperties corsProperties;
     private final JwtProperties jwtProperties;
@@ -277,10 +280,19 @@ public class SecurityConfig {
     /**
      * Provides the resolver of the bearer token that authenticates a request.
      * <p>
-     * {@code /api/auth/refresh} and {@code /api/auth/validate} receive a token to check rather than to
-     * authenticate the request: a refresh token, which the access token decoder rejects, and a token that may
-     * be invalid, which must be reported instead of failing with 401. The token is not resolved there, so the
-     * requests reach the endpoints, which decode the token themselves.
+     * The token is not resolved on the authentication endpoints, so the requests reach them whatever their
+     * {@code Authorization} header holds:
+     * </p>
+     * <ul>
+     *   <li>{@code /api/auth/login} authenticates with the credentials in the body, so a token left over from an
+     *   earlier session, such as an expired one that an API console keeps sending, must not block signing in.</li>
+     *   <li>{@code /api/auth/refresh} and {@code /api/auth/validate} receive a token to check rather than to
+     *   authenticate the request: a refresh token, which the access token decoder rejects, and a token that may
+     *   be invalid, which must be reported instead of failing with 401. The endpoints decode it themselves.</li>
+     * </ul>
+     * <p>
+     * A {@code Bearer} header without a token, which API consoles send before a token is entered, counts as no
+     * token, so the request is anonymous instead of failing as malformed.
      * </p>
      *
      * @return a {@link BearerTokenResolver} for the resource server
@@ -288,10 +300,21 @@ public class SecurityConfig {
     @Bean
     BearerTokenResolver bearerTokenResolver() {
         DefaultBearerTokenResolver resolver = new DefaultBearerTokenResolver();
-        RequestMatcher tokenEndpoints = new OrRequestMatcher(
+        RequestMatcher authenticationEndpoints = new OrRequestMatcher(
+                PathPatternRequestMatcher.withDefaults().matcher("/api/auth/login"),
                 PathPatternRequestMatcher.withDefaults().matcher("/api/auth/refresh"),
                 PathPatternRequestMatcher.withDefaults().matcher("/api/auth/validate"));
-        return request -> tokenEndpoints.matches(request) ? null : resolver.resolve(request);
+        return request -> {
+            if (authenticationEndpoints.matches(request) || hasEmptyBearerHeader(request)) {
+                return null;
+            }
+            return resolver.resolve(request);
+        };
+    }
+
+    private static boolean hasEmptyBearerHeader(HttpServletRequest request) {
+        String authorization = request.getHeader(HttpHeaders.AUTHORIZATION);
+        return authorization != null && BEARER_SCHEME.equalsIgnoreCase(authorization.strip());
     }
 
     /**

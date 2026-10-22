@@ -13,6 +13,12 @@ description: Changes to the G-Commerce API that affect its clients.
 - Browsers can read the `Retry-After` and `X-Rate-Limit-*` headers of cross-origin responses, and the discovery
   documents under `/.well-known` accept cross-origin requests.
 
+### Fixed
+
+- `401` and `403` responses carry the CORS headers, so browsers can read them instead of reporting a CORS error.
+- A `Bearer` header without a token counts as no token, and `POST /api/auth/login` ignores the `Authorization`
+  header, so an empty or expired token no longer blocks public requests or signing in.
+
 ### Changed
 
 - A `409 Conflict` for a taken email or product name now says which value is taken: "A user with this email already

@@ -11,8 +11,21 @@
 
 The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **JWT authentication with refresh tokens, role-based access control, product management, purchases and history tracking with pagination**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
 
-**Documentation:** guides and an interactive API reference, where you can sign in with a demo account and try every
-endpoint, are at **[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.vercel.app)**.
+## 🌐 Live Demo
+
+The API is deployed at `https://g-commerce.duckdns.org`, and its documentation is live at
+**[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.vercel.app)**: a quickstart, guides on
+authentication, errors, pagination and rate limits, and an interactive API reference where you can sign in with a
+[demo account](https://g-commerce-api-docs.vercel.app/introduction/#demo-accounts) and send real requests from the
+browser.
+
+The documentation site is built with [Astro Starlight](https://starlight.astro.build). The API reference is rendered
+by [Scalar](https://scalar.com) from the OpenAPI document that the API generates, and [Vercel](https://vercel.com)
+deploys the site on every push to `main`.
+
+The demo is public, so **its data is reset every day at 03:00 UTC**: the accounts, products and purchases that
+visitors created are deleted, and the demo data is restored. The email, password and role of the demo accounts can't
+be changed, so they keep working for everyone.
 
 ## 🚀 Features
 
@@ -55,6 +68,7 @@ endpoint, are at **[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.
   - Daily reset of the demo data, with a Redis lock so only one instance runs it
 
 - **Comprehensive Documentation**
+  - [Documentation site](https://g-commerce-api-docs.vercel.app) with guides and an interactive API reference
   - Javadoc for code-level documentation
   - OpenAPI (Swagger) for interactive API documentation
   - Detailed endpoint descriptions and schemas
@@ -88,6 +102,8 @@ endpoint, are at **[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.
 - Redis (for token storage and blacklisting)
 - Bucket4j (for rate limiting)
 - OpenAPI/Swagger
+- Astro Starlight and Scalar (documentation site and interactive API reference)
+- Vercel (documentation hosting)
 - Spring Data JPA
 - MySQL 9
 - H2 Database (for testing)
@@ -202,7 +218,8 @@ The developer documentation is published at [g-commerce-api-docs.vercel.app](htt
 a quickstart, guides on authentication, errors, pagination and rate limits, a changelog, and an interactive API
 reference that sends requests to the production API. It is an [Astro Starlight](https://starlight.astro.build) site
 in [`docs-site/`](docs-site/), with the reference rendered by [Scalar](https://scalar.com) from the published
-OpenAPI document; Vercel deploys it from `main`. See [`docs-site/README.md`](docs-site/README.md) to run it locally.
+OpenAPI document; Vercel deploys it from `main`. Its requests go to the live demo, whose data is reset every day. See
+[`docs-site/README.md`](docs-site/README.md) to run it locally.
 
 ### OpenAPI (Swagger) Documentation
 

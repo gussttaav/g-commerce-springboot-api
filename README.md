@@ -195,6 +195,25 @@ The project uses SpringDoc OpenAPI for interactive API documentation:
   - Machine-readable OpenAPI specification
   - Can be used for client code generation
 
+The document covers the `/api/**` and `/.well-known/**` endpoints, with an overview of authentication, errors,
+pagination and rate limits, every error response with an example body, and request examples based on the demo data.
+
+#### Published OpenAPI document
+
+A copy of the document is committed at [`docs-site/public/openapi.json`](docs-site/public/openapi.json), so API
+changes show up as a diff in their pull request. `OpenApiSpecTest` fails if the copy is out of date; after changing
+the API, regenerate it and commit it:
+
+```bash
+./mvnw test -Dtest=OpenApiSpecTest -Dopenapi.update=true
+```
+
+CI also lints it with [Redocly CLI](https://redocly.com/docs/cli/) (rules in `redocly.yaml`):
+
+```bash
+npx @redocly/cli@2.58.2 lint docs-site/public/openapi.json
+```
+
 ### JWKS and OpenID Connect Discovery
 
 The API exposes standard discovery endpoints for OAuth2 clients:

@@ -20,6 +20,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
+import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
@@ -28,12 +29,14 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import com.gplanet.commerce.api.configs.app.props.DemoProperties;
 import com.gplanet.commerce.api.dtos.user.UserDTO;
 import com.gplanet.commerce.api.dtos.user.UserMapper;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
 import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
 import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ApiException;
+import com.gplanet.commerce.api.exceptions.ProtectedAccountException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 
@@ -53,6 +56,9 @@ class UserServiceTest {
 
     @Mock
     private UserMapper userMapper;
+
+    @Spy
+    private DemoProperties demoProperties = new DemoProperties();
     
     @InjectMocks
     private UserService userService;
@@ -283,5 +289,63 @@ class UserServiceTest {
         assertEquals(sameRole, user.getRole());
         verify(userRepository).findById(userId);
         verify(userRepository).save(user);
+    }
+
+    @Test
+    void updateProfileOfDemoAccountRejectsEmailChange() {
+        demoProperties.setProtectedAccounts(List.of(TEST_USERNAME));
+        User user = createTestUser();
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+        UserUpdateDTO profileDTO = new UserUpdateDTO(null, "new@example.com");
+
+        ProtectedAccountException exception = assertThrows(ProtectedAccountException.class,
+            () -> userService.updateProfile(TEST_USER_ID, profileDTO));
+
+        assertEquals("The email and password of the demo accounts can't be changed; register your own account "
+            + "to try it", exception.getMessage());
+        assertEquals(TEST_USERNAME, user.getEmail());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProfileOfDemoAccountRejectsPasswordChange() {
+        // Emails are compared ignoring case
+        demoProperties.setProtectedAccounts(List.of("TEST@example.com"));
+        User user = createTestUser();
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+        UserUpdateDTO profileDTO = new UserUpdateDTO("current-password", "new-password", "new-password");
+
+        assertThrows(ProtectedAccountException.class, () -> userService.updateProfile(TEST_USER_ID, profileDTO));
+
+        assertEquals(TEST_PASSWD, user.getPassword());
+        verify(passwordEncoder, never()).encode(any());
+        verify(userRepository, never()).save(any());
+    }
+
+    @Test
+    void updateProfileOfDemoAccountAllowsNameChangeWithTheSameEmail() {
+        demoProperties.setProtectedAccounts(List.of(TEST_USERNAME));
+        User user = createTestUser();
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+        when(userRepository.save(user)).thenReturn(user);
+
+        userService.updateProfile(TEST_USER_ID, new UserUpdateDTO("Renamed User", TEST_USERNAME));
+
+        assertEquals("Renamed User", user.getName());
+        verify(userRepository).save(user);
+    }
+
+    @Test
+    void changeRoleOfDemoAccountIsRejected() {
+        demoProperties.setProtectedAccounts(List.of(TEST_USERNAME));
+        User user = createTestUser();
+        when(userRepository.findById(TEST_USER_ID)).thenReturn(Optional.of(user));
+
+        ProtectedAccountException exception = assertThrows(ProtectedAccountException.class,
+            () -> userService.changeRole(TEST_USER_ID, User.Role.ADMIN));
+
+        assertEquals("The role of the demo accounts can't be changed", exception.getMessage());
+        assertEquals(User.Role.USER, user.getRole());
+        verify(userRepository, never()).save(any());
     }
 }

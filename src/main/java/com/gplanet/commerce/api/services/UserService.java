@@ -11,6 +11,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.gplanet.commerce.api.configs.app.props.DemoProperties;
 import com.gplanet.commerce.api.dtos.user.UserDTO;
 import com.gplanet.commerce.api.dtos.user.UserMapper;
 import com.gplanet.commerce.api.dtos.user.UserResponseDTO;
@@ -18,6 +19,7 @@ import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
 import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.DuplicateResourceException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
+import com.gplanet.commerce.api.exceptions.ProtectedAccountException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.repositories.UserRepository;
 import com.gplanet.commerce.api.utilities.DatabaseOperationHandler;
@@ -28,6 +30,10 @@ import lombok.extern.slf4j.Slf4j;
 /**
  * Service class that handles user-related operations including registration,
  * authentication, profile updates, and password management.
+ * <p>
+ * The email, password and role of the shared demo accounts ({@link DemoProperties#getProtectedAccounts()}) can't be
+ * changed, so no visitor can lock the others out of them.
+ * </p>
  * 
  * @author Gustavo
  * @version 1.0
@@ -39,9 +45,13 @@ public class UserService {
     
     private static final String USER_NOT_FOUND_MSG = "User not found";
     private static final String DUPLICATE_EMAIL_MSG = "A user with this email already exists";
+    private static final String PROTECTED_CREDENTIALS_MSG =
+        "The email and password of the demo accounts can't be changed; register your own account to try it";
+    private static final String PROTECTED_ROLE_MSG = "The role of the demo accounts can't be changed";
     private final UserMapper userMapper;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final DemoProperties demoProperties;
 
     /**
      * Registers a new user in the system.
@@ -79,12 +89,16 @@ public class UserService {
      * @return UserResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if user is not found
      * @throws DuplicateResourceException if another user already has the new email
+     * @throws ProtectedAccountException if the update would change the email or password of a demo account
      */
     @Transactional
     public UserResponseDTO updateProfile(Long userId, UserUpdateDTO profileDTO) {
         log.info("Updating profile for user ID: {}", userId);
         User user = userRepository.findById(userId)
             .orElseThrow(() -> new UsernameNotFoundException(USER_NOT_FOUND_MSG));
+        if (demoProperties.isProtectedAccount(user.getEmail()) && changesCredentials(user, profileDTO)) {
+            throw new ProtectedAccountException(PROTECTED_CREDENTIALS_MSG);
+        }
         // Update basic profile fields only when provided (partial update semantics)
         if (profileDTO.newEmail() != null) {
             String newEmail = profileDTO.newEmail().trim();
@@ -116,6 +130,20 @@ public class UserService {
         );
         log.info("Profile updated successfully for user: {}", updatedUser.getEmail());
         return userMapper.toUserResponseDTO(updatedUser);
+    }
+
+    /**
+     * Whether a profile update would change the email or the password of the user. Any password field counts as a
+     * password change, even an invalid one.
+     *
+     * @param user the existing user
+     * @param profileDTO the profile update
+     * @return true if the update changes the email or the password
+     */
+    private static boolean changesCredentials(User user, UserUpdateDTO profileDTO) {
+        boolean changesEmail = profileDTO.newEmail() != null && !profileDTO.newEmail().trim().equals(user.getEmail());
+        return changesEmail || profileDTO.currentPassword() != null || profileDTO.newPassword() != null
+                || profileDTO.confirmPassword() != null;
     }
 
     /**
@@ -209,6 +237,7 @@ public class UserService {
      * @param userId ID of the user
      * @param newRole New role to assign
      * @throws ResourceNotFoundException if user is not found
+     * @throws ProtectedAccountException if the user is a demo account and the role is different
      */
     @Transactional
     public void changeRole(Long userId, User.Role newRole) {
@@ -217,6 +246,9 @@ public class UserService {
             .orElseThrow(() -> new ResourceNotFoundException(
                 "No user exists with the provided ID"
             ));
+        if (newRole != user.getRole() && demoProperties.isProtectedAccount(user.getEmail())) {
+            throw new ProtectedAccountException(PROTECTED_ROLE_MSG);
+        }
         
         user.setRole(newRole);
         userRepository.save(user);

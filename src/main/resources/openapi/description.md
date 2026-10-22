@@ -25,6 +25,10 @@ This deployment is a public demo, so anyone can sign in with these accounts and 
 | `john@example.com` | `JohnDoe123!` | `USER`: can buy products |
 | `admin@example.com` | `Admin123!` | `ADMIN`: can manage products and users |
 
+The email, password and role of these accounts can't be changed, so they keep working for everyone; register your
+own account to try those changes. The demo data is restored every day at 03:00 UTC, which deletes the accounts,
+products and purchases that visitors created.
+
 ## Errors
 
 Errors use conventional HTTP status codes and share one JSON body, the `Error` schema:

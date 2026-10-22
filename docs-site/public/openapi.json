@@ -2,7 +2,7 @@
   "openapi": "3.1.0",
   "info": {
     "title": "G-Commerce API",
-    "description": "The G-Commerce API is the backend of a demo online store: user accounts, a product catalog and purchases.\nIt is a Spring Boot application that issues and verifies its own RS256-signed JSON Web Tokens.\n\n## Authentication\n\nMost endpoints need an access token in the `Authorization` header:\n\n```http\nAuthorization: Bearer <access token>\n```\n\n1. Get an access token and a refresh token with `POST /api/auth/login`.\n2. The access token expires after 60 minutes. Exchange the refresh token for a new pair with\n   `POST /api/auth/refresh`; each refresh token works once and expires after 24 hours.\n3. `POST /api/auth/logout` revokes the access token and the refresh token of the session.\n\nTokens are signed with rotating RSA keys, published at `/.well-known/jwks.json` for other services to verify them.\n\n## Demo accounts\n\nThis deployment is a public demo, so anyone can sign in with these accounts and change the data:\n\n| Email | Password | Role |\n|---|---|---|\n| `john@example.com` | `JohnDoe123!` | `USER`: can buy products |\n| `admin@example.com` | `Admin123!` | `ADMIN`: can manage products and users |\n\n## Errors\n\nErrors use conventional HTTP status codes and share one JSON body, the `Error` schema:\n\n```json\n{\n  \"timestamp\": \"2026-10-20T09:30:00\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Product not found\",\n  \"path\": \"/api/products/42\",\n  \"details\": []\n}\n```\n\n`message` explains the error, and `details` lists the specific problems, such as one entry per invalid field.\n\n## Pagination\n\nList endpoints take `page` (0-based), `size` (1 to 100), `sort` and `direction` (`ASC` or `DESC`)\nquery parameters, and return the items in `content` with the page metadata.\n\n## Rate limits\n\nEvery client gets a bucket of requests that refills over time:\n\n| Requests | Counted per | Burst | Refill per minute |\n|---|---|---|---|\n| Anonymous | IP address | 10 | 5 |\n| Signed-in users | user | 30 | 20 |\n| Administrators | user | 100 | 50 |\n| Login attempts | IP address | 5 | 1 |\n\nSuccessful responses carry an `X-Rate-Limit-Remaining` header. When the bucket is empty, the API answers\n`429 Too Many Requests` with a `Retry-After` header: the seconds to wait before trying again.\n",
+    "description": "The G-Commerce API is the backend of a demo online store: user accounts, a product catalog and purchases.\nIt is a Spring Boot application that issues and verifies its own RS256-signed JSON Web Tokens.\n\n## Authentication\n\nMost endpoints need an access token in the `Authorization` header:\n\n```http\nAuthorization: Bearer <access token>\n```\n\n1. Get an access token and a refresh token with `POST /api/auth/login`.\n2. The access token expires after 60 minutes. Exchange the refresh token for a new pair with\n   `POST /api/auth/refresh`; each refresh token works once and expires after 24 hours.\n3. `POST /api/auth/logout` revokes the access token and the refresh token of the session.\n\nTokens are signed with rotating RSA keys, published at `/.well-known/jwks.json` for other services to verify them.\n\n## Demo accounts\n\nThis deployment is a public demo, so anyone can sign in with these accounts and change the data:\n\n| Email | Password | Role |\n|---|---|---|\n| `john@example.com` | `JohnDoe123!` | `USER`: can buy products |\n| `admin@example.com` | `Admin123!` | `ADMIN`: can manage products and users |\n\nThe email, password and role of these accounts can't be changed, so they keep working for everyone; register your\nown account to try those changes. The demo data is restored every day at 03:00 UTC, which deletes the accounts,\nproducts and purchases that visitors created.\n\n## Errors\n\nErrors use conventional HTTP status codes and share one JSON body, the `Error` schema:\n\n```json\n{\n  \"timestamp\": \"2026-10-20T09:30:00\",\n  \"status\": 404,\n  \"error\": \"Not Found\",\n  \"message\": \"Product not found\",\n  \"path\": \"/api/products/42\",\n  \"details\": []\n}\n```\n\n`message` explains the error, and `details` lists the specific problems, such as one entry per invalid field.\n\n## Pagination\n\nList endpoints take `page` (0-based), `size` (1 to 100), `sort` and `direction` (`ASC` or `DESC`)\nquery parameters, and return the items in `content` with the page metadata.\n\n## Rate limits\n\nEvery client gets a bucket of requests that refills over time:\n\n| Requests | Counted per | Burst | Refill per minute |\n|---|---|---|---|\n| Anonymous | IP address | 10 | 5 |\n| Signed-in users | user | 30 | 20 |\n| Administrators | user | 100 | 50 |\n| Login attempts | IP address | 5 | 1 |\n\nSuccessful responses carry an `X-Rate-Limit-Remaining` header. When the bucket is empty, the API answers\n`429 Too Many Requests` with a `Retry-After` header: the seconds to wait before trying again.\n",
     "contact": {
       "name": "Gustavo Torres Guerrero",
       "url": "https://github.com/gussttaav/g-commerce-springboot-api",
@@ -930,7 +930,7 @@
           "Users"
         ],
         "summary": "Update your profile",
-        "description": "Changes the name, email or password of the signed-in user; omitted fields keep their value. A password change needs `currentPassword`, `newPassword` and `confirmPassword`. The user's tokens keep working after an email change.",
+        "description": "Changes the name, email or password of the signed-in user; omitted fields keep their value. A password change needs `currentPassword`, `newPassword` and `confirmPassword`. The user's tokens keep working after an email change. The email and password of the demo accounts can't be changed.",
         "operationId": "updateProfile",
         "requestBody": {
           "content": {
@@ -989,6 +989,9 @@
           "401": {
             "$ref": "#/components/responses/AuthenticationRequired"
           },
+          "403": {
+            "$ref": "#/components/responses/DemoAccountProtected"
+          },
           "409": {
             "$ref": "#/components/responses/DuplicatedEmail"
           },
@@ -1004,7 +1007,7 @@
           "Users"
         ],
         "summary": "Change a user's role",
-        "description": "Gives a user the `USER` or `ADMIN` role. Requires the `ADMIN` role. The user's current access token keeps the old role until it expires or is refreshed.",
+        "description": "Gives a user the `USER` or `ADMIN` role. Requires the `ADMIN` role. The user's current access token keeps the old role until it expires or is refreshed. The role of the demo accounts can't be changed.",
         "operationId": "changeUserRole",
         "parameters": [
           {
@@ -1045,7 +1048,7 @@
             "$ref": "#/components/responses/AuthenticationRequired"
           },
           "403": {
-            "$ref": "#/components/responses/AdminRoleRequired"
+            "$ref": "#/components/responses/RoleChangeForbidden"
           },
           "404": {
             "$ref": "#/components/responses/UserNotFound"
@@ -1901,6 +1904,29 @@
           }
         }
       },
+      "DemoAccountProtected": {
+        "description": "The signed-in user is one of the shared demo accounts, whose email and password can't be changed. The name can. Register your own account to try changing them.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "demoAccountProtected": {
+                "summary": "Demo account",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "The email and password of the demo accounts can't be changed; register your own account to try it",
+                  "path": "/api/users/me",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
       "DuplicatedEmail": {
         "description": "Another user already has this email.",
         "content": {
@@ -2294,6 +2320,40 @@
                   "error": "Too Many Requests",
                   "message": "Rate limit exceeded",
                   "path": "/api/products",
+                  "details": []
+                }
+              }
+            }
+          }
+        }
+      },
+      "RoleChangeForbidden": {
+        "description": "The caller isn't an administrator, or the user is one of the shared demo accounts, whose role can't be changed.",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            },
+            "examples": {
+              "adminRoleRequired": {
+                "summary": "Not an administrator",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "Unauthorized operation",
+                  "path": "/api/users/5/role",
+                  "details": []
+                }
+              },
+              "demoAccountProtected": {
+                "summary": "Demo account",
+                "value": {
+                  "timestamp": "2026-10-20T09:30:00",
+                  "status": 403,
+                  "error": "Forbidden",
+                  "message": "The role of the demo accounts can't be changed",
+                  "path": "/api/users/2/role",
                   "details": []
                 }
               }

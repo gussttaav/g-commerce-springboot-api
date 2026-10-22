@@ -1,11 +1,12 @@
 # G-Commerce Database Image
 
-MySQL database image pre-configured with the schema for the G-Commerce E-commerce application.
+MySQL database image pre-configured with the schema and the demo data of the G-Commerce E-commerce application.
 
 ## 🚀 Features
 
 - Pre-configured MySQL 9 database
 - Complete e-commerce schema with users, products, and purchases
+- Demo data loaded on the first start: demo accounts, a product catalog and some purchases
 - Spanish collation (utf8mb4_spanish_ci)
 - Automatic table creation and structure initialization
 - Built-in foreign key relationships

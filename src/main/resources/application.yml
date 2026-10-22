@@ -51,6 +51,15 @@ cors:
   # Response headers that browser code can read: the rate limit headers
   exposed-headers: Retry-After,X-Rate-Limit-Remaining,X-Rate-Limit-Retry-After-Seconds
 
+# Public demo. The email, password and role of the protected accounts (comma-separated emails) can't be changed, and
+# the reset restores the demo data of src/main/resources/db/demo-data.sql on a cron schedule in UTC, deleting
+# everything else. Both are off by default.
+demo:
+  protected-accounts: ${DEMO_PROTECTED_ACCOUNTS:}
+  reset:
+    enabled: ${DEMO_RESET_ENABLED:false}
+    cron: ${DEMO_RESET_CRON:0 0 3 * * *}
+
 # Rate limiting configuration: each bucket allows bursts of `capacity` requests and refills `refill` requests
 # per window. Anonymous requests and login attempts are limited per client IP address. Behind a reverse proxy, set
 # server.forward-headers-strategy=native so the client address is taken from the proxy's X-Forwarded-For header.

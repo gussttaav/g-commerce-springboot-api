@@ -4,11 +4,15 @@
 [![Tests](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/docker-build.yml?branch=main&logo=checkmarx&logoColor=white&label=tests)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/docker-build.yml)
 [![Deploy Status](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/aws-deploy.yml?branch=main&logo=amazonaws&logoColor=white&label=deploy)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/aws-deploy.yml)
 [![Health Check](https://img.shields.io/github/actions/workflow/status/gussttaav/g-commerce-springboot-api/health-check.yml?branch=main&logo=heart&logoColor=white&label=health)](https://github.com/gussttaav/g-commerce-springboot-api/actions/workflows/health-check.yml)
+[![Documentation](https://img.shields.io/badge/Docs-API%20Reference-6366f1?logo=astro&logoColor=white)](https://g-commerce-api-docs.vercel.app)
 [![API Documentation](https://img.shields.io/badge/API%20Docs-Swagger-85EA2D?logo=swagger&logoColor=white)](https://g-commerce.duckdns.org/swagger-ui/index.html)
 [![Code Quality](https://img.shields.io/badge/Code%20Quality-Checkstyle%20%7C%20PMD-blue?logo=codeclimate&logoColor=white)](https://github.com/gussttaav/g-commerce-springboot-api)
 [![Backend Docker Image](https://img.shields.io/docker/pulls/gussttaav/g-commerce-backend?logo=docker&logoColor=white&label=pulls)](https://hub.docker.com/r/gussttaav/g-commerce-backend)
 
 The **G-Commerce API** is a robust, secure, and scalable backend for e-commerce applications, built with **Spring Boot**. It provides essential features such as **JWT authentication with refresh tokens, role-based access control, product management, purchases and history tracking with pagination**. Designed for seamless integration with various front-end projects, this API ensures a smooth and efficient e-commerce experience.
+
+**Documentation:** guides and an interactive API reference, where you can sign in with a demo account and try every
+endpoint, are at **[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.vercel.app)**.
 
 ## 🚀 Features
 
@@ -181,6 +185,14 @@ Both images are automatically built and pushed to Docker Hub on every push to th
 After the image is pushed to Docker Hub the application is automatically deployed to an AWS EC2 instance pulling the created images and running the associated containers using Docker Compose.
 
 ## 📚 API Documentation
+
+### Documentation site
+
+The developer documentation is published at [g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.vercel.app):
+a quickstart, guides on authentication, errors, pagination and rate limits, a changelog, and an interactive API
+reference that sends requests to the production API. It is an [Astro Starlight](https://starlight.astro.build) site
+in [`docs-site/`](docs-site/), with the reference rendered by [Scalar](https://scalar.com) from the published
+OpenAPI document; Vercel deploys it from `main`. See [`docs-site/README.md`](docs-site/README.md) to run it locally.
 
 ### OpenAPI (Swagger) Documentation
 

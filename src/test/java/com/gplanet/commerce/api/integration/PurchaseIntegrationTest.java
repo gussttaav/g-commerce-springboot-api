@@ -147,4 +147,20 @@ class PurchaseIntegrationTest extends AbstractIntegrationTest {
                 .andExpect(jsonPath("$.pageSize").value(10))
                 .andExpect(jsonPath("$.pageNumber").value(0));
     }
+
+    @Test
+    void listPurchasesShowsThePricePaidAfterAPriceChange() throws Exception {
+        // Arrange - Buy two units at the current price, then change the price
+        createPurchaseAvailableProductSucceeds();
+        Product product = productRepository.findById(productId).orElseThrow();
+        product.setPrice(new BigDecimal("15.00"));
+        productRepository.save(product);
+
+        // Act & Assert - The unit price used to be the product's current price, which didn't match the subtotal
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
+                .header(HttpHeaders.AUTHORIZATION, obtainJwtToken(USER_EMAIL, USER_PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].products[0].unitPrice").value(PRODUCT_PRICE))
+                .andExpect(jsonPath("$.content[0].products[0].subtotal").value(PURCHASE_TOTAL_PRICE));
+    }
 }

@@ -1,5 +1,7 @@
 package com.gplanet.commerce.api.dtos.purchase;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Component;
@@ -39,20 +41,26 @@ public class PurchaseMapper {
     }
 
     /**
-     * Converts a PurchasProduct entity to its response DTO representation.
+     * Converts a PurchaseProduct entity to its response DTO representation.
      * This method maps the product details, quantity, and pricing information
      * to the corresponding DTO fields.
+     *
+     * <p>The unit price is the price paid, derived from the stored subtotal: the product's
+     * current price may have changed since the purchase.</p>
      *
      * @param entity the purchase product entity to convert
      * @return the corresponding PurchaseProductResponseDTO
      */
     private PurchaseProductResponseDTO toPurchaseProductResponseDTO(PurchaseProduct entity) {
+        BigDecimal subtotal = entity.getSubtotal();
+        BigDecimal unitPrice = subtotal.divide(
+            BigDecimal.valueOf(entity.getQuantity()), subtotal.scale(), RoundingMode.HALF_UP);
         return new PurchaseProductResponseDTO(
             entity.getProduct().getId(),
             entity.getProduct().getName(),
-            entity.getProduct().getPrice(),
+            unitPrice,
             entity.getQuantity(),
-            entity.getSubtotal()
+            subtotal
         );
     }
 }

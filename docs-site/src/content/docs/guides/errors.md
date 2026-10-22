@@ -45,6 +45,7 @@ people, and their wording may change.
 | | `Missing Authorization Header` | `/api/auth/refresh` or `/api/auth/validate` got no `Authorization` header |
 | `403 Forbidden` | `Forbidden` | Your role can't use the endpoint, such as a user creating a product |
 | | `Access Denied` | The operation needs more privileges, such as registering an administrator |
+| | `Forbidden` | The request would change the email, password or role of a [demo account](/introduction/#demo-accounts) |
 | `404 Not Found` | `Not Found` | The resource doesn't exist, or a product to buy is inactive |
 | `409 Conflict` | `Conflict` | A unique value is taken: a user's email or a product's name |
 | `429 Too Many Requests` | `Too Many Requests` | Your [rate limit](/guides/rate-limits/) is exhausted; wait the seconds of `Retry-After` |

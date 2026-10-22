@@ -8,6 +8,8 @@ description: Changes to the G-Commerce API that affect its clients.
 ### Added
 
 - This documentation site, with an interactive [API Reference](/api-reference/).
+- The demo data is restored every day at 03:00 UTC, and the email, password and role of the
+  [demo accounts](/introduction/#demo-accounts) can't be changed: those requests get `403 Forbidden`.
 - Browsers can read the `Retry-After` and `X-Rate-Limit-*` headers of cross-origin responses, and the discovery
   documents under `/.well-known` accept cross-origin requests.
 

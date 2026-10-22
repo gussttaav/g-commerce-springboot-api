@@ -50,6 +50,10 @@ endpoint, are at **[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.
   - RSA-based JWT token signing and validation
   - Redis-based token storage and blacklisting
 
+- **Public Demo Mode** (optional)
+  - Shared demo accounts whose email, password and role can't be changed
+  - Daily reset of the demo data, with a Redis lock so only one instance runs it
+
 - **Comprehensive Documentation**
   - Javadoc for code-level documentation
   - OpenAPI (Swagger) for interactive API documentation
@@ -142,6 +146,12 @@ Maven is optional: the repository includes the Maven Wrapper (`./mvnw`).
 
    # Allowed CORS origins (optional, defaults to http://localhost:3000)
    CORS_ALLOWED_ORIGINS=http://localhost:3000
+
+   # Public demo (optional, off by default): demo accounts whose email, password and role can't be changed,
+   # and a daily reset of the demo data (cron in UTC)
+   DEMO_PROTECTED_ACCOUNTS=admin@example.com,john@example.com
+   DEMO_RESET_ENABLED=false
+   DEMO_RESET_CRON="0 0 3 * * *"
    ```
 
    #### HTTPS support (optional)
@@ -480,7 +490,7 @@ Content-Type: application/json
 ├── docs/
 │   └── KNOWN_ISSUES.md         # Defects found in a code review and the plan that fixed them
 ├── mysql-init/
-│   └── shopping_db.sql         # Database schema and seed data
+│   └── shopping_db.sql         # Database schema
 ├── src/
 │   ├── main/
 │   │   ├── java/com/gplanet/commerce/api/
@@ -506,6 +516,7 @@ Content-Type: application/json
 │   │   │   ├── services/
 │   │   │   └── utilities/
 │   │   └── resources/
+│   │       ├── db/demo-data.sql    # Demo data, loaded on the first start and by the daily reset
 │   │       └── application.yml
 │   └── test/
 │       ├── java/com/gplanet/commerce/api/

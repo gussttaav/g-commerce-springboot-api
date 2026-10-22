@@ -53,6 +53,10 @@ public final class ApiDocs {
     public static final String ADMIN_REGISTRATION_FORBIDDEN = "#/components/responses/AdminRegistrationForbidden";
     /** 403: only administrators can list products that are not active. */
     public static final String PRODUCT_STATUS_FORBIDDEN = "#/components/responses/ProductStatusForbidden";
+    /** 403: the email and password of the demo accounts can't be changed. */
+    public static final String DEMO_ACCOUNT_PROTECTED = "#/components/responses/DemoAccountProtected";
+    /** 403: the caller isn't an administrator, or the user is a demo account. */
+    public static final String ROLE_CHANGE_FORBIDDEN = "#/components/responses/RoleChangeForbidden";
     /** 404: the user doesn't exist. */
     public static final String USER_NOT_FOUND = "#/components/responses/UserNotFound";
     /** 404: the product doesn't exist. */

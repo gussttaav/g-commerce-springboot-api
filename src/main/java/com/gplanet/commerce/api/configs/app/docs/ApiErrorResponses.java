@@ -47,6 +47,7 @@ final class ApiErrorResponses {
     private static final String HEADER_MISSING_DETAIL = "The Authorization header with a Bearer token is missing";
     private static final String NOT_BEARER = "Missing or invalid Bearer token";
     private static final String UNAUTHORIZED_OPERATION = "Unauthorized operation";
+    private static final String NOT_AN_ADMINISTRATOR = "Not an administrator";
     private static final String RATE_LIMIT_MESSAGE = "Rate limit exceeded";
     private static final int EXAMPLE_RETRY_AFTER_SECONDS = 30;
 
@@ -123,7 +124,7 @@ final class ApiErrorResponses {
     private static void addAuthorizationErrors(Map<String, ApiResponse> responses) {
         responses.put("AdminRoleRequired", error(
             "The endpoint requires the `ADMIN` role.",
-            example("adminRoleRequired", "Not an administrator", HttpStatus.FORBIDDEN,
+            example("adminRoleRequired", NOT_AN_ADMINISTRATOR, HttpStatus.FORBIDDEN,
                 apiError(HttpStatus.FORBIDDEN), UNAUTHORIZED_OPERATION, PRODUCTS_PATH)));
         responses.put("UserRoleRequired", error(
             "The endpoint requires the `USER` role: administrators can't make purchases.",
@@ -131,8 +132,22 @@ final class ApiErrorResponses {
                 apiError(HttpStatus.FORBIDDEN), UNAUTHORIZED_OPERATION, PURCHASES_PATH)));
         responses.put("AdminRegistrationForbidden", error(
             "Only an administrator can register a user with the `ADMIN` role.",
-            example("adminRegistrationForbidden", "Not an administrator", HttpStatus.FORBIDDEN, ACCESS_DENIED,
+            example("adminRegistrationForbidden", NOT_AN_ADMINISTRATOR, HttpStatus.FORBIDDEN, ACCESS_DENIED,
                 "Only administrators can create admin users", USERS_PATH)));
+        responses.put("DemoAccountProtected", error(
+            "The signed-in user is one of the shared demo accounts, whose email and password can't be changed. "
+                + "The name can. Register your own account to try changing them.",
+            example("demoAccountProtected", "Demo account", HttpStatus.FORBIDDEN, apiError(HttpStatus.FORBIDDEN),
+                "The email and password of the demo accounts can't be changed; register your own account to try "
+                    + "it",
+                USERS_ME_PATH)));
+        responses.put("RoleChangeForbidden", error(
+            "The caller isn't an administrator, or the user is one of the shared demo accounts, whose role can't "
+                + "be changed.",
+            example("adminRoleRequired", NOT_AN_ADMINISTRATOR, HttpStatus.FORBIDDEN,
+                apiError(HttpStatus.FORBIDDEN), UNAUTHORIZED_OPERATION, USERS_PATH + "/5/role"),
+            example("demoAccountProtected", "Demo account", HttpStatus.FORBIDDEN, apiError(HttpStatus.FORBIDDEN),
+                "The role of the demo accounts can't be changed", USERS_PATH + "/2/role")));
         responses.put("ProductStatusForbidden", error(
             "Only administrators can list products that are not active (`status` other than `ACTIVE`).",
             example("anonymous", "Anonymous request", HttpStatus.FORBIDDEN, ACCESS_DENIED,

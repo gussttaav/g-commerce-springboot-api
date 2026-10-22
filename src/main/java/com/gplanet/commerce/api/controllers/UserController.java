@@ -24,6 +24,7 @@ import com.gplanet.commerce.api.dtos.user.UserUpdateDTO;
 import com.gplanet.commerce.api.entities.User;
 import com.gplanet.commerce.api.exceptions.ApiException;
 import com.gplanet.commerce.api.exceptions.PasswordMismatchException;
+import com.gplanet.commerce.api.exceptions.ProtectedAccountException;
 import com.gplanet.commerce.api.exceptions.ResourceNotFoundException;
 import com.gplanet.commerce.api.services.UserService;
 
@@ -143,16 +144,19 @@ public class UserController {
      * @return UserResponseDTO containing the updated user information
      * @throws UsernameNotFoundException if the user is not found
      * @throws PasswordMismatchException if the new password is not confirmed correctly
+     * @throws ProtectedAccountException if the update would change the email or password of a demo account
      * @throws ApiException if the user could not be updated due to a constraint violation
      */
     @Operation(operationId = "updateProfile", summary = "Update your profile",
                description = "Changes the name, email or password of the signed-in user; omitted fields keep "
                            + "their value. A password change needs `currentPassword`, `newPassword` and "
-                           + "`confirmPassword`. The user's tokens keep working after an email change.")
+                           + "`confirmPassword`. The user's tokens keep working after an email change. The email "
+                           + "and password of the demo accounts can't be changed.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "The updated user"),
         @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_PROFILE_UPDATE),
         @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.DEMO_ACCOUNT_PROTECTED),
         @ApiResponse(responseCode = "409", ref = ApiDocs.DUPLICATED_EMAIL),
         @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })
@@ -223,15 +227,17 @@ public class UserController {
      * @param roleDTO the payload containing the new role to assign to the user
      * @throws AccessDeniedException if the current user is not an administrator
      * @throws ResourceNotFoundException if the user is not found
+     * @throws ProtectedAccountException if the user is a demo account and the role is different
      */
     @Operation(operationId = "changeUserRole", summary = "Change a user's role",
                description = "Gives a user the `USER` or `ADMIN` role. Requires the `ADMIN` role. The user's "
-                           + "current access token keeps the old role until it expires or is refreshed.")
+                           + "current access token keeps the old role until it expires or is refreshed. The role "
+                           + "of the demo accounts can't be changed.")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Role changed; the response has no body"),
         @ApiResponse(responseCode = "400", ref = ApiDocs.INVALID_INPUT),
         @ApiResponse(responseCode = "401", ref = ApiDocs.AUTHENTICATION_REQUIRED),
-        @ApiResponse(responseCode = "403", ref = ApiDocs.ADMIN_ROLE_REQUIRED),
+        @ApiResponse(responseCode = "403", ref = ApiDocs.ROLE_CHANGE_FORBIDDEN),
         @ApiResponse(responseCode = "404", ref = ApiDocs.USER_NOT_FOUND),
         @ApiResponse(responseCode = "429", ref = ApiDocs.RATE_LIMIT_EXCEEDED)
     })

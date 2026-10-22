@@ -57,8 +57,9 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
 
         log.warn("Access denied for request to {}: {}", request.getRequestURI(), accessDeniedException.getMessage());
 
-        // Clear any existing response content
-        response.reset();
+        // Clear any content written so far, but keep the headers set by earlier filters, such as the CORS
+        // headers: without them a browser can't read this error and reports a CORS failure instead
+        response.resetBuffer();
 
         response.setContentType(MediaType.APPLICATION_JSON_VALUE + ";charset=UTF-8");
         response.setStatus(HttpServletResponse.SC_FORBIDDEN);

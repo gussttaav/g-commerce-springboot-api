@@ -24,6 +24,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -409,6 +410,75 @@ class SecurityConfigTest {
                     containsString("Retry-After"),
                     containsString("X-Rate-Limit-Remaining"),
                     containsString("X-Rate-Limit-Retry-After-Seconds"))));
+    }
+
+    @Test
+    void whenTokenIsRejectedThenErrorKeepsCorsHeaders() throws Exception {
+        // Without them, a browser can't read the 401 and reports a CORS error instead (FUN-8)
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
+                .header(AUTHORIZATION_HEADER, "Bearer invalid.token"))
+                .andExpect(status().isUnauthorized())
+                .andExpect(header().string("Access-Control-Allow-Origin", corsProperties.getTestOrigin()))
+                .andExpect(jsonPath("$.status").value(401));
+    }
+
+    @Test
+    void whenRoleIsMissingThenErrorKeepsCorsHeaders() throws Exception {
+        String jwtToken = loginAndGetToken(USER_EMAIL, USER_PASSWORD);
+
+        mockMvc.perform(post(ENDPOINT_PRODUCTS)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
+                .header(AUTHORIZATION_HEADER, BEARER_PREFIX + jwtToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(header().string("Access-Control-Allow-Origin", corsProperties.getTestOrigin()))
+                .andExpect(jsonPath("$.status").value(403));
+    }
+
+    @Test
+    void whenBearerHeaderHasNoTokenThenRequestIsAnonymous() throws Exception {
+        // API consoles send "Authorization: Bearer" when no token has been entered (FUN-8)
+        Page<ProductResponseDTO> productPage = new PageImpl<>(Arrays.asList(
+            new ProductResponseDTO(1L, TEST_PRODUCT_NAME, TEST_PRODUCT_DESC,
+                TEST_PRODUCT_PRICE, LocalDateTime.now(), true)
+        ));
+        when(productService.listProducts(eq(ProductStatus.ACTIVE), eq(null),
+            eq(0), eq(10), eq("name"), eq("ASC")))
+            .thenReturn(productPage);
+
+        mockMvc.perform(get(ENDPOINT_PRODUCTS)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
+                .header(AUTHORIZATION_HEADER, "Bearer"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", corsProperties.getTestOrigin()));
+        mockMvc.perform(get(ENDPOINT_PURCHASES)
+                .header(AUTHORIZATION_HEADER, "Bearer "))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.message").value("Access token required"));
+    }
+
+    @Test
+    void whenLoginHasAnExpiredOrInvalidBearerTokenThenItIsIgnored() throws Exception {
+        // Login authenticates with the credentials in the body; a token left over from an earlier session,
+        // such as the one an API console keeps after it expires, must not block signing in again (FUN-8)
+        mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .header(AUTHORIZATION_HEADER, "Bearer invalid.token")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new LoginDTO(USER_EMAIL, USER_PASSWORD))))
+                .andExpect(status().isOk());
+    }
+
+    private String loginAndGetToken(String email, String password) throws Exception {
+        String tokenResponse = mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(OBJECT_MAPPER.writeValueAsString(new LoginDTO(email, password))))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+        return OBJECT_MAPPER.readTree(tokenResponse).get(RESPONSE_TOKEN_FIELD).asText();
     }
 
     @Test

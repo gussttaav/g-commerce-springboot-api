@@ -88,6 +88,11 @@ OAUTH2_KEY_ENCRYPTION_SECRET=your_key_encryption_secret
 # OAuth2 Key Rotation (optional)
 OAUTH2_KEY_ROTATION_ENABLED=true
 OAUTH2_KEY_ROTATION_CRON="0 0 2 1 * ?"
+
+# Public demo (optional, off by default)
+DEMO_PROTECTED_ACCOUNTS=admin@example.com,john@example.com
+DEMO_RESET_ENABLED=false
+DEMO_RESET_CRON="0 0 3 * * *"
 ```
 
 #### HTTPS support (optional)
@@ -254,6 +259,9 @@ GET  /actuator/prometheus          # Prometheus-formatted metrics
 | `OAUTH2_KEY_ENCRYPTION_SECRET` | Secret (at least 32 characters) from which the key that encrypts the JWT signing keys in Redis is derived; changing it rotates the signing key | - | Yes |
 | `OAUTH2_KEY_ROTATION_ENABLED` | Enable automatic key rotation | true | No |
 | `OAUTH2_KEY_ROTATION_CRON` | Key rotation schedule | 0 0 2 1 * ? | No |
+| `DEMO_PROTECTED_ACCOUNTS` | Comma-separated emails of shared demo accounts, whose email, password and role can't be changed | - | No |
+| `DEMO_RESET_ENABLED` | Restore the demo data on a schedule, deleting everything else | false | No |
+| `DEMO_RESET_CRON` | Demo data reset schedule, in UTC | 0 0 3 * * * | No |
 | `SPRING_PROFILES_ACTIVE` | Set "https" to enable SSL, "http" to disable | http | No |
 | `SSL_PASSWORD` | Password for SSL keystore | - | No (Only for HTTPS) |
 | `LOG_PATH` | Application log path | /app/logs | No |

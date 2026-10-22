@@ -73,8 +73,9 @@ Each user has one role, which the access token carries in its `authorities` clai
 | `USER` | Manage their own profile, buy products and read their purchases |
 | `ADMIN` | Manage products and users, change roles and read every purchase, but not buy |
 
-An administrator can change a user's role with `PATCH /api/users/{id}/role`. The change applies to the user's next
-access token, so it takes effect when they refresh or sign in again.
+An administrator can change a user's role with `PATCH /api/users/{id}/role`, except the role of the
+[demo accounts](/introduction/#demo-accounts). The change applies to the user's next access token, so it takes effect
+when they refresh or sign in again.
 
 ## Checking a token
 

@@ -30,6 +30,14 @@ This deployment is a **public demo**: anyone can sign in with these accounts, so
 
 You can also [register your own account](/api-reference/#tag/users/POST/api/users) with the `USER` role.
 
+So that the demo keeps working for everyone:
+
+- **The demo accounts can't change their email, password or role**; those requests get `403 Forbidden`. Everything
+  else works, including renaming them. To try those changes, register your own account.
+- **The demo data is restored every day at 03:00 UTC.** The accounts, products and purchases that visitors created
+  are deleted, the demo products and accounts get their original values back, and everyone has to sign in again
+  when their access token expires.
+
 <Aside type="caution">
 Don't send real personal data or passwords you use elsewhere: everything in the demo is visible to other visitors.
 </Aside>

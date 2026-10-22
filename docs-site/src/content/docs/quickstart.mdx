@@ -1,0 +1,203 @@
+---
+title: Quickstart
+description: Sign in with a demo account, list the products and make a purchase in four requests.
+---
+
+import { Aside, Steps, TabItem, Tabs } from '@astrojs/starlight/components';
+
+This guide signs in with the demo user account, finds a product and buys it. Prefer clicking to typing? Every step
+also works from the [API Reference](/api-reference/): send a request, copy the token into **Authentication**, and
+continue.
+
+<Steps>
+
+1. **Sign in.** Send the email and password of the demo user to `POST /api/auth/login`:
+
+   <Tabs syncKey="lang">
+     <TabItem label="curl">
+       ```bash
+       curl -X POST https://g-commerce.duckdns.org/api/auth/login \
+         -H 'Content-Type: application/json' \
+         -d '{"email": "john@example.com", "password": "JohnDoe123!"}'
+       ```
+     </TabItem>
+     <TabItem label="JavaScript">
+       ```js
+       const response = await fetch('https://g-commerce.duckdns.org/api/auth/login', {
+         method: 'POST',
+         headers: { 'Content-Type': 'application/json' },
+         body: JSON.stringify({ email: 'john@example.com', password: 'JohnDoe123!' }),
+       });
+       const { token, refreshToken } = await response.json();
+       ```
+     </TabItem>
+     <TabItem label="Python">
+       ```python
+       import requests
+
+       response = requests.post(
+           "https://g-commerce.duckdns.org/api/auth/login",
+           json={"email": "john@example.com", "password": "JohnDoe123!"},
+       )
+       token = response.json()["token"]
+       ```
+     </TabItem>
+   </Tabs>
+
+   The response contains the user and two tokens:
+
+   ```json
+   {
+     "user": {
+       "id": 2,
+       "name": "John Doe",
+       "email": "john@example.com",
+       "role": "USER",
+       "creationDate": "2026-10-01T09:30:00"
+     },
+     "token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+     "tokenType": "Bearer",
+     "expiresIn": 3600,
+     "refreshToken": "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...",
+     "refreshExpiresIn": 86400
+   }
+   ```
+
+   `token` is the **access token**: send it with every request in the `Authorization` header. It expires after an
+   hour; the [Authentication guide](/guides/authentication/) explains how to refresh it.
+
+2. **Find a product.** The catalog is public, so this request needs no token. Search for a monitor:
+
+   <Tabs syncKey="lang">
+     <TabItem label="curl">
+       ```bash
+       curl 'https://g-commerce.duckdns.org/api/products?searchText=monitor'
+       ```
+     </TabItem>
+     <TabItem label="JavaScript">
+       ```js
+       const products = await fetch('https://g-commerce.duckdns.org/api/products?searchText=monitor')
+         .then((response) => response.json());
+       const productId = products.content[0].id;
+       ```
+     </TabItem>
+     <TabItem label="Python">
+       ```python
+       products = requests.get(
+           "https://g-commerce.duckdns.org/api/products",
+           params={"searchText": "monitor"},
+       ).json()
+       product_id = products["content"][0]["id"]
+       ```
+     </TabItem>
+   </Tabs>
+
+   Products come in a page: the items are in `content`, with the page metadata next to them.
+
+   ```json
+   {
+     "content": [
+       {
+         "id": 3,
+         "name": "4K Monitor",
+         "description": "27-inch 4K Ultra HD Monitor",
+         "price": 399.99,
+         "creationDate": "2026-10-01T09:30:00",
+         "active": true
+       }
+     ],
+     "pageNumber": 0,
+     "pageSize": 10,
+     "totalElements": 1,
+     "totalPages": 1,
+     "isLastPage": true
+   }
+   ```
+
+3. **Buy it.** Send the product ID and the quantity to `POST /api/purchases`, with the access token:
+
+   <Tabs syncKey="lang">
+     <TabItem label="curl">
+       ```bash
+       curl -X POST https://g-commerce.duckdns.org/api/purchases \
+         -H "Authorization: Bearer $TOKEN" \
+         -H 'Content-Type: application/json' \
+         -d '{"products": [{"productId": 3, "quantity": 1}]}'
+       ```
+     </TabItem>
+     <TabItem label="JavaScript">
+       ```js
+       const purchase = await fetch('https://g-commerce.duckdns.org/api/purchases', {
+         method: 'POST',
+         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+         body: JSON.stringify({ products: [{ productId, quantity: 1 }] }),
+       }).then((response) => response.json());
+       ```
+     </TabItem>
+     <TabItem label="Python">
+       ```python
+       purchase = requests.post(
+           "https://g-commerce.duckdns.org/api/purchases",
+           headers={"Authorization": f"Bearer {token}"},
+           json={"products": [{"productId": product_id, "quantity": 1}]},
+       ).json()
+       ```
+     </TabItem>
+   </Tabs>
+
+   The API charges the current price of each product and returns the purchase:
+
+   ```json
+   {
+     "id": 12,
+     "userName": "John Doe",
+     "date": "2026-10-20T09:30:00",
+     "total": 399.99,
+     "products": [
+       {
+         "id": 3,
+         "productName": "4K Monitor",
+         "unitPrice": 399.99,
+         "quantity": 1,
+         "subtotal": 399.99
+       }
+     ]
+   }
+   ```
+
+   <Aside>
+   Only users with the `USER` role can buy. The demo administrator gets `403 Forbidden` here.
+   </Aside>
+
+4. **Check your purchases.** `GET /api/purchases` lists the purchases of the signed-in user, newest first:
+
+   <Tabs syncKey="lang">
+     <TabItem label="curl">
+       ```bash
+       curl https://g-commerce.duckdns.org/api/purchases -H "Authorization: Bearer $TOKEN"
+       ```
+     </TabItem>
+     <TabItem label="JavaScript">
+       ```js
+       const history = await fetch('https://g-commerce.duckdns.org/api/purchases', {
+         headers: { Authorization: `Bearer ${token}` },
+       }).then((response) => response.json());
+       ```
+     </TabItem>
+     <TabItem label="Python">
+       ```python
+       history = requests.get(
+           "https://g-commerce.duckdns.org/api/purchases",
+           headers={"Authorization": f"Bearer {token}"},
+       ).json()
+       ```
+     </TabItem>
+   </Tabs>
+
+</Steps>
+
+## Next steps
+
+- Learn how to [refresh tokens and log out](/guides/authentication/).
+- Handle [errors](/guides/errors/) and [rate limits](/guides/rate-limits/) in your client.
+- Explore every endpoint in the [API Reference](/api-reference/).

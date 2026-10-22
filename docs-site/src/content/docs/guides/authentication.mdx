@@ -1,0 +1,103 @@
+---
+title: Authentication
+description: Sign in, send access tokens, refresh them, log out, and verify the API's tokens in other services.
+---
+
+import { Aside, Steps } from '@astrojs/starlight/components';
+
+The API issues its own tokens: there is no external identity provider. Signing in returns two
+[JSON Web Tokens](https://datatracker.ietf.org/doc/html/rfc7519) signed with RS256:
+
+| Token | Used for | Lifetime |
+|---|---|---|
+| **Access token** (`token`) | Authenticating requests | 60 minutes |
+| **Refresh token** (`refreshToken`) | Getting a new pair of tokens | 24 hours, and a single use |
+
+## Sending the access token
+
+Send the access token in the `Authorization` header of every request that needs authentication:
+
+```http
+GET /api/users/me HTTP/1.1
+Host: g-commerce.duckdns.org
+Authorization: Bearer eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9...
+```
+
+A missing, malformed, expired or revoked token gets `401 Unauthorized`. Some endpoints are public, such as signing in,
+registering and listing products; the [API Reference](/api-reference/) shows which ones need a token.
+
+## The token lifecycle
+
+<Steps>
+
+1. **Sign in** with `POST /api/auth/login` and an email and password. Failed attempts are
+   [rate-limited](/guides/rate-limits/) per IP address, and an unknown email and a wrong password get the same `401`,
+   so the API doesn't reveal which emails are registered.
+
+2. **Use the access token** until it expires. `expiresIn` in the login response tells you how many seconds it lasts.
+
+3. **Refresh** before or after it expires: send the **refresh token** as the Bearer token of
+   `POST /api/auth/refresh`, without a body.
+
+   ```bash
+   curl -X POST https://g-commerce.duckdns.org/api/auth/refresh \
+     -H "Authorization: Bearer $REFRESH_TOKEN"
+   ```
+
+   The response has the same format as the login response, with a new access token **and a new refresh token**.
+   Keep the new refresh token: each refresh token works once, and sending a used one again gets `401`.
+
+4. **Log out** with `POST /api/auth/logout`, authenticated with the access token and with the refresh token in the
+   body. Both tokens are revoked immediately, even though they haven't expired.
+
+   ```bash
+   curl -X POST https://g-commerce.duckdns.org/api/auth/logout \
+     -H "Authorization: Bearer $TOKEN" \
+     -H 'Content-Type: application/json' \
+     -d "{\"refreshToken\": \"$REFRESH_TOKEN\"}"
+   ```
+
+</Steps>
+
+<Aside type="tip">
+Use the refresh token only with `/api/auth/refresh`. Sent as an access token to any other endpoint, it's rejected with
+`401`.
+</Aside>
+
+## Roles
+
+Each user has one role, which the access token carries in its `authorities` claim:
+
+| Role | Can |
+|---|---|
+| `USER` | Manage their own profile, buy products and read their purchases |
+| `ADMIN` | Manage products and users, change roles and read every purchase, but not buy |
+
+An administrator can change a user's role with `PATCH /api/users/{id}/role`. The change applies to the user's next
+access token, so it takes effect when they refresh or sign in again.
+
+## Checking a token
+
+`GET /api/auth/validate` tells you whether the token in its `Authorization` header would be accepted as an access
+token. An invalid token isn't an error: the response says why.
+
+```json
+{ "valid": false, "message": "The token has been revoked" }
+```
+
+## Verifying tokens in another service
+
+Other services can verify the API's access tokens without calling it, with any JWT library:
+
+- **Signing keys.** `GET /.well-known/jwks.json` publishes the public RSA keys. Pick the key whose `kid` matches the
+  token's header. The signing key rotates periodically; retired keys stay published until the tokens they signed have
+  expired, so cache the key set and fetch it again when a token has an unknown `kid`.
+- **Issuer and metadata.** `GET /.well-known/openid-configuration` gives the issuer to compare with the `iss` claim,
+  along with the JWKS URI and the supported algorithms.
+- **Claims.** `sub` is the user ID, `email` the user's email when the token was issued, and `authorities` the roles.
+  Refresh tokens have a `token_type: refresh` claim: reject them where an access token is expected.
+
+<Aside type="caution">
+A verified token can still have been revoked by a logout. Only the API knows that; ask `GET /api/auth/validate` when
+it matters.
+</Aside>

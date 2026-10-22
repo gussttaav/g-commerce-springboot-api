@@ -1,0 +1,58 @@
+---
+title: Introduction
+description: What the G-Commerce API offers, its base URL, the demo accounts and the conventions shared by all endpoints.
+---
+
+import { Aside } from '@astrojs/starlight/components';
+
+The G-Commerce API is the backend of a demo online store. It manages **user accounts**, a **product catalog** and
+**purchases**, and it signs in users with JSON Web Tokens that it issues and verifies itself.
+
+It is a Spring Boot 3 application backed by MySQL and Redis, and its source code is
+[on GitHub](https://github.com/gussttaav/g-commerce-springboot-api).
+
+## Base URL
+
+```text
+https://g-commerce.duckdns.org
+```
+
+All requests use HTTPS. The endpoints live under `/api`, except the discovery documents under `/.well-known`.
+
+## Demo accounts
+
+This deployment is a **public demo**: anyone can sign in with these accounts, so the data may change at any time.
+
+| Email | Password | Role | What it can do |
+|---|---|---|---|
+| `john@example.com` | `JohnDoe123!` | `USER` | Buy products and read its purchases |
+| `admin@example.com` | `Admin123!` | `ADMIN` | Manage products and users, and read all purchases |
+
+You can also [register your own account](/api-reference/#tag/users/POST/api/users) with the `USER` role.
+
+<Aside type="caution">
+Don't send real personal data or passwords you use elsewhere: everything in the demo is visible to other visitors.
+</Aside>
+
+## Conventions
+
+- **JSON everywhere.** Requests with a body send `Content-Type: application/json`, and responses are JSON.
+- **Authentication** uses Bearer access tokens; see [Authentication](/guides/authentication/).
+- **Errors** share one body format; see [Errors](/guides/errors/).
+- **Lists are paginated** with `page`, `size`, `sort` and `direction`; see [Pagination](/guides/pagination/).
+- **Rate limits** apply per IP address or per user; see [Rate limits](/guides/rate-limits/).
+- **Timestamps** are ISO 8601 local date-times without a time zone offset, such as `2026-10-20T09:30:00`.
+- **Prices** are numbers in US dollars with up to two decimals.
+
+## Resources
+
+| Resource | Endpoints | Who can use them |
+|---|---|---|
+| Authentication | `/api/auth/login`, `/refresh`, `/logout`, `/validate` | Everyone |
+| Users | `/api/users`, `/api/users/me`, `/api/users/{id}/role` | Everyone registers; users manage their profile; admins list users and change roles |
+| Products | `/api/products`, `/api/products/{id}` | Everyone browses active products; admins manage the catalog |
+| Purchases | `/api/purchases` | Users buy and read their purchases; admins read all purchases |
+| Discovery | `/.well-known/jwks.json`, `/.well-known/openid-configuration` | Everyone |
+
+The [API Reference](/api-reference/) documents each endpoint, and is generated from the same OpenAPI document the API
+serves at `/v3/api-docs`. You can also [download it](/openapi.json).

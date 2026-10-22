@@ -1,0 +1,44 @@
+---
+title: G-Commerce API
+description: Developer documentation and interactive API reference of the G-Commerce API.
+template: splash
+hero:
+  tagline: The REST API behind a demo online store. Sign in, browse the catalog and buy products, with self-issued RS256 JSON Web Tokens and per-client rate limits.
+  actions:
+    - text: Quickstart
+      link: /quickstart/
+      icon: right-arrow
+    - text: API Reference
+      link: /api-reference/
+      variant: minimal
+      icon: open-book
+---
+
+import { Card, CardGrid, LinkCard } from '@astrojs/starlight/components';
+
+## Make your first request in a minute
+
+The API is live at `https://g-commerce.duckdns.org` with demo accounts and data, so you can call it straight away
+from your terminal or from the interactive API reference.
+
+<CardGrid>
+  <LinkCard title="Quickstart" href="/quickstart/" description="Sign in, list products and make a purchase." />
+  <LinkCard title="API Reference" href="/api-reference/" description="Every endpoint, with a console to try it." />
+</CardGrid>
+
+## Guides
+
+<CardGrid>
+  <Card title="Authentication" icon="approve-check">
+    Access and refresh tokens, roles, logout, and how other services verify tokens. [Read the guide](/guides/authentication/).
+  </Card>
+  <Card title="Errors" icon="warning">
+    One JSON body for every error, and what each status code means. [Read the guide](/guides/errors/).
+  </Card>
+  <Card title="Pagination" icon="list-format">
+    Page through products, purchases and users. [Read the guide](/guides/pagination/).
+  </Card>
+  <Card title="Rate limits" icon="information">
+    How many requests you can send, and how to handle `429`. [Read the guide](/guides/rate-limits/).
+  </Card>
+</CardGrid>

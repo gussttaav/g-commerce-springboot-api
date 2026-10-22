@@ -1,10 +1,15 @@
 package com.gplanet.commerce.api.services;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.dao.DataAccessException;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -55,6 +60,7 @@ public class AuthService {
 
     private static final String REFRESH_TOKEN_PREFIX = "token:refresh:";
     private static final String INVALID_CREDENTIALS_MSG = "Invalid email or password";
+    private static final long SCAN_BATCH_SIZE = 500;
 
     private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
@@ -160,6 +166,29 @@ public class AuthService {
         } catch (BadJwtException e) {
             return new TokenValidationResponseDTO(false, "Token is malformed or its signature is invalid");
         }
+    }
+
+    /**
+     * Revokes every stored refresh token, so all sessions end when their access tokens expire. Access tokens
+     * are not stored, so they stay valid until then.
+     *
+     * @return the number of refresh tokens revoked
+     */
+    public long revokeAllRefreshTokens() {
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(REFRESH_TOKEN_PREFIX + "*")
+                .count(SCAN_BATCH_SIZE)
+                .build();
+        List<String> keys = new ArrayList<>();
+        try (Cursor<String> cursor = stringRedisTemplate.scan(options)) {
+            cursor.forEachRemaining(keys::add);
+        }
+        long deleted = 0;
+        if (!keys.isEmpty()) {
+            deleted = Optional.ofNullable(stringRedisTemplate.delete(keys)).orElse(0L);
+        }
+        log.info("Revoked {} refresh tokens", deleted);
+        return deleted;
     }
 
     /**

@@ -9,5 +9,6 @@ ENV TZ=UTC
 # Set MySQL global time zone at startup
 RUN echo "[mysqld]\ndefault-time-zone='UTC'" > /etc/mysql/conf.d/timezone.cnf
 
-# Copy the initialization script
-COPY mysql-init/shopping_db.sql /docker-entrypoint-initdb.d/
+# Copy the initialization scripts, which run in name order on the first start: the schema, then the demo data
+COPY mysql-init/shopping_db.sql /docker-entrypoint-initdb.d/01-schema.sql
+COPY src/main/resources/db/demo-data.sql /docker-entrypoint-initdb.d/02-demo-data.sql

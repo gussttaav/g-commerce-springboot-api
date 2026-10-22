@@ -29,6 +29,12 @@
       "defaultValue": []
     },
     {
+      "name": "cors.exposed-headers",
+      "type": "java.util.List<java.lang.String>",
+      "description": "List of response headers that browser code can read (e.g., Retry-After, X-Rate-Limit-Remaining).",
+      "defaultValue": ["Retry-After", "X-Rate-Limit-Remaining", "X-Rate-Limit-Retry-After-Seconds"]
+    },
+    {
       "name": "cors.allowed-headers",
       "type": "java.util.List<java.lang.String>",
       "description": "List of HTTP headers allowed in CORS requests (e.g., Authorization, Content-Type).",

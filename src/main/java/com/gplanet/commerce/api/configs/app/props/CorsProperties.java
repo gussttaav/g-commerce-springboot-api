@@ -34,8 +34,14 @@ public class CorsProperties {
      * List of allowed HTTP headers. 
      */
     private List<String> allowedHeaders;
-    
-    /** 
+
+    /**
+     * List of response headers that browser code may read, such as the rate limit headers.
+     */
+    private List<String> exposedHeaders = List.of(
+        "Retry-After", "X-Rate-Limit-Remaining", "X-Rate-Limit-Retry-After-Seconds");
+
+    /**
      * Origin used for testing purposes. 
      */
     private String testOrigin;

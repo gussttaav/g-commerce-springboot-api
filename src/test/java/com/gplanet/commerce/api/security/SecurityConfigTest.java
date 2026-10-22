@@ -11,6 +11,8 @@ import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_SWAGGER_DOCS;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS_ME;
 import static com.gplanet.commerce.api.testutils.TestConstants.ENDPOINT_USERS;
+import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -392,8 +394,29 @@ class SecurityConfigTest {
                 .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
                 .contentType(MediaType.APPLICATION_JSON)
                 .content("{}"))
-                .andExpect(header().string("Access-Control-Allow-Origin", 
+                .andExpect(header().string("Access-Control-Allow-Origin",
                     corsProperties.getTestOrigin()));
+    }
+
+    @Test
+    void whenActualCorsRequestThenExposesRateLimitHeaders() throws Exception {
+        // Without Access-Control-Expose-Headers, browser code (e.g. the docs console) can't read them
+        mockMvc.perform(post(ENDPOINT_AUTH_LOGIN)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("{}"))
+                .andExpect(header().string("Access-Control-Expose-Headers", allOf(
+                    containsString("Retry-After"),
+                    containsString("X-Rate-Limit-Remaining"),
+                    containsString("X-Rate-Limit-Retry-After-Seconds"))));
+    }
+
+    @Test
+    void whenCorsRequestToDiscoveryEndpointThenAllowsOrigin() throws Exception {
+        mockMvc.perform(get(ENDPOINT_JWKS)
+                .header(CORS_ORIGIN_HEADER, corsProperties.getTestOrigin()))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Access-Control-Allow-Origin", corsProperties.getTestOrigin()));
     }
 
     @Test

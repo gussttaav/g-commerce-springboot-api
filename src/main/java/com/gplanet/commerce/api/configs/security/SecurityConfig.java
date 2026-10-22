@@ -295,7 +295,9 @@ public class SecurityConfig {
     }
 
     /**
-     * Configures CORS for API endpoints using properties from {@link CorsProperties}.
+     * Configures CORS for the API and discovery endpoints using properties from {@link CorsProperties}.
+     * Browser clients such as the frontend and the docs console call both, and read the exposed
+     * rate limit headers.
      *
      * @return a {@link CorsConfigurationSource} for CORS handling
      */
@@ -305,10 +307,12 @@ public class SecurityConfig {
         configuration.setAllowedOrigins(corsProperties.getAllowedOrigins());
         configuration.setAllowedMethods(corsProperties.getAllowedMethods());
         configuration.setAllowedHeaders(corsProperties.getAllowedHeaders());
+        configuration.setExposedHeaders(corsProperties.getExposedHeaders());
         configuration.setAllowCredentials(true);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/api/**", configuration);
+        source.registerCorsConfiguration("/.well-known/**", configuration);
         return source;
     }
 

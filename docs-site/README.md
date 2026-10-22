@@ -39,5 +39,9 @@ size. Update them when those settings change.
 
 ## Deployment
 
-Vercel builds and deploys the site from this folder (project root directory `docs-site`). The production domain
-that Vercel exposes at build time (`VERCEL_PROJECT_PRODUCTION_URL`) becomes the site URL used by the sitemap.
+Vercel builds and deploys the site from this folder (project root directory `docs-site`) to
+[g-commerce-api-docs.vercel.app](https://g-commerce-api-docs.vercel.app). The production domain that Vercel exposes at
+build time (`VERCEL_PROJECT_PRODUCTION_URL`) becomes the site URL used by the sitemap.
+
+The API accepts browser requests from that origin (`CORS_ALLOWED_ORIGINS` on the server), so "Test Request" works on
+the production site, but not on preview deployments or `localhost`.
